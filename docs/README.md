@@ -7,7 +7,7 @@
 | 目录 | 文档 | 编号 | 负责角色 | 更新时机 |
 | --- | --- | --- | --- | --- |
 | `requirements/` | [问题定义与产品描述](requirements/problem_definition.md) | MM-REQ-001 | 产品负责人 | 定位、目标用户、范围变化时 |
-| `requirements/` | [功能需求规范](requirements/functional_spec.md) | MM-REQ-002 | 产品负责人 + 技术负责人 | 每个迭代开始前 |
+| `requirements/` | [功能需求规范](requirements/functional_spec.md) | MM-REQ-002 | 产品负责人 + 项目负责人 | 每个迭代开始前 |
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | MM-REQ-003 | 技术负责人 + 安全/隐私负责人 | 架构或合规要求变化时 |
 | `mgmt/` | [沟通管理计划](mgmt/communication_mgmt_plan.md) | MM-PM-001 | 项目负责人 | 团队/干系人/工具变化时 |
 | `mgmt/` | [风险管理计划](mgmt/risk_mgmt_plan.md) | MM-PM-002 | 项目负责人 | 每两周评审，重大风险即时更新 |
