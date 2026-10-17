@@ -52,10 +52,10 @@
 
 ## 5. 文档与知识管理
 
-| 类型 | 位置 | 命名 | 负责人 |
-| --- | --- | --- | --- |
-| 需求/计划 | `docs/requirements/`、`docs/mgmt/` | `*_spec.md`、`*_plan.md` | 各文档负责人 |
-| 决策记录 | CHANGELOG.md | `D-xx`、`ADR-xxx` | 决策发起人 |
+| 类型 | 位置 | 命名 | 负责人 | 更新时机 |
+| --- | --- | --- | --- | --- |
+| 需求/计划 | `docs/requirements/`、`docs/mgmt/` | `*_spec.md`、`*_plan.md` | 各文档负责人 | 变更时 |
+| 决策记录 | CHANGELOG.md | `D-xx`、`ADR-xxx` | 决策发起人 | 决策发生时 |
 | 任务/缺陷 | GitHub Issues | 模板 | 提出人 | 实时 |
 
 **文档规则**：
