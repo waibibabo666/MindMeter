@@ -1,0 +1,13 @@
+# 统一换行与文本处理，避免 Windows/macOS 协作产生无关 diff
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.ico binary

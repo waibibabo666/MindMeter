@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全与隐私问题
+    url: https://github.com/waibibabo666/MindMeter/security/policy
+    about: 请勿公开提交安全/隐私问题，按 SECURITY.md 私下报告。
+  - name: 项目文档
+    url: https://github.com/waibibabo666/MindMeter/blob/main/docs/README.md
+    about: 先阅读文档规范、待定事项与需求基线。

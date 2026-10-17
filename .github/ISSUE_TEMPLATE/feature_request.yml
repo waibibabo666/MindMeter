@@ -1,0 +1,49 @@
+name: 功能需求
+description: 提出新功能、改进或产品建议
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 谁在什么场景下遇到什么问题？请描述事实而非直接给方案
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 用可验证的条件描述「怎样算完成」
+      placeholder: |
+        - Given … When … Then …
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 建议优先级
+      options:
+        - P0 必须（MVP 阻断）
+        - P1 应该
+        - P2 可以
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 备选方案与影响
+      description: 是否有更简单的做法？涉及数据、隐私、计分或合规吗？
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 影响确认
+      options:
+        - label: 不影响临床诊断/治疗表述
+        - label: 已考虑隐私与数据最小化
