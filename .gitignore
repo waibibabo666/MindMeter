@@ -1,0 +1,44 @@
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# ---- Environment / Secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Node / Frontend ----
+node_modules/
+.npm-cache/
+dist/
+build/
+.next/
+coverage/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ---- Python / Backend / Core Engine ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ---- Data / Local artifacts ----
+data/local/
+*.sqlite
+*.db
+logs/
+tmp/
