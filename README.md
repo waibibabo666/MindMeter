@@ -19,7 +19,7 @@ MindMeter 是一个 **4 人 / 6 周**的课程项目：用 4 个 2–4 分钟的
 
 | 周次 | 目标 | 交付物 |
 | --- | --- | --- |
-| W1 | 需求与测量方案 | 5 份文档、4 个游戏规则 |
+| W1 | 需求与测量方案 | 需求/设计/管理文档、4 个游戏规则 |
 | W2 | 原型与视觉 | 页面流程、原型、技术选型 |
 | W3 | 核心游戏开发 | 4 个游戏可玩、计分模块 |
 | W4 | 报告与联调 | 雷达图、建议、历史记录 |
@@ -33,14 +33,51 @@ MindMeter 是一个 **4 人 / 6 周**的课程项目：用 4 个 2–4 分钟的
 | [问题定义与产品描述](docs/requirements/problem_definition.md) | 5W1H、使命/口号、目标用户、竞品、SWOT、产品定义 7 项 |
 | [功能需求规范](docs/requirements/functional_spec.md) | 4 个游戏规则、计分、报告、数据与验收标准 |
 | [非功能需求规范](docs/requirements/nonfunctional_spec.md) | 性能、兼容、隐私、科学性与 6 周质量底线 |
+| [算法设计](docs/algorithm/algorithm.md) | 四个游戏的指标、0–100 计分公式与版本 |
+| [软件设计](docs/software/software.md) | 前端、计分模块、本地存储与静态部署 |
 | [沟通管理计划](docs/mgmt/communication_mgmt_plan.md) | 4 人分工、每周节奏、渠道、决策与升级 |
 | [风险管理计划](docs/mgmt/risk_mgmt_plan.md) | 12 项风险、重点应对、跟踪与应急 |
+| [复盘模板](docs/retrospection/retrospection.md) | 每周/里程碑复盘记录 |
 
 课程提交版摘要：
 
 - [作业 1：使命、口号与产品策略](work_for_submission/1.md)
 - [作业 2：产品定位与产品定义](work_for_submission/2.md)
 - [作业 3：沟通管理与风险管理计划](work_for_submission/3.md)
+
+## 仓库结构
+
+```text
+MindMeter/
+├─ docs/
+│  ├─ README.md                 # 文档索引
+│  ├─ requirements/             # 问题定义、功能、非功能
+│  ├─ algorithm/                # 4 个游戏的计分设计
+│  ├─ software/                 # 前端、计分模块、存储与部署
+│  ├─ mgmt/                     # 沟通与风险管理
+│  └─ retrospection/            # 复盘模板
+├─ code/
+│  ├─ backend/                  # 本期不启用，保留未来同步/账号
+│  ├─ frontend/                 # 页面、4 个游戏、报告
+│  └─ core_engine/              # 纯函数计分模块
+├─ tests/
+│  ├─ unit/                     # 计分公式单测
+│  └─ integration/              # 完整流程测试
+├─ .github/workflows/           # 项目结构检查
+├─ work_for_submission/         # 课程提交版 1/2/3
+└─ README.md
+```
+
+目录说明：
+
+| 目录 | 用途 |
+| --- | --- |
+| `code/frontend` | 首页、同意页、4 个游戏、报告、历史 |
+| `code/core_engine` | 计分公式与阈值配置，不操作 DOM |
+| `code/backend` | 本期空目录，不做后端 |
+| `tests/unit` | 计分正常/边界/缺失用例 |
+| `tests/integration` | 4 个游戏到报告的完整流程 |
+| `.github/workflows` | push/PR 时检查文档和目录是否齐全 |
 
 ## 本期范围
 
@@ -50,7 +87,7 @@ MindMeter 是一个 **4 人 / 6 周**的课程项目：用 4 个 2–4 分钟的
 
 ## 当前状态
 
-仓库目前以需求与计划文档为主，代码尚未开始。开发启动后会在根目录补充启动说明和实际目录结构。
+项目目录与文档结构已搭好，代码尚未开始。W2 确定技术栈后，在 `code/frontend` 和 `code/core_engine` 落地，并在 README 补充启动说明。
 
 ## 原则
 

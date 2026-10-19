@@ -1,0 +1,64 @@
+name: Project structure
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  structure:
+    name: Check required files and directories
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check files
+        run: |
+          set -e
+          for f in \
+            README.md \
+            docs/README.md \
+            docs/requirements/problem_definition.md \
+            docs/requirements/functional_spec.md \
+            docs/requirements/nonfunctional_spec.md \
+            docs/algorithm/algorithm.md \
+            docs/software/software.md \
+            docs/mgmt/communication_mgmt_plan.md \
+            docs/mgmt/risk_mgmt_plan.md \
+            docs/retrospection/retrospection.md \
+            work_for_submission/1.md \
+            work_for_submission/2.md \
+            work_for_submission/3.md
+          do
+            if [ ! -f "$f" ]; then
+              echo "Missing file: $f"
+              exit 1
+            fi
+          done
+
+      - name: Check directories
+        run: |
+          set -e
+          for d in \
+            docs/requirements \
+            docs/algorithm \
+            docs/software \
+            docs/mgmt \
+            docs/retrospection \
+            code/backend \
+            code/frontend \
+            code/core_engine \
+            tests/unit \
+            tests/integration \
+            .github/workflows
+          do
+            if [ ! -d "$d" ]; then
+              echo "Missing directory: $d"
+              exit 1
+            fi
+          done
+          echo "Project structure OK"
