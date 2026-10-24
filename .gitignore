@@ -42,3 +42,6 @@ data/local/
 *.db
 logs/
 tmp/
+
+work_for_permission/
+
