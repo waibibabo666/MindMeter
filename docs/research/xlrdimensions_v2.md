@@ -1,5 +1,7 @@
 # 认知维度、分档测评与 AI 使用的调研与设计建议
 
+> **历史调研（2026-10-24 前）**：团队最终拍板改为 **8 项能力**（言语理解、言语流畅性、数字运算、知觉速度、归纳推理、空间视觉化、联想记忆、自然探索）。本文件的 4/7 维、总分、三档时长不再作为实现依据；当前口径见 [功能需求 v2.0](../requirements/functional_spec.md)、[算法设计 v3.0](../algorithm/algorithm.md)、[技术方案 v3.0](../software/architecture.md)。保留本文仅用于追溯取舍过程。
+
 | 项目 | 内容 |
 | --- | --- |
 | 文档编号 | MM-REQ-006 |
@@ -9,7 +11,7 @@
 | 评审人 | waibibabo666、song、1213lz |
 | 最后更新 | 2026-10-24 |
 | 合并来源 | [认知测量框架](rengzhi.md)（构念与测量学）＋ 本文件 v1.0《认知维度的依据调研与改动建议》（口径评审） |
-| 关联文档 | [功能需求规范](functional_spec.md)、[非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md) |
+| 关联文档 | [功能需求规范](../requirements/functional_spec.md)、[非功能需求规范](../requirements/nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md) |
 
 ## 摘要
 
