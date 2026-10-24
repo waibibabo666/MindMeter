@@ -35,7 +35,12 @@ jobs:
             docs/software/prototype/index.html \
             docs/mgmt/communication_mgmt_plan.md \
             docs/mgmt/risk_mgmt_plan.md \
-            docs/retrospection/retrospection.md
+            docs/retrospection/retrospection.md \
+            code/backend/README.md \
+            code/frontend/README.md \
+            code/core_engine/README.md \
+            code/ai/README.md \
+            tests/README.md
           do
             if [ ! -f "$f" ]; then
               echo "Missing file: $f"

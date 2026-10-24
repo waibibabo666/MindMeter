@@ -1,174 +1,129 @@
-# AI 接入位说明（BYOK）
+# Agent 接入位（L2：前端 → 后端）
 
-> 状态：**已留位，默认关闭；未配置 Key 时不发任何请求**
-> 位置：`index.html` 报告页 / 设置页
-> 更新：2026-10-24
+> L2 的 Agent 在后端（FastAPI + LangGraph），前端不直连模型；对话请求不携带 BYOK Key（设置页只在保存时提交一次，后端加密存储，之后前端不再接触）。
+> 本文件定义前端与后端的最小契约；详细图/节点见 [Agent 设计](../../requirements/xlragentdesign.md)。
 
----
+## 1. 角色
 
-## 1. 现在是什么状态
-
-| 项目 | 状态 |
+| 层 | 职责 |
 | --- | --- |
-| 报告页「AI 解读」卡片 | ✅ 已占位（默认显示模板） |
-| 设置页 BYOK 表单 | ✅ endpoint / model / key 三个字段 |
-| 实际网络请求 | ❌ 未配置或 `settings.enabled = false` 时不发起 |
-| 建议文案来源 | 本地规则表 `ADVICE`（8 个维度各 2 条，按最低的 1–2 个维度取 2–3 条） |
-| 后端 | ❌ 不存在；没有 `server.py`、没有网关、没有云端 Key |
+| 前端 | 展示消息、建议卡片、引用；发问题；显示降级状态 |
+| FastAPI | JWT 鉴权、限流、thread/memory API |
+| LangGraph | 取 facts/记忆 → 检索 → 生成 → 校验 → 存摘要 |
+| 模型 | 后端用用户加密的 BYOK Key 调用；Key 不出后端 |
 
-**当前行为**：报告页显示模板解读，下方标注“当前：模板解释（未开启 AI）”。
+## 2. 接口
 
----
+### 2.1 创建对话
 
-## 2. 接入位在哪
+`POST /api/v1/threads`
 
-### 2.1 前端开关
-
-`index.html` 中搜索 `let settings =`：
-
-```js
-let settings = Object.assign({
-  enabled: false,          // 用户配置并勾选后才为 true
-  endpoint: '',            // OpenAI-compatible /chat/completions
-  model: '',               // 用户填写
-  apiKey: ''               // 只存本机 localStorage
-}, store.get(K.settings, {}));
+```json
+{ "assessment_id": "a_123" }
 ```
 
-### 2.2 三个已实现函数 + 一个待抽出
+响应：
 
-| 函数 | 职责 | 说明 |
-| --- | --- | --- |
-| `buildFacts(session)` | 从 session 组装 facts | 只含维度分、完成度、建议 ID、复测差值 |
-| `callModel(facts, question)` | 发请求、解析、失败返回 `null` | 浏览器直连，无代理；校验目前内联 |
-| `validate(text, facts)` | 结构/ID/数字/禁用词/长度校验 | **正式实现从 `callModel` 抽出**；骨架内联在 `callModel` |
-| `renderAITemplate(session)` | 渲染 + 回退 | 失败时用模板；不是 `renderAdvice` |
+```json
+{ "thread_id": "t_456", "created_at": "2026-10-24T20:00:00+08:00" }
+```
 
-**接入只需要两件事**：用户在设置页填 endpoint/model/key；`settings.enabled` 置 `true`。
+### 2.2 发消息
 
----
+`POST /api/v1/threads/{thread_id}/messages`
 
-## 3. 请求契约
+```json
+{ "content": "为什么我联想记忆低？" }
+```
 
-`POST {endpoint}`，`Content-Type: application/json`，`Authorization: Bearer {apiKey}`
+响应（M1 非流式）：
 
 ```json
 {
-  "model": "user-model",
-  "messages": [
-    { "role": "system", "content": "你是 MindMeter 的报告解释助手。只解释给定 facts，不算分、不诊断、不新增建议。" },
-    { "role": "user", "content": "{\"task\":\"report\",\"dims\":[{\"id\":\"vc\",\"score\":62},{\"id\":\"am\",\"score\":60}],\"completed\":[\"vc\",\"ps\",\"sv\",\"am\"],\"adviceIds\":[\"adv_vc_01\",\"adv_am_02\"],\"retestDelta\":{\"ps\":4},\"constraints\":{\"maxChars\":200}}" }
-  ],
-  "temperature": 0.3,
-  "max_tokens": 400
+  "message_id": "m_789",
+  "role": "assistant",
+  "content": "本次联想记忆 60 分，低于你的空间视觉化 74 分。……",
+  "citations": ["kb_am_01", "kb_lim_02"],
+  "degraded": false,
+  "suggestions": [
+    { "advice_id": "adv_am_01", "title": "间隔重复", "accepted": null }
+  ]
 }
 ```
 
-### 字段说明
+### 2.3 最近消息
 
-| 字段 | 用途 | 缺了会怎样 |
-| --- | --- | --- |
-| `dims` | 八维分数（未测不传） | 只能泛泛而谈 |
-| `completed` | 完成度 | 可能把“未测”说成“低分” |
-| `adviceIds` | 固定建议 ID | 可能自创建议，校验会失败 |
-| `retestDelta` | 共同维度差值 | 复测解释缺失 |
-| `constraints` | 长度/禁诊断 | 输出不可控 |
+`GET /api/v1/threads/{thread_id}/messages?limit=20`
 
-**绝不发送**：姓名、手机号、年龄、学历、学校、公司、原始试次、ASR 文本。
+只返回最近 20 条；更早内容由摘要体现。
 
----
+### 2.4 记忆
 
-## 4. 响应契约
-
-```json
-{
-  "headline": "你的空间视觉化相对突出，联想记忆还有提升空间",
-  "body": "这次你完成了标准档四项。……",
-  "source": "model",
-  "degraded": false
-}
+```text
+GET  /api/v1/memory/profile
+PUT  /api/v1/memory/profile
+GET  /api/v1/memory/summaries
+DELETE /api/v1/memory
 ```
 
-- `source`: `model` | `template`
-- `degraded: true` 表示走了降级路径
-- 前端只读 `headline/body/source`，其余字段忽略
+## 3. 请求约束
 
----
+- 必须带 `Authorization: Bearer <access_token>`；
+- 只接受当前用户自己的 thread/assessment；
+- 不允许前端传 `user_id`、`facts`、`system prompt`、`model key`；
+- 后端从 DB 取 facts/记忆，从加密存储解密 Key；
+- 限流：每用户每分钟/每天上限（M1 可 30/500）。
 
-## 5. 校验（五条）
+## 4. 响应约束
 
-1. JSON 结构合法，`headline/body` 是字符串；
-2. 建议 ID 必须在池内，不新增建议；
-3. 回答里的数字必须来自 facts；
-4. 禁用词命中 0：诊断、治疗、治愈、疗效、正常、异常、提升智商、脑龄、抑郁、痴呆、ADHD；
-5. 总长 ≤200 字，追问 ≤120 字。
+- `content` 必须来自校验通过的模型输出或模板；
+- `citations` 至少 1 个（有知识块时）；无检索结果时为空并说明；
+- `degraded=true` 表示模板兜底；
+- 不返回内部报错/堆栈/Key/完整 prompt；
+- 不返回未授权记忆。
 
-> 原型骨架的 `callModel` 目前内联做结构/长度/禁用词校验；建议 ID 与数字来源校验在正式实现中抽成 `validate(text, facts)` 补齐。
+## 5. 降级
 
-不通过 → 重试一次 → 仍不通过 → 模板。
-
----
-
-## 6. 降级行为
-
-```
-未配置 Key / 未开启        → 不发请求，模板 + “未开启 AI”
-超时（8s）                → 模板 + “AI 暂不可用”
-非 2xx / JSON 解析失败     → 模板
-结构缺 headline/body       → 模板
-命中禁用词                → 重试一次 → 模板
-数字不在 facts 中          → 模板
-endpoint 不支持 CORS       → 提示换 endpoint + 模板
-```
-
-**铁律：报告页永远不空。分数和图表是本地算的，只有“那段话”依赖 AI。**
-
----
-
-## 7. 三条红线
-
-1. **分数不由模型算** —— 模型只解释，不测量；
-2. **不做疾病判断** —— 输出后扫描禁词；
-3. **不虚构研究/数字** —— 提示词禁止编造，校验拦截 facts 之外的数字。
-
-命中禁词/幻觉数字：丢弃输出，回退模板。
-
----
-
-## 8. 隐私与安全
-
-| 项 | 要求 |
+| 情况 | 前端看到 |
 | --- | --- |
-| Key 存储 | 只存本机 `mindmeter.settings.v1`；不写日志、不进导出 |
-| 公用设备 | 设置页提示“请勿在公用设备保存 Key” |
-| 数据出境 | 仅用户主动开启后，发维度分与 facts；由用户选择的模型厂商处理 |
-| 清除 | 清除数据时同时删除 Key |
-| CORS | endpoint 必须支持浏览器 CORS；不支持则 AI 不可用，不绕过 |
-| 无后端 | 项目组不托管 Key、不代理请求、不保存对话 |
+| 模型超时/限流 | 模板回答 + “AI 暂不可用，已回退模板” |
+| 校验不过 | 模板回答 |
+| 无 facts | 引导先完成测评 |
+| 无检索结果 | 回答 + “知识库暂未覆盖” |
+| 未登录/过期 | 401 → 刷新/登录 |
 
----
+**铁律：对话页不空；分数/报告不受 AI 失败影响。**
 
-## 9. 上线前检查清单
+## 6. 前端展示
 
-- [ ] 默认 `settings.enabled = false`
-- [ ] 未配置 Key 时，网络面板无 AI 请求
-- [ ] Key 只在 localStorage，仓库/日志/导出里搜不到
-- [ ] 断网、超时、500、越界词四种情况都回退模板
-- [ ] 报告页首屏不依赖 AI（先出分数和雷达图）
-- [ ] 请求体不含身份/人口学/原始试次/ASR 文本
-- [ ] 输出禁词/数字/长度校验生效
-- [ ] 清除数据后 Key 也被删除
-- [ ] 页面提示“AI 生成·非诊断·可关闭”
+- 消息列表：用户/助手气泡；
+- 建议卡片：标题、时长、接受/拒绝；
+- 引用：显示 `kb_*` 对应标题；
+- 降级：黄色提示，不显示报错栈；
+- 记忆：单独的“记忆”页，可删除；
+- 不展示原始 prompt/模型 Key。
 
----
+## 7. 安全与隐私
 
-## 10. 相关文件
+- Key 只在后端解密使用；前端只在设置页提交一次，对话请求不带 Key；
+- 前端不缓存完整对话到 localStorage（只保留当前视图）；
+- 退出登录清空内存中的消息；
+- 删除账号/记忆后，后续请求不得引用；
+- 不把对话发给第三方分析/SDK。
 
-| 文件 | 作用 |
-| --- | --- |
-| `index.html` | 前端接入位（`settings`、`buildFacts`、`callModel`、`renderAITemplate`） |
-| `../requirements/xlragentdesign.md` | AI 功能与边界 |
-| `../../algorithm/algorithm.md` | 八维计分与 facts 来源 |
-| `../../software/architecture.md` | 无后端/BYOK 架构 |
+## 8. 上线检查
 
-> 没有 `server.py`，没有 `mindmeter-v3.html`，没有 serverless 网关。旧文档中的这些引用已删除。
+- [ ] 对话请求体无 Key；设置页只在保存时提交
+- [ ] 401 能刷新/回登录
+- [ ] 只返回当前用户 thread
+- [ ] 最近 20 条限制生效
+- [ ] citations 可点击/可读
+- [ ] 降级提示可见，不显示堆栈
+- [ ] 删除记忆后不再引用
+- [ ] 限流生效
+
+## 9. 相关
+
+- [Agent 设计](../../requirements/xlragentdesign.md)
+- [技术方案](../../software/architecture.md)
+- [功能需求](../../requirements/functional_spec.md)

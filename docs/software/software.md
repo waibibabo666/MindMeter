@@ -5,132 +5,130 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档编号 | MM-DES-002 |
-| 版本 | v2.0 |
-| 状态 | 完成（2026-10-24 八维决策后重写） |
+| 版本 | v3.0（L2） |
+| 状态 | 目标设计；细节见技术方案 |
 | 文档负责人 | song |
 | 评审人 | waibibabo666、xlr268、1213lz |
 | 最后更新 | 2026-10-24 |
-| 关联文档 | [功能需求规范](../requirements/functional_spec.md)、[算法设计](../algorithm/algorithm.md)、[技术方案](architecture.md) |
+| 关联 | [功能需求](../requirements/functional_spec.md)、[算法设计](../algorithm/algorithm.md)、[技术方案](architecture.md)、[Agent 设计](../requirements/xlragentdesign.md) |
 
-> 本文只保留软件设计的总览。技术选型、模块契约、AI/ASR、数据模型和排期的细节以[技术方案](architecture.md)为准，避免两份文档各写一套。
+> 本文只保留 L2 软件设计总览。技术选型、数据模型、API、LangGraph 图、RAG、部署与阶段以[技术方案](architecture.md)为准，避免两份文档各写一套。
 
 ## 二、目标与约束
 
-6 周内做一个**纯前端、本地存储、静态部署**的 Web 应用：
+L2 是一个**有账号、有服务端记忆、有对话式 Agent** 的 Web 产品：
 
-- 不建账号、不接数据库、不做后端接口；
-- 8 个任务和报告都在浏览器里完成；
-- 计分逻辑独立成模块，方便测试和复用；
-- 支持快测 / 标准 / 深度三档（5 / 13 / 28 分钟）；
-- AI 为可选 BYOK，默认关闭；ASR 仅用于言语流畅性；
-- 静态托管即可上线，成本接近零。
+- 用户注册/登录，跨设备查看测评与记忆；
+- 8 项测评、三档、服务端计分；
+- Agent 做报告解读、建议、追问、趋势解释；
+- 记忆：最近 20 条消息 + 画像 + 测评摘要 + 建议记录；
+- RAG：本地知识库 + pgvector 检索 + 引用；
+- 模型 BYOK，Key 加密存库；
+- 原生前端 + FastAPI + PostgreSQL/pgvector + LangGraph；
+- 不引入 K8s/Redis/Milvus，保持 4 人可维护。
 
-## 三、架构
-
-```text
-浏览器
-├─ 页面与任务（frontend）
-├─ 计分模块（core_engine，纯函数）
-├─ 可选 AI（frontend/ai，BYOK）
-├─ 可选 ASR（Web Speech API）
-└─ localStorage（sessions / draft / settings / practice）
-        │
-        ▼
-静态托管（GitHub Pages，HTTPS）
-```
-
-`code/backend` 继续保留为空目录，但本期**不启用**；如果未来要做账号或跨设备同步，再单独评估。
-
-## 四、模块划分
+## 三、模块
 
 | 模块 | 职责 | 不做什么 |
 | --- | --- | --- |
-| `frontend/pages` | 首页、档位、同意、任务、报告、历史、设置 | 不实现计分公式 |
-| `frontend/tasks` | 8 个任务的试次、计时、指标采集 | 不判定分数 |
-| `frontend/ai` | BYOK 请求、模板、护栏、降级 | 不改分数、不发身份信息 |
-| `frontend/practice` | 4 款补充练习（心算、舒尔特、翻牌、分类） | 不计分、不进报告 |
-| `core_engine` | 8 维计分、缺失处理、版本 | 不操作 DOM、不发请求 |
-| `storage` | 四类本地键读写与异常 | 不上传 |
-| `backend` | 本期空目录 | 不实现 |
+| `frontend` | 登录/注册、测评、报告、对话、记忆、趋势、设置 | 不计分、不直连模型 |
+| `backend/api` | Auth、Assessment、Report、Thread、Memory、Settings、Health | 不写 Agent prompt |
+| `backend/scoring` | 8 维计分、缺失处理、版本 | 不碰 DOM/网络 |
+| `backend/agent` | LangGraph 图、节点、prompt、校验 | 不改分数、不新增建议 |
+| `backend/rag` | 知识库 ingest、embedding、检索、引用 | 不抓公网 |
+| `backend/memory` | profile/summaries/advice/最近消息 | 不存全量对话 |
+| `backend/core` | 配置、DB、安全、加密、日志 | — |
+| `postgres` | 业务表 + pgvector + LangGraph checkpoint | — |
+| `tests` | 单测/集成/E2E/AI 评测 | 不使用真实用户数据 |
 
-## 五、目录结构
+## 四、目录
 
 ```text
 code/
-├─ frontend/
-│  ├─ index.html
-│  └─ src/
-│     ├─ main.js
-│     ├─ pages/
-│     ├─ tasks/            # vc, vf, nc, ps, ir, sv, am, ni
-│     ├─ ai/               # byok.js, validate.js, templates.js
-│     ├─ practice/         # math, schulte, flip, sort
-│     ├─ storage.js
-│     └─ styles/
-├─ core_engine/
-│  ├─ src/
-│  │  ├─ scoring.js
-│  │  └─ config.js
-│  ├─ test/
-│  │  └─ scoring.test.js
-│  └─ README.md
-└─ backend/
-   └─ README.md            # 本期不启用
+├─ backend/
+│  ├─ app/
+│  │  ├─ main.py
+│  │  ├─ api/
+│  │  ├─ core/
+│  │  ├─ models/
+│  │  ├─ schemas/
+│  │  ├─ scoring/
+│  │  ├─ agent/
+│  │  ├─ rag/
+│  │  └─ memory/
+│  ├─ alembic/
+│  ├─ tests/
+│  ├─ Dockerfile
+│  └─ pyproject.toml
+└─ frontend/
+   ├─ index.html
+   └─ src/
+      ├─ api.js
+      ├─ auth.js
+      ├─ pages/
+      ├─ tasks/
+      ├─ asr/
+      └─ styles/
 ```
 
-> 原型骨架在 `docs/software/prototype/index.html`，用于走通三档流程；正式实现按上面的目录落到 `code/`。
+> `code/core_engine/` 是 L1 JS 计分历史，L2 不再参与计分；正式计分在 `backend/app/scoring/`。
 
-## 六、数据流
+## 五、数据流
 
 ```text
-任务作答
-  → 每个任务输出原始指标
-  → core_engine.scoreSession(results, tier)
-  → { 八维分数, 缺失维度, scoringVersion }
-  → 报告页渲染（无总分）
-  → localStorage 追加 session
-  → 历史页读取并对比共同维度
+登录
+  → 创建 assessment
+  → 前端跑任务，提交原始指标
+  → 服务端计分 + 落库
+  → 八维报告（无总分）
+  → 创建 thread
+  → LangGraph:
+       取 facts + 记忆 → 检索知识库 → 生成 → 校验
+  → 回答 + 引用
+  → 会话结束写摘要
+  → 7 天后复测 → 趋势 → Agent 解释共同维度
 ```
 
-报告只依赖计分结果和静态文案，不依赖网络。AI 只影响“解释那段话”，不影响分数和图表。
+## 六、数据与存储
 
-## 七、本地存储
+| 数据 | 存储 | 保留 |
+| --- | --- | --- |
+| 账号 | `users` / `refresh_tokens` | 账号存续期；删除后 30 天清除 |
+| 测评 | `assessments` / `assessment_raw` / `assessment_scores` | 账号存续期 |
+| 记忆 | `memory_profile` / `memory_summaries` / `advice_log` | 账号存续期；可删 |
+| 对话 | `chat_messages` | 最近 20 条；更早只留摘要 |
+| 知识库 | `kb_chunks`（pgvector） | 版本化 |
+| AI 运行 | `ai_runs` | 30–180 天；不记 Key/全文 |
+| 审计 | `audit_log` | 180 天 |
 
-- `mindmeter.sessions.v1`：已完成测评；
-- `mindmeter.draft.v1`：进行中的测评，每完成一个任务写一次；
-- `mindmeter.settings.v1`：AI 开关、BYOK endpoint/model/key；
-- `mindmeter.practice.v1`：4 款补充练习最佳纪录。
+- 不存姓名、手机号、学校、公司、年龄、学历；
+- 不存原始 ASR 音频/转写全文；
+- BYOK Key 加密存库，主密钥只放环境变量；
+- 导出不含密码/Key。
 
-规则：
+## 七、部署
 
-- 只存测评数据，不存姓名、手机号、身份证、学校、公司、年龄、学历；
-- 不存 ASR 原始音频/转写文本；
-- 写入失败（隐私模式/空间不足）要提示用户；
-- 清除数据时同时删除四类键和 BYOK Key；
-- 数据 schema 见[功能需求规范](../requirements/functional_spec.md)第八节。
-
-## 八、部署
-
-| 项目 | 方案 |
+| 项 | 方案 |
 | --- | --- |
-| 托管 | GitHub Pages（备选 Vercel/Netlify 免费额度） |
-| 协议 | HTTPS |
-| 构建 | 纯静态文件直接部署，无构建步骤 |
-| 回滚 | 每周演示版本打 tag |
-| 演示兜底 | 本地打开 `index.html` + 录屏视频 |
-| AI/ASR | 需要网络；断网时回退模板/提示未测 |
+| 本地 | Docker Compose：api + postgres |
+| 生产 | 1 个 API 服务 + 1 个托管 Postgres + 静态前端 |
+| 迁移 | Alembic |
+| 备份 | 托管 Postgres 每日备份，7 天 |
+| 监控 | 结构化日志 + `ai_runs` + 健康检查 |
+| 回滚 | 镜像 tag + 迁移回退 |
 
-## 九、关键取舍
+## 八、关键取舍
 
-- **不做后端**：省掉账号、数据库、接口联调和部署成本；代价是换设备不同步、清浏览器会丢数据，已在隐私提示中说明。
-- **不做框架锁定**：原生 JS 足够支撑 8 个短任务；不引入构建链，答辩现场最稳。
-- **计分独立**：即使页面重写，`core_engine` 的公式和测试仍可复用。
-- **本地优先**：课程演示不依赖网络，降低现场故障风险。
-- **AI 是增强**：BYOK、默认关闭、模板兜底；关掉 AI 报告仍完整。
-- **不设总分**：三档维度不同，总分不可比；只给八维分数和共同维度复测。
+- **服务端计分**：单一权威、防篡改；代价是 Python 重写 8 个公式。
+- **BYOK 加密存库**：用户不用每次填 Key；代价是托管风险与主密钥管理。
+- **LangGraph**：显式图/状态/checkpoint；代价是框架复杂度，prompt 和校验仍留在自己代码。
+- **本地 embedding**：不依赖外部 embedding API；代价是 CPU/模型依赖。
+- **原生前端**：不引入构建链；代价是复杂交互要自己组织模块。
+- **不上 K8s/Redis/Milvus**：4 人维护；需要时再评估。
 
-## 十、与旧版的关系
+## 九、与 L1 的关系
 
-- 2026-10-19 的 v1.0 软件设计（4 游戏、15 分钟、Vite/React 可选）已被本版取代；
-- 2026-10-24 的 v1.1 技术方案（serverless 网关、账号/后端）已被[技术方案](architecture.md)取代；
-- 旧版只保留在 git 历史中，不再作为实现依据。
+- L1 的静态原型、JS 计分、BYOK 直连保留为历史/UI 参考；
+- L2 以本文和[技术方案](architecture.md)为准；
+- 迁移时优先复用前端任务 UI，不直接复用 L1 计分；
+- L1 localStorage 数据可在 M3 提供导入工具，不作为 M1 范围。
