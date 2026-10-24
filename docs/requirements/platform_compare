@@ -1,16 +1,20 @@
-# MindMeter 平台选型与可行性分析
+# MindMeter 平台选型、可行性与 API 架构分析
 
 **项目**：MindMeter——用 4 个 2–4 分钟的小游戏，在 15 分钟内给出工作记忆、抑制控制、加工速度、情景记忆四个维度的认知画像与行动建议，并支持本地复测对比。  
 **团队与周期**：4 人 / 6 周。  
-**文档目的**：比较 Web 与原生应用两条技术路线，评估 6 周内完成的可行性，并给出范围与风险建议。
+**文档目的**：比较 Web 与原生应用两条技术路线，评估 6 周内完成的可行性，并分析网页端与应用端 API 接口的差异与选型。  
+**版本**：v1.0  
+**日期**：2026-10-24
 
-> 一句话结论：**Web 优先**；原生 App 只在课程硬性要求或“毫秒级时序”是评分核心时才值得。平台不是最大风险，**测量效度与复测解释**才是。
+> 一句话结论：**Web 优先**；原生 App 只在课程硬性要求或“毫秒级时序”是评分核心时才值得。平台不是最大风险，**测量效度与复测解释**才是；API 应坚持“一套契约、两个适配层”，且对 MindMeter 的 MVP 而言可以后置甚至不做。
 
 ## 摘要
 
 建议采用 Web 优先路线，原生 App 作为备选而非默认方案。原因是一套代码、零安装、答辩演示成本最低，本地存储天然契合“本地复测”；6 周内应把时间投入测量设计与验证，而不是打包、签名和商店审核。
 
 但平台不是最大风险。**测量效度**才是：2–4 分钟的任务信度有限，复测的练习效应容易被误读为“认知提升”。因此项目应定位为“教育性 / 自我探索工具”，而不是临床测评。
+
+API 方面，网页端与应用端的差异不在业务契约，而在边缘适配：认证方式、CORS、离线能力、版本碎片、推送、安全加固。正确做法是一套领域 API + 两套薄适配层；对 MindMeter 的 MVP，本地优先可以完全不需要 API，若要做同步，只做最小会话同步，不做全套账号。
 
 可行性判断：
 
@@ -20,6 +24,7 @@
 | 测量 | 中 | 2–4 分钟任务信度有限；无直接可用常模；差异分数不稳 |
 | 进度 | 中高 | 可完成 MVP，但验证研究必须从第 1 周启动 |
 | 伦理 | 可控 | 本地存储、知情同意、非诊断声明 |
+| API | 可选 | MVP 可本地优先；做同步则工作量 +1–1.5 周 |
 
 ## 1. 项目约束与关键假设
 
@@ -28,8 +33,10 @@
 - 输出四个维度的画像与行动建议
 - 支持本地复测对比，不依赖后端账号体系
 - 默认参与者使用笔记本浏览器；若以手机为主，需要额外的设备控制策略
+- 团队 4 人、6 周，开发时间按课余投入估算
+- 若课程评分明确要求原生 App，平台结论需要反转
 
-## 2. 网页 vs 应用：差异分析
+## 2. 网页 vs 应用：平台选型
 
 ### 2.1 计时精度不是“原生一定更好”
 
@@ -56,7 +63,7 @@
 | 成本 | 低 | 高（开发者账号、证书、测试机） | 中 |
 | 适合 | 课程项目、快速迭代 | 强制原生、传感器、商店分发 | 国内轻量传播 |
 
-### 2.3 加权对比
+### 2.3 加权对比与敏感性
 
 权重按课程项目场景设定，可按评分标准调整。评分为 1–10 的主观锚定，用于暴露取舍，不是精确结论。
 
@@ -68,6 +75,13 @@
 | 桌面壳（Tauri/Electron） | 6 | 7 | 4 | 9 | 5 | 10 | 7 | 7 | 7 | 6.5 |
 
 敏感性：把时序权重提高到 40%、交付权重降到 5%，Web 约 7.3，原生约 7.3，基本打平。结论是：只有课程明确要求原生，或“毫秒级时序”是评分核心时，才值得转原生。
+
+### 2.4 平台选型结论
+
+- 默认选 **Web / PWA**，一套代码覆盖答辩演示、同学试用和本地复测。
+- 原生适合：课程硬性要求、必须上商店、必须离线现场使用、必须用传感器。
+- 微信小程序不推荐作为主方案：计时链路受限、审核与主体要求增加 6 周项目的不确定性。
+- 桌面壳（Tauri/Electron）不会改善时序，只改变分发形态；除非课程要求桌面应用，否则没有必要。
 
 ## 3. 可行性分析
 
@@ -160,6 +174,7 @@
 - 任务顺序固定，复测保持一致，使顺序效应在两次之间成为常量
 - 练习 trial 不计分，但保留在流程内
 - 组间休息固定 10–15 秒，避免疲劳与节奏差异
+- 表中 trial 数是目标值，W1 预试后按实际时长微调
 
 ### 3.5 伦理与合规：可控
 
@@ -168,21 +183,236 @@
 - 明确声明“不是医疗诊断，不构成健康建议”
 - 避免污名化标签
 - 刺激注意色盲友好，避免闪烁
+- 若后续增加云端同步，需补充隐私政策、删除机制与合规评估（PIPL/GDPR）
 
-## 4. 6 周计划与分工
+## 4. API 架构：网页端 vs 应用端
+
+### 4.1 先澄清三种含义
+
+“在网页端做 API”可能指三件不同的事，结论并不一样：
+
+1. **后端 API 服务**（供网页 / 应用调用）：应该平台无关，一套契约。
+2. **客户端 API 封装层**（fetch 封装、hooks、SDK）：必须分平台适配。
+3. **API 的部署位置**（放在 Web 框架里，还是独立后端）：建议独立或稳定 serverless，不要绑死 Web 会话。
+
+如果指的是用 Next.js Route Handlers / Server Actions 写接口：Route Handlers 可以是公开 REST，但 Server Actions 是 Web-only；如果未来有 App，不要把业务逻辑放在 Server Actions 里。
+
+### 4.2 差异总表
+
+| 维度 | 网页端 | 应用端 | 对 API 设计的影响 |
+|---|---|---|---|
+| 认证 | HttpOnly Cookie + CSRF + BFF | Bearer + Refresh Token + Keychain/Keystore | 同一套 OIDC，双适配；Web 用 BFF 避免 token 进 JS |
+| CORS | 需要预检、白名单、credentials | 无 CORS | CORS 不是鉴权；服务端仍要做 authz 和限流 |
+| 离线 | IndexedDB + Service Worker；Background Sync 在 iOS 不可用 | SQLite + WorkManager/BGTask；后台同步可靠 | 队列、幂等、重试要通用 |
+| 推送 / 后台 | Web Push 受限（iOS 16.4+ 且需安装 PWA） | APNs/FCM 可靠 | 提醒功能做平台分支，或改用邮件 / 日历 |
+| 版本 / 发布 | 原子发布、即时回滚、用户通常处于最新版 | 版本碎片数月、商店审核、灰度 | API 必须 `/v1` + 向后兼容 + 功能开关 + 最小版本 |
+| 安全 | XSS、CSRF、CSP、第三方脚本 | 逆向、令牌窃取、重打包 | 同一鉴权 + 平台加固；不要信任客户端指标 |
+| 观测 | RUM、JS error、网络瀑布 | Crash/ANR、版本维度看板 | 统一 `requestId`、`clientVersion`、`platform`、`taskVersion` |
+| 测试 | Playwright、MSW | Detox/Maestro、真机矩阵 | OpenAPI 契约测试共享 |
+| 性能 | 冷启动、包体、HTTP 缓存 | 安装包、启动、连接池 | gzip/br、ETag、批量、超时重试通用 |
+| 分发 | URL / 二维码 | 安装、商店、深链 | API 域名稳定，支持 universal link |
+
+### 4.3 关键差异逐项
+
+#### 4.3.1 认证与会话
+
+**网页端**
+
+- 首选 HttpOnly + Secure + SameSite Cookie，CSRF token 或 SameSite=Lax + 自定义头。
+- SPA 不要把长期 token 放 `localStorage`；短期 token 放内存，refresh 放 HttpOnly Cookie。
+- 推荐 BFF（Backend for Frontend）：浏览器只跟同源 BFF 说话，BFF 持有 token 再调核心 API。这样 XSS 拿不到 token，CORS/CSRF 也好处理。
+
+**应用端**
+
+- Bearer access token（短时效）+ refresh token（Keychain/Keystore），支持轮换与撤销。
+- 没有 Cookie，也不应该依赖 Cookie；深链回调适合 OAuth PKCE。
+- 可选证书固定、Play Integrity/App Attest，课程项目一般不必。
+
+**统一做法**
+
+- OIDC Authorization Code + PKCE，Web 走 BFF，App 走原生安全存储。
+- 课程项目不建议自建账号系统：匿名参与者码 + 可选 PIN，或 magic link；真要做账号，用 Supabase/Auth0/Clerk。
+
+**常见误区**：如果 API 写在 Next.js Route Handler 里并用 Cookie 认证，App 很难复用；Server Actions 更是 Web-only。要跨端，就把 API 当成独立服务，用 Bearer/Cookie 双认证或独立 BFF。
+
+#### 4.3.2 离线与同步
+
+**网页端**
+
+- IndexedDB 存 trial 数据；Service Worker 缓存静态资源。
+- Background Sync 在 iOS Safari 基本不可用；`sendBeacon` 有 ~64KB 限制；用户关标签页可能丢最后一次请求。
+- 所以：**会话结束前必须完成同步或落盘**，不能把“关页即发”当可靠机制。
+
+**应用端**
+
+- SQLite/Room/CoreData + WorkManager/BGTaskScheduler，后台重试可靠；iOS 可用 background URLSession。
+- 但仍要处理杀进程、低电量、无网。
+
+**通用设计**
+
+- 本地队列 + 幂等键 + 指数退避。
+- 会话数据 **append-only**：创建后只追加 trial，完成后不可变；服务端按 `sessionId` 去重。
+- 冲突策略：会话不可合并，元数据用 ETag/`If-Match`；不要对 trial 做 last-write-wins。
+
+#### 4.3.3 版本与发布（最大差异）
+
+**Web**
+
+- 部署是原子的，回滚快，用户通常处于最新版。
+- 但 Service Worker 可能让用户继续跑旧 JS；需要版本化资源、`skipWaiting`/`clients.claim` 或提示刷新。
+
+**App**
+
+- 版本碎片持续数月；旧版本会继续调 API。
+- API 只能做**加法**：加字段、加端点，不删不改语义；弃用要给 `Deprecation`/`Sunset` 头；breaking change 要配最小版本强制升级（426 Upgrade Required）。
+- 需要功能开关、灰度、服务端配置下发。
+
+**结论**：App 会把 API 的生命周期成本抬高一个量级。如果 6 周内只做 Web，可以推进更快；但既然设计 API，就按“未来可能有 App”的标准做版本化，成本很低。
+
+**技术选型提醒**：
+
+- tRPC 对 TypeScript 全栈开发效率高，但 Dart/Kotlin/Swift 客户端用不了；Server Actions 同理。
+- GraphQL 对多端较灵活，但 6 周项目增加复杂度；gRPC 在浏览器端需要 grpc-web。
+- **REST/JSON + OpenAPI 是跨端最低公共分母**，客户端可自动生成。
+
+#### 4.3.4 安全
+
+**Web**
+
+- 主要风险是 XSS、CSRF、点击劫持、第三方脚本。
+- CSP、SRI、HttpOnly Cookie、CORS 白名单、CSRF token；不要用 `Access-Control-Allow-Origin: *` 配 credentials。
+- CORS 不是安全边界，只是浏览器策略；服务端必须自己做鉴权和授权。
+
+**App**
+
+- 主要风险是逆向、token 提取、重打包、root/越狱环境。
+- 不要把密钥写进 App；token 放安全存储；证书固定和 attestation 是可选项，课程项目可跳过。
+- 原生请求没有 Origin，不要把 Origin 当作鉴权依据。
+
+**API 侧（两端共通）**
+
+- 每个 session 校验归属：参与者只能读写自己的数据。
+- 输入校验（Zod/JSON Schema）、限流（429 + Retry-After）、审计日志、加密传输与静态加密。
+- **不要信任客户端算出的分数**：服务端从原始 trial 重算 metrics；客户端结果只用于即时展示。
+
+#### 4.3.5 推送与后台
+
+- Web Push：需要 Service Worker + 权限；iOS 要 16.4+ 且“添加到主屏幕”，可靠性一般。
+- App：APNs/FCM 可靠，还能做本地通知和后台任务。
+- MindMeter 唯一的推送场景是“复测提醒”。课程项目用邮件/日历提醒更省事，不建议把推送作为核心功能。
+
+#### 4.3.6 观测与测试
+
+- Web：RUM、JS 错误、网络瀑布；Playwright + MSW 做 E2E 和 mock。
+- App：Crashlytics/Sentry、ANR、真机矩阵；Detox/Maestro。
+- 统一请求头：`X-Client-Version`、`X-Platform`、`X-Task-Version`、`X-Request-Id`；服务端日志按这些维度切分。
+- 契约测试：OpenAPI + Schemathesis/Dredd，Web 和 App 共用同一份 spec。
+
+#### 4.3.7 接口定义与类型共享
+
+- Web：monorepo 里共享 TypeScript 类型/Zod schema。
+- App：从 OpenAPI 生成 Dart/Kotlin/Swift 客户端，不要手写。
+- **Contract-first**：OpenAPI 3.1 作为唯一真相源；生成客户端、mock server、契约测试。
+- 跨端共享“schema”，不要共享运行时实现；Web 的 React 组件和 App 的 Widget 本来就不该复用。
+
+### 4.4 架构方案对比
+
+| 方案 | 结构 | 优点 | 缺点 | 适用 |
+|---|---|---|---|---|
+| 无 API（本地优先） | IndexedDB + JSON 导出 | 零后端、隐私好、无延迟、6 周最稳 | 无跨设备、数据易失 | **MindMeter MVP 推荐** |
+| 单 API + Web BFF | 核心 API + BFF（Cookie）+ App Bearer | 安全、复用、边界清晰 | 多一层，工作量 +3–5 天 | 有同步/账号时推荐 |
+| 单 API 直连 | Web/App 都调同一 API | 简单 | Web token 暴露、CORS/CSRF 要处理 | 小项目可接受 |
+| 双 API | Web API + App API | 各自优化 | 重复、漂移、测试翻倍 | **不推荐** |
+| Web 框架内嵌 API | Next.js Route Handlers/Server Actions | 上手快 | 绑 Web 会话、App 难用、发布耦合 | 仅 Web |
+
+**关键区分**：允许两套 **BFF**（平台适配层），不允许两套**领域 API**。BFF 可以薄到只做 Cookie/CSRF/聚合；核心业务 API 必须共享。
+
+### 4.5 MindMeter API 契约建议
+
+如果决定做同步，最小可用 API 如下：
+
+| 方法 | 路径 | 用途 | 备注 |
+|---|---|---|---|
+| POST | `/v1/sessions` | 创建会话 | 客户端生成 UUID + `Idempotency-Key` |
+| PUT | `/v1/sessions/{id}` | 批量写 trial | 分片、压缩，允许重试 |
+| POST | `/v1/sessions/{id}/complete` | 完成会话 | 服务端重算 metrics |
+| GET | `/v1/participants/{code}/sessions` | 复测列表 | 游标分页 |
+| GET | `/v1/norms/{task}` | 常模 | ETag + 版本化，可缓存 |
+| GET | `/v1/recommendations` | 建议 | 可按 profile 缓存，或打包进客户端 |
+| POST | `/v1/telemetry` | 质量日志 | 采样、批量 |
+| DELETE | `/v1/participants/{code}` | 删除数据 | 隐私要求 |
+
+Payload 示例：
+
+    {
+      "schemaVersion": 1,
+      "taskVersion": "wm-2back-1.0",
+      "formId": "A",
+      "participantCode": "P-XXXX",
+      "startedAt": "2026-10-24T10:00:00+08:00",
+      "device": { "platform": "web", "refreshHz": 60, "input": "keyboard" },
+      "quality": { "droppedFrames": 3, "visibilityChanges": 1 },
+      "trials": [
+        { "i": 0, "stim": "A", "onsetMs": 1200, "respMs": 1650, "correct": true }
+      ],
+      "metrics": { "dprime": 1.8 }
+    }
+
+设计要点：
+
+- **时间**：会话时间用 ISO 字符串；trial 内用单调毫秒；服务端记录 `receivedAt`，不要依赖客户端时钟。
+- **幂等**：`Idempotency-Key` + 客户端 UUID；重复请求返回同一结果。
+- **重算**：服务端从 `trials` 重算 metrics，客户端 `metrics` 只做参考。
+- **版本**：`schemaVersion`、`taskVersion`、`formId` 都存；常模版本独立，跨版本比较要映射。
+- **不可变**：会话 `complete` 后不允许改 trial；修正走新会话或标注。
+- **大小**：4 个任务 × ~100 trial × ~100B ≈ 40KB，JSON gzip 后 ~20KB，完全可控；帧级日志要采样。
+
+认证建议：
+
+- 课程项目：匿名参与者码 + 可选 PIN，或 magic link；不建密码体系。
+- 跨设备复测才需要账号；用托管 auth，不自己写。
+- Web 用 BFF + Cookie；App 用 Bearer + 安全存储。
+
+计时与 API 的关系：
+
+- **trial 循环里绝对不能有网络请求**；常模/建议在会话开始前预取并缓存。
+- 会话结束后批量上传；Web 用 `fetch(..., {keepalive:true})` 或 `sendBeacon` 做最后兜底，App 用后台任务。
+- 因此 API 延迟不会污染 RT；这是 MindMeter 做 API 时最重要的约束。
+
+### 4.6 API 的工作量与 6 周可行性
+
+| 方案 | 额外工作量 | 判断 |
+|---|---|---|
+| 无 API，本地优先 | 0 | **推荐**，把时间留给测量与验证 |
+| 最小同步 API（匿名码 + 单表 + 幂等） | 1–1.5 周（1 人） | 可行，但会挤压验证研究 |
+| 完整账号 + 跨设备合并 | +1–2 周 | 不建议，6 周内风险高 |
+| 双 API（Web/App 各一套） | +1–2 周 | 不值得 |
+
+加速选项：用 Supabase/Firebase 托管 auth + DB + storage，省 3–5 天；但契约要自己设计，避免锁死。
+
+**关键路径不是 API，而是测量设计与 W5 的验证研究**。API 做多了，项目会变成“带认知游戏的 CRUD”，反而偏离课程重点。
+
+### 4.7 小结
+
+- 业务契约平台无关；差异在认证、离线、版本、安全、推送、观测。
+- 一套领域 API + 两套薄适配层；允许两套 BFF，不允许两套领域 API。
+- Web 优先时 API 可以后置；若未来做 App，从第一天就用 REST/OpenAPI 和 `/v1` 版本化。
+- 对 MindMeter，API 的最大价值是跨设备复测与数据备份，不是核心测量；不要让 API 进入 trial 循环。
+
+## 5. 6 周计划与分工
 
 | 周 | 交付物 | 重点 |
 |---|---|---|
 | W1 | 协议冻结、计时 spike、仓库 / CI、线框、开始招募 | 用 1 页 demo 测 3 台设备的 rAF / 键盘 RT / 音频延迟 |
 | W2 | 共用 trial 引擎 + 工作记忆 + 加工速度 | 引擎先跑通，两个任务复用 |
-| W3 | 抑制控制 + 情景记忆 + 完整 session 流程 | 端到端能走完 15 分钟 |
-| W4 | 计分、画像、建议、复测 UI；内部预试 n=8–10 | 修 bug、检查计时质量日志 |
+| W3 | 抑制控制 + 情景记忆 + 完整 session 流程 | 端到端能走完 15 分钟；API 若要做，本周定契约 |
+| W4 | 计分、画像、建议、复测 UI；内部预试 n=8–10 | 修 bug、检查计时质量日志；最小同步 API 可并行 |
 | W5 | 验证研究 n=20–30；计时审计；修复 | 7 天复测、平行版本、计算 ICC / SEM / 练习效应 |
 | W6 | 打磨、无障碍、答辩 demo、报告、缓冲 | 冻结功能，只修 bug |
 
 角色建议（4 人）：
 
-- 技术负责人：引擎、计时、CI
+- 技术负责人：引擎、计时、CI、API 契约（如果做）
 - 开发者 A：工作记忆 + 加工速度
 - 开发者 B：抑制控制 + 情景记忆
 - 研究 / 设计：协议、计分、UX、验证招募
@@ -190,7 +420,7 @@
 
 验证研究是课程报告的加分项，优先级高于额外动画与装饰性功能。
 
-## 5. 风险与范围裁剪
+## 6. 风险与范围裁剪
 
 | 风险 | 概率 / 影响 | 缓解 |
 |---|---|---|
@@ -201,6 +431,7 @@
 | 招募不到验证样本 | 中 / 中 | W1 开始招募；同学 + 小激励；备选 n=10 |
 | iOS / Safari 兼容 | 中 / 中 | 早测、音频解锁、不依赖全屏、导出兜底 |
 | 伦理 / 隐私 | 中 / 高 | 知情同意、本地存储、非诊断声明 |
+| API 拖慢主线 | 中 / 高 | MVP 不做 API；要做只做最小同步；契约先行 |
 
 MVP 必须有：
 
@@ -223,10 +454,11 @@ MVP 必须有：
 - 原生壳
 - 多语言
 - 抑制控制 / 加工速度自适应
+- 完整 API / 推送提醒
 
-## 6. 决策规则
+## 7. 决策规则
 
-选择原生 App 的条件：
+### 7.1 平台
 
 - 课程 rubric 明确要求原生 / 移动应用 → 选 Flutter（单代码库），接受验证样本缩水或某个任务打磨时间减少
 - 必须上应用商店、必须离线现场使用、必须使用传感器 → 原生
@@ -235,16 +467,25 @@ MVP 必须有：
 
 补充：如果最终答辩需要“应用”形态，可用 Capacitor 把 Web 代码包一层，复用约 95% 代码，成本约 2–4 天；但 WebView 不会改善时序，只解决安装、图标和分发形态。
 
-## 7. 本周可执行动作
+### 7.2 API
+
+- MVP 默认 **不做 API**，本地优先是特性，不是妥协。
+- 需要跨设备或备份 → 做**单 API**：匿名参与者码、append-only session、幂等、服务端重算、`/v1` 版本化。
+- 未来可能做 App → 现在就用 **REST/OpenAPI**，不要用 tRPC/Server Actions 作为公开 API。
+- 永远不要写两套领域 API；允许两套薄 BFF。
+
+## 8. 本周可执行动作
 
 1. **计时 spike**：写一个单页测试（rAF 呈现 + 键盘反应 + Web Audio），在 3 台设备 / 浏览器上测刷新率、RT 分布、掉帧。这页数据可直接放进课程报告。
-2. **冻结协议**：4 个范式、trial 数、顺序、指标、异常值规则、分档规则，写成 2 页 scoring spec。
+2. **冻结协议**：4 个范式、trial 数、顺序、指标、异常值规则、分档规则，写成 2 页 scoring spec；同时决定 API 做不做、做到什么程度。
 3. **开始招募**：20+ 人，预约 W5 的两次测试。没有验证数据，“认知画像”就只是 demo。
 
-## 8. 结论
+## 9. 结论
 
 - Web 优先，原生只在硬性要求或时序精度是评分核心时才值得
 - 平台不是最大风险，测量效度与复测解释才是
 - 3 分钟任务只适合“3 档画像 + 置信区间”，不适合精细排名
+- API 应一套契约、两个适配层；MindMeter 的 MVP 可以没有 API，若做只做最小同步
+- 网页与 App 的 API 最大差异不是传输，而是版本碎片带来的长期兼容成本
 - 6 周内可完成 MVP，但验证研究必须从 W1 启动
 - 项目定位应为教育性 / 自我探索工具，而非临床测评
