@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MindMeter 心智镜 · 交互原型 v4（三档测评）</title>
+<style>
+  :root{
+    --bg:#0b0d13; --card:#161a24; --card2:#1c2130; --line:#252b3a;
+    --text:#eef1f8; --muted:#8a91a5; --dim:#5d6579;
+    --accent:#5b8cff; --accent2:#8f6bff; --ok:#35c48f;
+    --warn:#f0a33a; --bad:#ef5f6b; --r:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 800px at 50% -10%,#1a2038 0%,var(--bg) 55%);
+    color:var(--text);line-height:1.6;display:flex;justify-content:center;overflow-x:hidden}
+  .app{width:100%;max-width:480px;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px;
+    font-size:12px;letter-spacing:.16em;color:var(--dim);position:sticky;top:0;z-index:20;
+    background:linear-gradient(var(--bg),rgba(11,13,19,.86) 70%,transparent)}
+  .topbar .name{color:var(--muted)}
+  .topbar .badge{letter-spacing:0;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);font-size:11px}
+  main{flex:1;padding:0 20px 34px}
+  .screen{display:none}
+  .screen.active{display:block;animation:in .28s cubic-bezier(.2,.7,.3,1)}
+  @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  h1{font-size:32px;line-height:1.24;font-weight:800;letter-spacing:-.5px}
+  h2{font-size:20px;font-weight:700;margin-bottom:6px}
+  h3{font-size:15px;font-weight:600}
+  .lead{color:var(--muted);font-size:14.5px}
+  .tiny{font-size:12px;color:var(--dim);line-height:1.7}
+
+  .btn{font-family:inherit;font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:13px;
+    padding:15px 20px;transition:.16s;width:100%;background:var(--card2);color:var(--text)}
+  .btn:hover{filter:brightness(1.12)}.btn:active{transform:scale(.985)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+    box-shadow:0 8px 24px -8px rgba(91,140,255,.6)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .btn.ghost:hover{color:var(--text);border-color:#39415a}
+  .btn:disabled{opacity:.38;cursor:not-allowed;filter:none}
+  .row{display:flex;gap:10px}.row .btn{flex:1}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .card + .card{margin-top:12px}
+
+  /* 首页 */
+  .hero{padding-top:22px}
+  .hero .kicker{color:var(--accent);font-size:12px;letter-spacing:.24em;margin-bottom:12px}
+  .hero h1{margin-bottom:14px}
+  .hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{margin-bottom:24px}
+  .main-entry{background:linear-gradient(160deg,rgba(91,140,255,.16),rgba(143,107,255,.09));
+    border:1px solid rgba(91,140,255,.35);border-radius:18px;padding:20px;margin-bottom:16px}
+  .main-entry .t{font-size:19px;font-weight:700;margin-bottom:3px}
+  .main-entry .s{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+
+  /* 模式选择 */
+  .mode-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:16px 18px;margin-bottom:11px;cursor:pointer;transition:.16s}
+  .mode-card:hover{border-color:#3a4258;transform:translateY(-1px)}
+  .mode-card[data-rec]{border-color:rgba(91,140,255,.4);background:rgba(91,140,255,.06)}
+  .mc-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px}
+  .mc-name{font-size:16px;font-weight:700}
+  .mc-rec{font-style:normal;font-size:10px;font-weight:600;color:var(--accent);
+    border:1px solid rgba(91,140,255,.45);border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+  .mc-time{font-size:12.5px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .mc-desc{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.55}
+  .mc-tags{font-size:11px;color:var(--dim)}
+  .sub-entry{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;
+    color:var(--muted);cursor:pointer;padding:10px;background:none;border:none;width:100%;font-family:inherit}
+  .sub-entry:hover{color:var(--text)}.sub-entry b{color:var(--accent);font-weight:600}
+
+  /* 说明 / 表单 */
+  .list{margin:16px 0}
+  .list .li{display:flex;gap:11px;padding:9px 0;font-size:14px;color:var(--muted)}
+  .list .li b{color:var(--text);font-weight:600}
+  .num{width:20px;height:20px;border-radius:50%;background:var(--card2);color:var(--accent);font-size:11px;
+    display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px}
+  .consent{margin:18px 0;padding:14px 16px;border-radius:12px;background:rgba(240,163,58,.07);
+    border:1px solid rgba(240,163,58,.22);font-size:12.5px;color:#d8b98a;line-height:1.7}
+  .q{padding:13px 0;border-bottom:1px solid var(--line)}
+  .q:last-of-type{border-bottom:none}
+  .q .qt{font-size:14px;margin-bottom:9px}
+  .q .qt i{font-style:normal;color:var(--bad);margin-left:3px}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{font-family:inherit;font-size:13px;padding:9px 14px;border-radius:99px;background:var(--card);
+    border:1px solid var(--line);color:var(--muted);cursor:pointer;transition:.14s}
+  .pill:hover{border-color:#39415a;color:var(--text)}
+  .pill.sel{background:rgba(91,140,255,.16);border-color:var(--accent);color:#cfe0ff}
+
+  /* 游戏 */
+  .hud{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .hud .label{font-size:13px;color:var(--muted)}
+  .hud .count{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:20px}
+  .bar i{display:block;height:100%;width:0;border-radius:2px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
+  .stage{min-height:350px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .prompt{font-size:13.5px;color:var(--muted);text-align:center;min-height:22px;margin-bottom:14px}
+  .prompt b{color:var(--text)}
+  .countdown{font-size:44px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:100%;max-width:270px;aspect-ratio:1}
+  .cell{background:var(--card);border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:.09s}
+  .cell.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;
+    box-shadow:0 0 26px rgba(91,140,255,.5)}
+  .cell.ok{background:rgba(53,196,143,.3);border-color:var(--ok)}
+  .cell.no{background:rgba(239,95,107,.3);border-color:var(--bad)}
+
+  .gonogo{width:170px;height:170px;border-radius:24px;display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:700;color:#fff;transition:.06s}
+  .gonogo.go{background:linear-gradient(135deg,#3ddc84,#2aa76a)}
+  .gonogo.nogo{background:linear-gradient(135deg,#ef5f6b,#c23b46)}
+  .gonogo.idle{background:var(--card);border:1px solid var(--line);color:var(--dim);font-weight:400}
+
+  .dot{width:74px;height:74px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 34px rgba(91,140,255,.65);cursor:pointer}
+
+  .wordgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:100%}
+  .word{padding:12px 6px;text-align:center;border-radius:11px;background:var(--card);
+    border:1px solid var(--line);font-size:14px}
+  .word.pick{cursor:pointer}
+  .word.sel{background:rgba(91,140,255,.16);border-color:var(--accent);color:#cfe0ff}
+
+  /* 计算中 */
+  .computing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58vh;gap:20px}
+  .spinner{width:42px;height:42px;border-radius:50%;border:3px solid var(--line);
+    border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* 报告 */
+  .report-head{text-align:center;padding:4px 0 0}
+  .big-score{font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1;
+    background:linear-gradient(120deg,#8fb0ff,var(--accent2));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .big-score small{font-size:14px;font-weight:600;-webkit-text-fill-color:var(--muted)}
+  .avg-note{font-size:11.5px;color:var(--dim);margin-top:6px}
+  .verdict{margin-top:8px;font-size:14px;color:var(--muted)}
+  .radar-wrap{display:flex;justify-content:center;margin:12px 0 2px}
+  .dimrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .dimrow:last-child{border-bottom:none}
+  .dimrow .n{flex:none;width:86px;font-size:12.5px;color:var(--muted)}
+  .dimrow .t{flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden}
+  .dimrow .t b{display:block;height:100%;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .dimrow .v{flex:none;width:32px;text-align:right;font-size:13px;color:var(--muted)}
+  .advice .k{font-size:11.5px;letter-spacing:.1em;color:var(--accent);margin-bottom:6px}
+  .advice p{font-size:13.8px;color:#d5dae8}
+  .advice .card{border-left:3px solid var(--accent)}
+  .advice-src{font-size:11px;color:var(--dim);margin-top:8px}
+
+  /* AI 教练接入位 */
+  .coach{border-style:dashed;border-color:#2f3648;background:rgba(22,26,36,.5)}
+  .coach-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .coach-badge{font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:99px;
+    border:1px solid #3a4154;color:var(--dim)}
+  .coach-title{font-size:14px;font-weight:600;color:var(--muted)}
+  .coach-desc{font-size:12.5px;color:var(--dim);margin-bottom:10px}
+  .coach-list{list-style:none;margin:0 0 14px;padding:0}
+  .coach-list li{font-size:12.5px;color:var(--dim);padding:3px 0 3px 14px;position:relative}
+  .coach-list li::before{content:'·';position:absolute;left:4px;color:var(--dim)}
+  .coach-contract{font-size:10.5px;color:#4a5163;margin-top:10px;text-align:center}
+  .coach-contract code{font-family:ui-monospace,Consolas,monospace;color:#5d6579}
+  .detail{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;padding:5px 0}
+  .detail b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  .badge-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;justify-content:center}
+  .tag{font-size:11px;padding:4px 9px;border-radius:99px;background:var(--card2);
+    color:var(--muted);border:1px solid var(--line)}
+  .tag.hi{border-color:rgba(53,196,143,.45);color:#8ae0bd}
+  .tag.mid{border-color:rgba(240,163,58,.45);color:#e8c08a}
+  .tag.lo{border-color:rgba(239,95,107,.45);color:#f0a3a8}
+  .disclaimer{margin-top:14px;font-size:11.5px;color:var(--dim);line-height:1.75;
+    padding-top:12px;border-top:1px solid var(--line)}
+
+  /* 游戏中心 —— 放大版 */
+  .hero-card{display:flex;align-items:center;gap:14px;padding:18px;border-radius:18px;
+    background:linear-gradient(150deg,rgba(143,107,255,.2),rgba(91,140,255,.08));
+    border:1px solid rgba(143,107,255,.35);margin:14px 0 14px;cursor:pointer;transition:.16s}
+  .hero-card:hover{transform:translateY(-2px)}
+  .hero-card .ico{font-size:38px;line-height:1}
+  .hero-card .tt{font-size:17px;font-weight:700}
+  .hero-card .ss{font-size:12px;color:var(--muted);margin-top:2px}
+  .hero-card .go{margin-left:auto;font-size:12px;color:var(--accent);white-space:nowrap}
+
+  .arcade-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .gcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;
+    cursor:pointer;transition:.16s;display:flex;flex-direction:column;min-height:128px}
+  .gcard:hover{border-color:#3a4258;transform:translateY(-2px)}
+  .gcard .ico{font-size:25px;line-height:1;margin-bottom:8px}
+  .gcard .nm{font-size:14.5px;font-weight:700;margin-bottom:1px}
+  .gcard .dm{font-size:11px;color:var(--dim);margin-bottom:auto}
+  .gcard .bt{font-size:11px;color:var(--muted);margin-top:10px}
+  .gcard .bt b{color:var(--accent);font-size:13.5px}
+
+  /* 难度 */
+  .diff{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    margin-bottom:10px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:12px}
+  .diff:hover{border-color:#3a4258}
+  .diff.sel{border-color:var(--accent);background:rgba(91,140,255,.09)}
+  .diff .dn{font-size:14px;font-weight:600;width:46px;flex:none}
+  .diff .dd{flex:1}.diff .dd .p{font-size:12px;color:var(--muted)}
+  .diff .dd .b{font-size:11px;color:var(--dim);margin-top:2px}
+  .diff .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex:none}
+  .diff.sel .radio{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--bg)}
+
+  /* 结果 */
+  .result{text-align:center;padding-top:10px}
+  .result .lab{font-size:12px;letter-spacing:.2em;color:var(--dim);margin-bottom:10px}
+  .result .n{font-size:56px;font-weight:800;line-height:1;
+    background:linear-gradient(120deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .best-box{margin-top:16px;padding:14px;border-radius:12px;background:var(--card);
+    border:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .best-box b{color:var(--text)}
+  .newrec{color:var(--ok);font-weight:700}
+
+  /* 历史 */
+  .hist-item{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .hist-item .d{font-size:12px;color:var(--muted);width:70px;flex:none}
+  .hist-item .bars{flex:1;display:flex;gap:4px}
+  .hist-item .bars b{flex:1;height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+  .hist-item .bars b i{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:3px;background:var(--accent)}
+  .hist-item .s{font-size:13px;width:30px;text-align:right;font-weight:600}
+
+  .toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);background:#232838;
+    border:1px solid var(--line);color:var(--text);padding:11px 18px;border-radius:99px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:88%;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"><span class="name">MINDMETER</span><span class="badge">原型 v4</span></div>
+  <main>
+
+    <!-- P0 首页 -->
+    <section id="s-home" class="screen active">
+      <div class="hero">
+        <div class="kicker">认知测评</div>
+        <h1>玩一局，<br>看清你的<em>大脑</em></h1>
+        <p class="lead">3 种模式，4 到 7 分钟。<br>不是给你一个分数，是告诉你下一步该练什么。</p>
+        <div class="main-entry">
+          <div class="t">开始测评</div>
+          <div class="s">3 种模式 · 4–7 分钟 · 按你有多少时间选</div>
+          <button class="btn primary" onclick="openMode()">选择模式</button>
+        </div>
+        <button class="sub-entry" onclick="openArcade()">想先随便玩玩？ 游戏中心 <b>›</b></button>
+      </div>
+    </section>
+
+    <!-- P0.5 模式选择 -->
+    <section id="s-mode" class="screen">
+      <h2>选一个模式</h2>
+      <p class="lead" style="margin-bottom:16px">核心 4 项三档完全一致，分数可以直接比较。<br>高档位只是多测，不改变已测的内容。</p>
+
+      <div class="mode-card" onclick="pickMode('basic')">
+        <div class="mc-head">
+          <span class="mc-name">基础</span>
+          <span class="mc-time">≈ 4 分钟</span>
+        </div>
+        <p class="mc-desc">4 个核心维度，出完整画像与分数。</p>
+        <p class="mc-tags">工作记忆 · 抑制控制 · 反应速度 · 词语再认</p>
+      </div>
+
+      <div class="mode-card" data-rec="1" onclick="pickMode('deep')">
+        <div class="mc-head">
+          <span class="mc-name">深度 <i class="mc-rec">推荐</i></span>
+          <span class="mc-time">≈ 6 分钟</span>
+        </div>
+        <p class="mc-desc">基础 + 认知灵活性，补上执行功能三成分的最后一块。</p>
+        <p class="mc-tags">+ 任务切换（切换代价）</p>
+      </div>
+
+      <div class="mode-card" onclick="pickMode('full')">
+        <div class="mc-head">
+          <span class="mc-name">完全</span>
+          <span class="mc-time">≈ 7 分钟</span>
+        </div>
+        <p class="mc-desc">深度 + 一个游戏化任务，覆盖视空间能力。</p>
+        <p class="mc-tags">+ 任务切换 + 心理旋转</p>
+      </div>
+
+      <p class="tiny" style="margin-top:14px">
+        扩展项为「描述性指标」：只和你自己的历史比较，不做人群百分位。
+      </p>
+      <button class="btn ghost" onclick="show('home')" style="margin-top:14px">返回</button>
+    </section>
+
+    <!-- P1 说明 -->
+    <section id="s-intro" class="screen">
+      <h2>开始之前</h2>
+      <p class="lead" style="margin-bottom:16px" id="intro-time">整个测评约 4 分钟，过程中请勿切换应用。</p>
+      <div class="list">
+        <div class="li"><span class="num">1</span><span><b>5 道基本信息题</b>，约 30 秒</span></div>
+        <div class="li"><span class="num">2</span><span id="intro-plan"><b>4 个任务</b>，顺序固定</span></div>
+        <div class="li"><span class="num">3</span><span>测评中<b>不会提示对错</b>，凭第一反应作答</span></div>
+      </div>
+      <div class="consent">
+        中断或刷新页面后，本次成绩作废，需从第一个任务重新开始。<br>
+        MindMeter 不是医疗器械，不提供诊断、治疗或医疗建议。
+      </div>
+      <button class="btn primary" onclick="toForm()">我已了解，开始</button>
+      <button class="btn ghost" onclick="openMode()" style="margin-top:10px">换个模式</button>
+    </section>
+
+    <!-- P2 表单 -->
+    <section id="s-form" class="screen">
+      <h2>基本信息</h2>
+      <p class="lead" style="margin-bottom:6px">用于对照常模、判断本次结果的可信度。</p>
+      <div id="form-body"></div>
+      <button class="btn primary" id="form-next" onclick="submitForm()" disabled style="margin-top:16px">下一步</button>
+      <p class="tiny" style="margin-top:10px;text-align:center" id="form-hint"></p>
+    </section>
+
+    <!-- 游戏容器 -->
+    <section id="s-game" class="screen">
+      <div class="hud"><span class="label" id="g-label"></span><span class="count" id="g-count"></span></div>
+      <div class="bar"><i id="g-bar"></i></div>
+      <div class="stage" id="g-stage"></div>
+    </section>
+
+    <!-- P4 计算 -->
+    <section id="s-computing" class="screen">
+      <div class="computing"><div class="spinner"></div><p class="lead">正在生成你的认知画像…</p></div>
+    </section>
+
+    <!-- P5 报告 -->
+    <section id="s-report" class="screen">
+      <div class="report-head">
+        <div class="tiny" style="letter-spacing:.2em;margin-bottom:8px">你的认知画像</div>
+        <div class="big-score" id="rp-score">--<small> 分</small></div>
+        <div class="avg-note">四项均分 · 仅供参考，不代表总体认知能力，也不与人群比较</div>
+        <p class="verdict" id="rp-verdict"></p>
+        <div class="badge-row" id="rp-tags"></div>
+      </div>
+
+      <div class="radar-wrap"><svg id="rp-radar" width="250" height="222"></svg></div>
+
+      <div class="card">
+        <div class="dimrow"><span class="n">视空间工作记忆</span><span class="t"><b id="bar-wm"></b></span><span class="v" id="v-wm">--</span></div>
+        <div class="dimrow"><span class="n">抑制控制</span><span class="t"><b id="bar-ic"></b></span><span class="v" id="v-ic">--</span></div>
+        <div class="dimrow"><span class="n">反应速度</span><span class="t"><b id="bar-ps"></b></span><span class="v" id="v-ps">--</span></div>
+        <div class="dimrow"><span class="n">词语再认</span><span class="t"><b id="bar-em"></b></span><span class="v" id="v-em">--</span></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="k" style="font-size:11.5px;letter-spacing:.1em;color:var(--dim);margin-bottom:6px">测量细节</div>
+        <div class="detail"><span>序列广度</span><b id="dt-span">--</b></div>
+        <div class="detail"><span>误报率 commission rate</span><b id="dt-comm">--</b></div>
+        <div class="detail"><span>中位反应时</span><b id="dt-rt">--</b></div>
+        <div class="detail"><span>反应时 IQR</span><b id="dt-iqr">--</b></div>
+        <div class="detail"><span>再认 d′</span><b id="dt-dp">--</b></div>
+      </div>
+
+      <div class="card advice" style="margin-top:12px">
+        <div class="k">优先改善</div>
+        <h3 id="rp-weakname" style="margin-bottom:6px"></h3>
+        <p id="rp-advice">正在生成建议…</p>
+        <p class="advice-src" id="rp-advice-src"></p>
+      </div>
+
+      <!-- ===== AI 教练接入位：默认不发起任何请求，仅占位 ===== -->
+      <div class="card coach" id="rp-coach">
+        <div class="coach-head">
+          <span class="coach-badge">接入位</span>
+          <span class="coach-title">AI 教练</span>
+        </div>
+        <p class="coach-desc" id="rp-coach-status">预留位置，尚未接入。</p>
+        <ul class="coach-list">
+          <li>结合历史曲线解释「为什么这项变了」</li>
+          <li>按你已玩过的练习，避开重复推荐</li>
+          <li>生成一周训练计划，并支持追问</li>
+        </ul>
+        <button class="btn ghost" disabled id="rp-coach-btn">即将开放</button>
+        <p class="coach-contract">契约见 <code>agent-接入位.md</code> · 开关在 <code>AGENT.enabled</code></p>
+      </div>
+      <!-- ===== 接入位结束 ===== -->
+
+      <div class="card" id="rp-ext" style="display:none;border-style:dashed;border-color:#2f3648">
+        <div class="k" style="font-size:11.5px;letter-spacing:.1em;color:var(--dim);margin-bottom:6px">扩展观察 · 描述性指标</div>
+        <div class="detail" id="rp-ext-switch" style="display:none"><span>任务切换代价</span><b>--</b></div>
+        <div class="detail" id="rp-ext-rotate" style="display:none"><span>心理旋转正确率</span><b>--</b></div>
+        <p class="tiny" style="margin-top:8px">仅与你自己的历史比较，不做人群百分位，不构成诊断。</p>
+      </div>
+
+      <div class="card" id="rp-selfcard" style="display:none">
+        <div class="k" style="font-size:11.5px;letter-spacing:.1em;color:var(--accent);margin-bottom:6px">自评 vs 客观</div>
+        <p id="rp-selftext" style="font-size:13.5px;color:#d5dae8"></p>
+      </div>
+
+      <p class="disclaimer" id="rp-note"></p>
+      <div class="row" style="margin-top:16px">
+        <button class="btn ghost" onclick="openHistory()">历史</button>
+        <button class="btn ghost" onclick="toIntro()">再测</button>
+      </div>
+    </section>
+
+    <!-- P6 游戏中心 -->
+    <section id="s-arcade" class="screen">
+      <h2>游戏中心</h2>
+      <p class="lead">8 款小游戏，随便玩，成绩不计入认知画像。</p>
+      <div class="hero-card" id="arcade-hero"></div>
+      <div class="arcade-grid" id="arcade-grid"></div>
+      <p class="tiny" style="margin-top:16px;text-align:center">
+        练习成绩仅用于自我对比，<b style="color:var(--muted)">不出百分位、不进画像</b>。
+      </p>
+      <button class="btn ghost" onclick="show('home')" style="margin-top:16px">返回首页</button>
+    </section>
+
+    <!-- P7 难度 -->
+    <section id="s-setup" class="screen">
+      <h2 id="setup-title">选择难度</h2>
+      <p class="lead" style="margin-bottom:14px" id="setup-sub"></p>
+      <div id="setup-diffs"></div>
+      <button class="btn primary" onclick="startPlay()" style="margin-top:16px">开始</button>
+      <button class="btn ghost" onclick="openArcade()" style="margin-top:10px">返回游戏中心</button>
+    </section>
+
+    <!-- P9 结果 -->
+    <section id="s-result" class="screen">
+      <div class="result">
+        <div class="lab" id="rs-lab">本次成绩</div>
+        <div class="n" id="rs-score">--</div>
+        <div class="best-box" id="rs-best"></div>
+        <div class="row" style="margin-top:18px">
+          <button class="btn ghost" onclick="startPlay()">再来一次</button>
+          <button class="btn primary" onclick="openSetup(currentGame)">换个难度</button>
+        </div>
+        <button class="btn ghost" id="rs-add" style="margin-top:10px" onclick="addToProfile()">加入我的画像</button>
+        <button class="btn ghost" onclick="openArcade()" style="margin-top:10px">返回游戏中心</button>
+      </div>
+    </section>
+
+    <!-- P10 历史 -->
+    <section id="s-history" class="screen">
+      <h2>你的变化</h2>
+      <p class="lead" style="margin-bottom:16px">看趋势，不看单次分数。</p>
+      <div id="hist-list"></div>
+      <p class="tiny" id="hist-empty" style="display:none;padding:34px 0;text-align:center">
+        还没有足够记录。<br>完成第二次完整测评后，这里会显示变化。
+      </p>
+      <div class="row" style="margin-top:20px">
+        <button class="btn ghost" onclick="show('report')">返回报告</button>
+        <button class="btn primary" onclick="toIntro()">再测一次</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   基础
+   ========================================================= */
+let TOKEN = 0, timers = [];
+const T = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+const $ = id => document.getElementById(id);
+
+function show(name){
+  TOKEN++; clearTimers();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $('s-' + name).classList.add('active');
+  window.scrollTo({top:0});
+  return TOKEN;
+}
+function toast(m){
+  const el = $('toast'); el.textContent = m; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2100);
+}
+function median(a){
+  if (!a.length) return 0;
+  const s = [...a].sort((x,y)=>x-y), m = Math.floor(s.length/2);
+  return s.length % 2 ? s[m] : (s[m-1]+s[m])/2;
+}
+function quantile(a, q){
+  if (!a.length) return 0;
+  const s = [...a].sort((x,y)=>x-y), pos = (s.length-1)*q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  return lo === hi ? s[lo] : s[lo] + (s[hi]-s[lo])*(pos-lo);
+}
+function normInv(p){                     // 标准正态分位数（Acklam 近似）
+  if (p <= 0) p = 1e-6; if (p >= 1) p = 1-1e-6;
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,
+            1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,
+            6.680131188771972e+01,-1.328068155288572e+01];
+  const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,
+           -2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  let q, r, x;
+  if (p < 0.02425){ q = Math.sqrt(-2*Math.log(p));
+    x = (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  else if (p > 1-0.02425){ q = Math.sqrt(-2*Math.log(1-p));
+    x = -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  else { q = p-0.5; r = q*q;
+    x = (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); }
+  return x;
+}
+
+/* =========================================================
+   状态与存储
+   ========================================================= */
+const S = { wm:0, ic:0, ps:0, em:0 };
+const RAW = {};
+let FORM = { age:null, edu:null, sleep:null, energy:null, caffeine:null, memory:null };
+
+const K_A = 'mm3_assess', K_B = 'mm3_best', K_P = 'mm3_partial';
+const ls = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+const DIMS = ['wm','ic','ps','em'];
+const DIM_CN = { wm:'视空间工作记忆', ic:'抑制控制', ps:'反应速度', em:'词语再认' };
+const DIM_SHORT = { wm:'工作记忆', ic:'抑制控制', ps:'反应速度', em:'词语再认' };
+
+/* =========================================================
+   游戏壳
+   ========================================================= */
+function head(label, counter){
+  $('g-label').textContent = label;
+  $('g-count').textContent = counter || '';
+  $('g-bar').style.width = '0%';
+}
+function bar(p){ $('g-bar').style.width = p + '%'; }
+function stage(){ const el = $('g-stage'); el.innerHTML = ''; return el; }
+function el(tag, cls, html){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+
+/* =========================================================
+   测评 ① 视空间工作记忆 · Corsi 序列广度
+   ========================================================= */
+function runCorsi(opt){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const maxLen = 7, startLen = 3;
+    let len = startLen, tries = 0, pass = 0, fail = 0, total = 0, span = 0;
+
+    head('视空间工作记忆 · 序列广度', '');
+    const st = stage();
+    const prompt = el('p','prompt','看它依次闪过的位置，然后按<b>同样顺序</b>点回来');
+    const grid = el('div','grid3');
+    grid.innerHTML = Array.from({length:9},(_,i)=>`<div class="cell" data-i="${i}"></div>`).join('');
+    st.append(prompt, grid);
+    const cells = [...grid.querySelectorAll('.cell')];
+
+    let seq = [], inputIdx = 0, accepting = false, respTimer = null;
+
+    function light(i){ cells[i].classList.add('on'); }
+    function unlight(i){ cells[i].classList.remove('on'); }
+
+    function playSeq(){
+      if (tk !== TOKEN) return;
+      seq = [];
+      for (let i=0;i<len;i++){
+        let p; do { p = Math.floor(Math.random()*9); } while (seq.length && p === seq[seq.length-1]);
+        seq.push(p);
+      }
+      $('g-count').textContent = `长度 ${len}`;
+      bar((len - startLen) / (maxLen - startLen + 1) * 100);
+      prompt.innerHTML = `留意顺序（${seq.length} 个）`;
+
+      let i = 0;
+      const step = () => {
+        if (tk !== TOKEN) return;
+        if (i >= seq.length){
+          accepting = true; inputIdx = 0;
+          prompt.innerHTML = '按顺序点回来';
+          // 8 秒内没点完视为失败，避免卡死
+          respTimer = T(() => { if (accepting) endTrial(false); }, 8000);
+          return;
+        }
+        light(seq[i]);
+        T(() => { unlight(seq[i]); i++; T(step, 180); }, 520);
+      };
+      T(step, 450);
+    }
+
+    cells.forEach(c => {
+      c.onclick = () => {
+        if (!accepting) return;
+        const idx = Number(c.dataset.i);
+        if (idx === seq[inputIdx]){
+          c.classList.add('ok');
+          T(() => c.classList.remove('ok'), 180);
+          inputIdx++;
+          if (inputIdx === seq.length) endTrial(true);
+        } else {
+          c.classList.add('no');
+          T(() => c.classList.remove('no'), 260);
+          endTrial(false);
+        }
+      };
+    });
+
+    function endTrial(ok){
+      accepting = false;
+      if (respTimer){ clearTimeout(respTimer); respTimer = null; }
+      total++;
+      if (ok){ pass++; span = Math.max(span, len); tries = 0; }
+      else { fail++; tries++; }
+
+      if (ok){
+        if (len >= maxLen) return finish();     // 已到最高长度，结束
+        len++;
+      } else if (tries >= 2){
+        if (len >= maxLen) return finish();
+        len++; tries = 0;                       // 连续两次失败 → 升一级继续
+      }
+      T(playSeq, 700);
+    }
+
+    function finish(){
+      bar(100);
+      const acc = total ? pass / total : 0;
+      const spanScore = Math.max(0, (span - 2)) / 5;     // 3 → 0.2，7 → 1.0
+      const score = Math.max(5, Math.min(98, Math.round(100 * (0.6*spanScore + 0.4*acc))));
+      resolve({ score, raw:{ span, pass, total, acc } });
+    }
+
+    playSeq();
+  });
+}
+
+/* =========================================================
+   测评 ② 抑制控制 · Go / No-Go
+   ========================================================= */
+function runGoNoGo(opt){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 60, NOGO_RATE = 0.25, STIM = 520, GAP = 260;
+    const flags = Array.from({length:TOTAL}, () => Math.random() < NOGO_RATE);
+    // 保证至少 12 个 No-Go
+    let c = flags.filter(Boolean).length;
+    while (c < 15){ const i = Math.floor(Math.random()*TOTAL); if (!flags[i]){ flags[i] = true; c++; } }
+
+    let i = 0, goHit = 0, goTotal = 0, nogoCorrect = 0, nogoTotal = 0, commission = 0;
+    let responded = false, isNoGo = false, canRespond = false;
+
+    head('抑制控制 · Go / No-Go', `1 / ${TOTAL}`);
+    const st = stage();
+    const prompt = el('p','prompt','绿色方块 → 点；红色方块 → 别点');
+    const box = el('div','gonogo idle','准备');
+    st.append(prompt, box);
+
+    box.onclick = () => {
+      if (!canRespond || responded) return;
+      responded = true;
+      box.style.transform = 'scale(.94)';
+      T(() => box.style.transform = '', 90);
+    };
+
+    function trial(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+
+      isNoGo = flags[i];
+      responded = false; canRespond = true;
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+
+      box.className = 'gonogo ' + (isNoGo ? 'nogo' : 'go');
+      box.textContent = isNoGo ? '停' : '点';
+
+      T(() => {
+        if (tk !== TOKEN) return;
+        canRespond = false;
+        box.className = 'gonogo idle'; box.textContent = '';
+        const pressed = responded;
+
+        if (isNoGo){ nogoTotal++; if (!pressed) nogoCorrect++; else commission++; }
+        else { goTotal++; if (pressed) goHit++; }
+
+        i++;
+        T(trial, GAP);
+      }, STIM);
+    }
+
+    function finish(){
+      bar(100);
+      const goAcc = goTotal ? goHit / goTotal : 0;
+      const nogoAcc = nogoTotal ? nogoCorrect / nogoTotal : 0;
+      const commRate = nogoTotal ? commission / nogoTotal : 0;
+      const score = Math.max(5, Math.min(98,
+        Math.round(100 * (0.4*goAcc + 0.6*nogoAcc))));
+      resolve({ score, raw:{ goAcc, nogoAcc, commRate, commission, nogoTotal } });
+    }
+
+    T(trial, 600);
+  });
+}
+
+/* =========================================================
+   测评 ③ 反应速度 · 简单反应时
+   ========================================================= */
+function runSRT(opt){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 30;
+    let i = 0, rts = [], misses = 0, waiting = false, active = false, t0 = 0;
+
+    head('反应速度 · 简单反应时', `1 / ${TOTAL}`);
+    const st = stage();
+    const prompt = el('p','prompt','圆点出现就立刻点它');
+    const zone = el('div');
+    zone.style.cssText = 'height:150px;display:flex;align-items:center;justify-content:center';
+    st.append(prompt, zone);
+
+    zone.onclick = () => {
+      if (!active) return;
+      active = false;
+      rts.push(performance.now() - t0);
+      zone.innerHTML = '';
+      i++;
+      T(round, 320);
+    };
+
+    function round(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+      prompt.textContent = '准备…';
+      zone.innerHTML = '';
+      waiting = true;
+
+      T(() => {
+        if (tk !== TOKEN) return;
+        waiting = false; active = true; t0 = performance.now();
+        prompt.textContent = '点！';
+        zone.innerHTML = '<div class="dot"></div>';
+
+        T(() => {
+          if (!active) return;
+          active = false; misses++;
+          zone.innerHTML = '';
+          i++;
+          T(round, 320);
+        }, 1200);
+      }, 500 + Math.random()*700);
+    }
+
+    function finish(){
+      bar(100);
+      const m = median(rts) || 700;
+      const iqr = rts.length > 3 ? quantile(rts,.75) - quantile(rts,.25) : 0;
+      let base = (620 - m) / (620 - 260) * 100;
+      base = Math.max(0, Math.min(100, base));
+      const score = Math.max(5, Math.min(98, Math.round(base - misses * 3)));
+      resolve({ score, raw:{ median: Math.round(m), iqr: Math.round(iqr), misses, n: rts.length } });
+    }
+
+    round();
+  });
+}
+
+/* =========================================================
+   测评 ④ 词语再认（编码 → 延迟 → 再认，d′ 计分）
+   ========================================================= */
+const WORDS = ['苹果','钥匙','铅笔','雨伞','台灯','枕头','茶杯','眼镜','钱包','剪刀','地图','蜡烛',
+               '闹钟','手套','背包','水杯','邮票','药瓶','梳子','纽扣'];
+const LURES = ['香蕉','挂锁','橡皮','帽子','沙发','被子','水壶','手表','尺子','指南针',
+               '火柴','扇子','衣架','牙杯','书签','夹子','镜框','笔筒','毯子','盘子'];
+
+function shuffle(a){ const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; }
+
+function runEncode(count){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    head('词语再认 · 记忆阶段', `共 ${count} 个`);
+    const st = stage();
+    const words = shuffle(WORDS).slice(0, count);
+    const prompt = el('p','prompt','请记住这些词，稍后要判断是否见过');
+    const grid = el('div','wordgrid');
+    grid.innerHTML = words.map(w => `<div class="word">${w}</div>`).join('');
+    const cd = el('div','countdown','8');
+    cd.style.marginTop = '20px';
+    st.append(prompt, grid, cd);
+
+    let left = 8;
+    const tick = () => {
+      if (tk !== TOKEN) return;
+      cd.textContent = left;
+      bar((8 - left) / 8 * 100);
+      if (left <= 0) return resolve({ words });
+      left--; T(tick, 1000);
+    };
+    tick();
+  });
+}
+
+function runRecognition(count, targets){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const old = targets;
+    const fresh = shuffle(LURES).slice(0, count);
+    const all = shuffle([...old, ...fresh]);
+    const picked = new Set();
+
+    head('词语再认 · 判断阶段', `0 / ${count*2}`);
+    const st = stage();
+    const prompt = el('p','prompt','选出刚才见过的词，没见过的不要选');
+    const grid = el('div','wordgrid');
+    const submit = el('button','btn primary','提交');
+    submit.style.marginTop = '18px';
+    submit.disabled = true;
+    st.append(prompt, grid, submit);
+
+    all.forEach(w => {
+      const d = el('div','word pick', w);
+      d.onclick = () => {
+        if (picked.has(w)){ picked.delete(w); d.classList.remove('sel'); }
+        else { picked.add(w); d.classList.add('sel'); }
+        $('g-count').textContent = `${picked.size} / ${count*2}`;
+        bar(picked.size / (count*2) * 100);
+        submit.disabled = picked.size === 0;
+      };
+      grid.appendChild(d);
+    });
+
+    submit.onclick = () => {
+      if (tk !== TOKEN) return;
+      let hits = 0, fa = 0;
+      picked.forEach(w => old.includes(w) ? hits++ : fa++);
+      const n = count;
+      const H = (hits + 0.5) / (n + 1);
+      const F = (fa + 0.5) / (n + 1);
+      const dp = normInv(H) - normInv(F);
+      const score = Math.max(0, Math.min(100, Math.round((dp + 1) / 5 * 100)));
+      resolve({ score, raw:{ dprime: +dp.toFixed(2), hits, fa, n } });
+    };
+  });
+}
+
+/* =========================================================
+   测评编排
+   ========================================================= */
+const QUESTIONS = [
+  { id:'age',    t:'你的年龄段', need:true, opts:[['18-24','18–24'],['25-30','25–30'],['31-40','31–40'],['41-50','41–50'],['50+','50 以上']] },
+  { id:'edu',    t:'你的最高学历', need:true, opts:[['hs','高中及以下'],['col','大专'],['bs','本科'],['ms','研究生及以上']] },
+  { id:'sleep',  t:'昨晚睡了几个小时', need:true, opts:[['<5','不足 5 小时'],['5-6','5–6 小时'],['6-7','6–7 小时'],['7-8','7–8 小时'],['>8','8 小时以上']] },
+  { id:'energy', t:'现在感觉精力如何', need:true, opts:[['1','1 很累'],['2','2'],['3','3'],['4','4'],['5','5 充沛']] },
+  { id:'caffeine', t:'过去两小时是否摄入咖啡因', need:false, opts:[['1','是'],['0','否']] },
+  { id:'memory', t:'你觉得自己的记忆力怎么样', need:true, opts:[['1','1 很差'],['2','2'],['3','3'],['4','4'],['5','5 很好']] }
+];
+
+function toIntro(){ show('intro'); }
+
+function toForm(){ renderForm(); show('form'); }
+
+function renderForm(){
+  const box = $('form-body'); box.innerHTML = '';
+  QUESTIONS.forEach(q => {
+    const d = el('div','q', `<div class="qt">${q.t}${q.need?'<i>*</i>':''}</div>`);
+    const opts = el('div','opts');
+    q.opts.forEach(([v, label]) => {
+      const b = el('button','pill' + (FORM[q.id] === v ? ' sel' : ''), label);
+      b.type = 'button';
+      b.onclick = () => {
+        FORM[q.id] = v;
+        opts.querySelectorAll('.pill').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+        formState();
+      };
+      opts.appendChild(b);
+    });
+    d.appendChild(opts);
+    box.appendChild(d);
+  });
+  formState();
+}
+function formState(){
+  const req = QUESTIONS.filter(q => q.need);
+  const left = req.filter(q => FORM[q.id] == null).length;
+  $('form-next').disabled = left > 0;
+  $('form-hint').textContent = left ? `还有 ${left} 题未作答` : '可以开始了';
+}
+function reliability(){
+  const lowSleep = FORM.sleep === '<5', lowE = Number(FORM.energy) <= 2;
+  if (lowSleep && lowE) return '低';
+  if (lowSleep || lowE) return '中';
+  return '高';
+}
+
+/* =========================================================
+   扩展任务 ① 任务切换（认知灵活性）
+   ========================================================= */
+function runTaskSwitch(){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 16;
+    let i = 0, ok = 0, prevRule = null;
+    const rtRep = [], rtSw = [];
+
+    head('任务切换', '1 / ' + TOTAL);
+    const st = stage();
+    const prompt = el('p','prompt','按上方规则分类，越快越准');
+    const rule = el('div');
+    rule.style.cssText = 'font-size:13px;color:var(--accent);font-weight:600;margin-bottom:12px';
+    const figure = el('div');
+    figure.style.cssText = 'display:flex;align-items:center;justify-content:center;margin-bottom:24px';
+    const row = el('div','row');
+    st.append(prompt, rule, figure, row);
+
+    let cur = null, t0 = 0, answered = false;
+
+    function trial(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+
+      const r = Math.random() < .5 ? 'color' : 'shape';
+      const isSwitch = prevRule !== null && r !== prevRule;
+      const color = Math.random() < .5 ? 'red' : 'blue';
+      const shape = Math.random() < .5 ? 'circle' : 'square';
+      cur = { r, color, shape, isSwitch };
+      prevRule = r;
+
+      rule.textContent = r === 'color' ? '规则：按【颜色】分' : '规则：按【形状】分';
+      figure.innerHTML = `<div style="width:96px;height:96px;
+        background:${color === 'red' ? '#ef5f6b' : '#5b8cff'};
+        border-radius:${shape === 'circle' ? '50%' : '16px'}"></div>`;
+
+      const labels = r === 'color' ? ['红','蓝'] : ['圆','方'];
+      row.innerHTML = '';
+      labels.forEach((lab, idx) => {
+        const b = el('button', 'btn ' + (idx === 0 ? 'ghost' : 'primary'), lab);
+        b.onclick = () => answer(idx);
+        row.appendChild(b);
+      });
+
+      t0 = performance.now();
+      answered = false;
+      T(() => { if (!answered) answer(-1); }, 5000);   // 超时记为错误
+    }
+
+    function answer(idx){
+      if (answered) return;
+      answered = true;
+      const rt = performance.now() - t0;
+      const correct = cur.r === 'color'
+        ? (cur.color === 'red' ? 0 : 1)
+        : (cur.shape === 'circle' ? 0 : 1);
+      const right = idx === correct;
+      if (right) ok++;
+      const eff = right ? rt : rt + 600;
+      (cur.isSwitch ? rtSw : rtRep).push(eff);
+
+      i++;
+      T(trial, 220);
+    }
+
+    function finish(){
+      bar(100);
+      const acc = ok / TOTAL;
+      const rep = median(rtRep) || 700;
+      const sw = median(rtSw) || 900;
+      const cost = Math.max(0, Math.round(sw - rep));
+      const score = Math.max(5, Math.min(98,
+        Math.round(acc * 60 + Math.max(0, 40 - cost / 10))));
+      resolve({ score, raw:{ acc, cost, rep: Math.round(rep), sw: Math.round(sw) } });
+    }
+
+    trial();
+  });
+}
+
+/* =========================================================
+   扩展任务 ② 心理旋转（视空间）
+   ========================================================= */
+const ROT_BASE = [[-30,-30],[30,-20],[12,10],[30,30],[-20,22]];
+
+function rotPoints(mirror, deg){
+  const rad = deg * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad);
+  return ROT_BASE.map(([x0, y0]) => {
+    const x = mirror ? -x0 : x0;
+    return `${(x * c - y0 * s).toFixed(1)},${(x * s + y0 * c).toFixed(1)}`;
+  }).join(' ');
+}
+
+function rotSvg(pts, color){
+  return `<svg width="112" height="112" viewBox="-58 -58 116 116">
+    <polygon points="${pts}" fill="rgba(91,140,255,.16)" stroke="${color}" stroke-width="3"
+      stroke-linejoin="round"/></svg>`;
+}
+
+function runMentalRotate(){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 12;
+    let i = 0, ok = 0, t0 = 0, answered = false, truth = true;
+
+    head('心理旋转', '1 / ' + TOTAL);
+    const st = stage();
+    const prompt = el('p','prompt','右边是不是左边转了一下？<b>镜像不算</b>');
+    const pair = el('div');
+    pair.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:center;margin-bottom:22px';
+    const row = el('div','row');
+    row.innerHTML = `<button class="btn ghost" data-a="0">镜像 / 不同</button>
+                     <button class="btn primary" data-a="1">同一个</button>`;
+    st.append(prompt, pair, row);
+
+    row.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        if (answered) return;
+        answered = true;
+        const said = b.dataset.a === '1';
+        if (said === truth) ok++;
+        i++;
+        T(trial, 260);
+      };
+    });
+
+    function trial(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+
+      truth = Math.random() < .5;
+      const deg = 25 + Math.floor(Math.random() * 300);
+      const left = rotSvg(rotPoints(false, 0), '#8a91a5');
+      const right = rotSvg(rotPoints(!truth, deg), '#5b8cff');
+      pair.innerHTML = left + `<span style="color:#5d6579;font-size:20px">→</span>` + right;
+
+      t0 = performance.now();
+      answered = false;
+      T(() => { if (!answered){ answered = true; i++; T(trial, 260); } }, 7000);
+    }
+
+    function finish(){
+      bar(100);
+      const acc = ok / TOTAL;
+      const score = Math.max(5, Math.min(98, Math.round(acc * 100)));
+      resolve({ score, raw:{ acc, ok, total: TOTAL } });
+    }
+
+    trial();
+  });
+}
+
+/* =========================================================
+   测评模式
+   三档共用同一套核心 4 项；高档位只“加任务”，不改已测内容。
+   ========================================================= */
+let MODE = 'basic';
+const EXTRA = {};                    // 扩展项结果（不进画像、不做人群比较）
+
+const MODE_CFG = {
+  basic: { name:'基础', minutes:4, extra:[],
+           plan:'<b>4 个任务</b>，顺序固定：序列 → 抑制 → 反应 → 再认' },
+  deep:  { name:'深度', minutes:6, extra:['switch'],
+           plan:'<b>5 个任务</b>：核心 4 项 + 任务切换' },
+  full:  { name:'完全', minutes:7, extra:['switch','rotate'],
+           plan:'<b>6 个任务</b>：核心 4 项 + 任务切换 + 心理旋转' }
+};
+
+function openMode(){ show('mode'); }
+
+function pickMode(m){
+  MODE = m;
+  const cfg = MODE_CFG[m];
+  $('intro-time').textContent = `整个测评约 ${cfg.minutes} 分钟，过程中请勿切换应用。`;
+  $('intro-plan').innerHTML = cfg.plan;
+  show('intro');
+}
+
+async function submitForm(){
+  S.wm = S.ic = S.ps = S.em = 0;
+  for (const k in RAW) delete RAW[k];
+  for (const k in EXTRA) delete EXTRA[k];
+
+  const cfg = MODE_CFG[MODE];
+
+  // 编码放在最前，再认放在最后：中间所有任务天然充当保持间隔
+  const enc = await runEncode(16);
+  const corsi = await runCorsi();
+  const gn = await runGoNoGo();
+  const srt = await runSRT();
+
+  if (cfg.extra.includes('switch')) EXTRA.switch = await runTaskSwitch();
+  if (cfg.extra.includes('rotate')) EXTRA.rotate = await runMentalRotate();
+
+  const rec = await runRecognition(16, enc.words);
+
+  S.wm = corsi.score; S.ic = gn.score; S.ps = srt.score; S.em = rec.score;
+  RAW.corsi = corsi.raw; RAW.gn = gn.raw; RAW.srt = srt.raw; RAW.rec = rec.raw;
+
+  show('computing');
+  const tk = TOKEN;
+  T(() => { if (tk === TOKEN){ renderReport(); show('report'); } }, 1200);
+}
+
+/* =========================================================
+   练习游戏（8 款）
+   ========================================================= */
+const PLAY = {
+  flip:    { icon:'🃏', name:'翻牌配对', dim:'工作记忆', desc:'找出所有相同的牌',
+             lv:{ easy:'4×4 · 6 对', normal:'4×4 · 8 对', hard:'5×4 · 10 对' } },
+  schulte: { icon:'🔢', name:'舒尔特方格', dim:'注意搜索', desc:'按 1→N 顺序点',
+             lv:{ easy:'4×4', normal:'5×5', hard:'6×5' } },
+  rhythm:  { icon:'🥁', name:'节奏点击', dim:'时序反应', desc:'踩着节拍点',
+             lv:{ easy:'8 拍 · 600ms', normal:'12 拍 · 500ms', hard:'16 拍 · 400ms' } },
+  math:    { icon:'🧮', name:'心算连击', dim:'工作记忆', desc:'连续加减',
+             lv:{ easy:'10 题', normal:'15 题', hard:'20 题' } },
+  reverse: { icon:'⬅️', name:'反向指令', dim:'抑制控制', desc:'按相反方向点',
+             lv:{ easy:'10 题', normal:'16 题', hard:'24 题' } },
+  simon:   { icon:'🎵', name:'记忆序列', dim:'序列记忆', desc:'复现闪烁顺序',
+             lv:{ easy:'4 色 · 慢速', normal:'4 色 · 标准', hard:'6 色 · 标准' } },
+  sort:    { icon:'🍎', name:'快速分类', dim:'加工速度', desc:'食物还是物品',
+             lv:{ easy:'20 个 · 30s', normal:'30 个 · 30s', hard:'40 个 · 30s' } },
+  dots:    { icon:'⚡', name:'点数闪现', dim:'数量估计', desc:'瞬间数清圆点',
+             lv:{ easy:'3–9 点', normal:'4–14 点', hard:'5–20 点' } }
+};
+
+/* —— 翻牌配对 —— */
+function playFlip(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const pairs = { easy:6, normal:8, hard:10 }[level];
+    const cols = level === 'hard' ? 5 : 4;
+    const icons = ['🍎','🚗','🐱','🌙','⚡','🍀','🎈','🔔','🐟','🌻'].slice(0, pairs);
+    const deck = shuffle([...icons, ...icons]);
+
+    head('翻牌配对', '0 / ' + pairs);
+    const st = stage();
+    const prompt = el('p','prompt','找出所有相同的牌');
+    const grid = el('div');
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;width:100%`;
+    st.append(prompt, grid);
+
+    let open = [], matched = 0, moves = 0, lock = false;
+    deck.forEach((ic, i) => {
+      const c = el('div','cell');
+      c.style.cssText = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px';
+      c.dataset.ic = ic;
+      c.textContent = '';
+      c.onclick = () => {
+        if (lock || c.classList.contains('on') || c.dataset.done) return;
+        c.textContent = ic; c.classList.add('on');
+        open.push(c);
+        if (open.length === 2){
+          moves++;
+          const [a,b] = open;
+          if (a.dataset.ic === b.dataset.ic){
+            a.dataset.done = b.dataset.done = '1';
+            a.classList.add('ok'); b.classList.add('ok');
+            matched++;
+            head('翻牌配对', matched + ' / ' + pairs);
+            bar(matched / pairs * 100);
+            open = [];
+            if (matched === pairs){
+              const score = Math.max(5, Math.min(98, Math.round(100 - (moves - pairs) * 3)));
+              T(() => resolve({ score, raw:{ moves } }), 400);
+            }
+          } else {
+            lock = true;
+            T(() => {
+              a.textContent = b.textContent = '';
+              a.classList.remove('on'); b.classList.remove('on');
+              open = []; lock = false;
+            }, 620);
+          }
+        }
+      };
+      grid.appendChild(c);
+    });
+  });
+}
+
+/* —— 舒尔特方格 —— */
+function playSchulte(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const [cols, rows] = { easy:[4,4], normal:[5,5], hard:[6,5] }[level];
+    const n = cols * rows;
+    const nums = shuffle(Array.from({length:n},(_,i)=>i+1));
+
+    head('舒尔特方格', `1 / ${n}`);
+    const st = stage();
+    const prompt = el('p','prompt','按 1 → N 的顺序点击');
+    const grid = el('div');
+    grid.style.cssText = `display:grid;grid-template-columns:repeat(${cols},1fr);gap:7px;width:100%`;
+    st.append(prompt, grid);
+
+    let next = 1;
+    const t0 = performance.now();
+    nums.forEach(v => {
+      const c = el('div','cell', v);
+      c.style.cssText = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:16px';
+      c.onclick = () => {
+        if (v !== next) return;
+        c.classList.add('ok');
+        next++;
+        head('舒尔特方格', `${next-1} / ${n}`);
+        bar((next-1)/n*100);
+        if (next > n){
+          const sec = (performance.now() - t0) / 1000;
+          const target = n * 0.9;
+          const score = Math.max(5, Math.min(98, Math.round(100 - (sec - target) * 3)));
+          T(() => resolve({ score, raw:{ sec: +sec.toFixed(1) } }), 200);
+        }
+      };
+      grid.appendChild(c);
+    });
+  });
+}
+
+/* —— 节奏点击 —— */
+function playRhythm(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const cfg = { easy:[8,600], normal:[12,500], hard:[16,400] }[level];
+    const [beats, interval] = cfg;
+
+    head('节奏点击', `0 / ${beats}`);
+    const st = stage();
+    const prompt = el('p','prompt','每响一声点一下，踩准节拍');
+    const pad = el('div');
+    pad.style.cssText = 'width:170px;height:170px;border-radius:24px;background:var(--card);border:1px solid var(--line);cursor:pointer';
+    st.append(prompt, pad);
+
+    const offsets = [];
+    let beat = 0, tapping = false, lastBeat = 0;
+
+    pad.onclick = () => {
+      if (!tapping) return;
+      offsets.push(Math.abs(performance.now() - lastBeat));
+    };
+
+    const start = performance.now();
+    const timer = setInterval(() => {
+      if (tk !== TOKEN){ clearInterval(timer); return; }
+      lastBeat = performance.now();
+      pad.style.background = 'linear-gradient(135deg,#5b8cff,#8f6bff)';
+      T(() => pad.style.background = 'var(--card)', 130);
+      beat++;
+      head('节奏点击', `${beat} / ${beats}`);
+      bar(beat / beats * 100);
+      if (beat >= beats){
+        clearInterval(timer); tapping = false;
+        const avg = offsets.length ? offsets.reduce((a,b)=>a+b,0)/offsets.length : 999;
+        const score = Math.max(5, Math.min(98, Math.round(100 - avg / 4)));
+        T(() => resolve({ score, raw:{ offset: Math.round(avg), taps: offsets.length } }), 400);
+      }
+    }, interval);
+
+    T(() => { tapping = true; }, 300);
+  });
+}
+
+/* —— 心算连击 —— */
+function playMath(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const total = { easy:10, normal:15, hard:20 }[level];
+    let i = 0, ok = 0, a = 0, b = 0, ans = 0, t0 = 0;
+
+    head('心算连击', `1 / ${total}`);
+    const st = stage();
+    const prompt = el('p','prompt','算出结果');
+    const q = el('div');
+    q.style.cssText = 'font-size:36px;font-weight:800;margin:10px 0 20px;font-variant-numeric:tabular-nums';
+    const opts = el('div','opts3');
+    st.append(prompt, q, opts);
+
+    function round(){
+      if (tk !== TOKEN) return;
+      if (i >= total) return finish();
+      head('心算连击', `${i+1} / ${total}`);
+      bar(i / total * 100);
+      a = 5 + Math.floor(Math.random()*40);
+      b = 1 + Math.floor(Math.random()*20);
+      const plus = Math.random() < .5;
+      ans = plus ? a + b : a - b;
+      q.textContent = `${a} ${plus?'+':'−'} ${b} = ?`;
+
+      const set = new Set([ans]);
+      while (set.size < 3) set.add(ans + (Math.floor(Math.random()*9) - 4));
+      const choices = shuffle([...set]);
+
+      opts.innerHTML = '';
+      choices.forEach(v => {
+        const btn = el('button','opt3', v);
+        btn.onclick = () => {
+          if (v === ans) ok++;
+          i++;
+          T(round, 160);
+        };
+        opts.appendChild(btn);
+      });
+      t0 = performance.now();
+    }
+
+    function finish(){
+      bar(100);
+      const score = Math.max(5, Math.min(98, Math.round(ok / total * 100)));
+      resolve({ score, raw:{ ok, total } });
+    }
+    round();
+  });
+}
+
+/* —— 反向指令 —— */
+function playReverse(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const total = { easy:10, normal:16, hard:24 }[level];
+    const DIRS = [['↑','up'],['↓','down'],['←','left'],['→','right']];
+    const OPP = { up:'down', down:'up', left:'right', right:'left' };
+    const CN = { up:'上', down:'下', left:'左', right:'右' };
+
+    let i = 0, ok = 0, cur = 'up';
+
+    head('反向指令', `1 / ${total}`);
+    const st = stage();
+    const prompt = el('p','prompt','箭头指向什么，你就点<b>相反</b>的方向');
+    const arrow = el('div');
+    arrow.style.cssText = 'font-size:76px;font-weight:800;margin:6px 0 18px;color:var(--accent)';
+    const pad = el('div');
+    pad.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:230px';
+    st.append(prompt, arrow, pad);
+
+    function build(){
+      pad.innerHTML = '';
+      [['', 'up', ''], ['left','', 'right'], ['', 'down', '']].flat().forEach(k => {
+        if (!k){ pad.appendChild(el('div')); return; }
+        const b = el('button','opt3', DIRS.find(d => d[1] === k)[0]);
+        b.onclick = () => {
+          if (k === OPP[cur]) ok++;
+          i++;
+          T(round, 140);
+        };
+        pad.appendChild(b);
+      });
+    }
+
+    function round(){
+      if (tk !== TOKEN) return;
+      if (i >= total) return finish();
+      head('反向指令', `${i+1} / ${total}`);
+      bar(i / total * 100);
+      cur = DIRS[Math.floor(Math.random()*4)][1];
+      arrow.textContent = DIRS.find(d => d[1] === cur)[0];
+    }
+
+    function finish(){
+      bar(100);
+      resolve({ score: Math.max(5, Math.min(98, Math.round(ok/total*100))), raw:{ ok, total } });
+    }
+
+    build(); round();
+  });
+}
+
+/* —— 记忆序列（Simon） —— */
+function playSimon(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const nColors = level === 'hard' ? 6 : 4;
+    const speed = level === 'easy' ? 700 : 500;
+    const COLORS_6 = ['#5b8cff','#8f6bff','#35c48f','#f0a33a','#ef5f6b','#38b4c8'];
+    const padColors = COLORS_6.slice(0, nColors);
+
+    let seq = [], inputIdx = 0, accepting = false, best = 0;
+
+    head('记忆序列', '长度 2');
+    const st = stage();
+    const prompt = el('p','prompt','看它闪烁的顺序，然后按同样顺序点回来');
+    const board = el('div');
+    board.style.cssText = `display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:250px`;
+    st.append(prompt, board);
+
+    const pads = padColors.map((c, i) => {
+      const p = el('div');
+      p.style.cssText = `aspect-ratio:1;border-radius:14px;background:${c};opacity:.35;cursor:pointer;transition:.08s`;
+      p.onclick = () => {
+        if (!accepting) return;
+        light(i, true);
+        if (i === seq[inputIdx]){
+          inputIdx++;
+          if (inputIdx === seq.length){ accepting = false; best = seq.length; nextRound(); }
+        } else {
+          accepting = false;
+          const score = Math.max(5, Math.min(98, Math.round(best / 9 * 100)));
+          T(() => resolve({ score, raw:{ best } }), 500);
+        }
+      };
+      board.appendChild(p);
+      return p;
+    });
+
+    function light(i, brief){
+      pads[i].style.opacity = '1';
+      T(() => pads[i].style.opacity = '.35', brief ? 110 : speed * 0.6);
+    }
+
+    function play(){
+      accepting = false;
+      let k = 0;
+      const step = () => {
+        if (tk !== TOKEN) return;
+        if (k >= seq.length){ accepting = true; inputIdx = 0; prompt.textContent = '轮到你了'; return; }
+        light(seq[k], false);
+        k++;
+        T(step, speed);
+      };
+      prompt.textContent = '看好了…';
+      T(step, 350);
+    }
+
+    function nextRound(){
+      if (seq.length >= 9){
+        const score = Math.max(5, Math.min(98, Math.round(seq.length / 9 * 100)));
+        return resolve({ score, raw:{ best: seq.length } });
+      }
+      seq.push(Math.floor(Math.random()*nColors));
+      head('记忆序列', `长度 ${seq.length}`);
+      bar(seq.length / 9 * 100);
+      T(play, 600);
+    }
+
+    seq = [Math.floor(Math.random()*nColors)];
+    T(play, 500);
+  });
+}
+
+/* —— 快速分类 —— */
+function playSort(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const total = { easy:20, normal:30, hard:40 }[level];
+    const FOOD = ['🍎','🍌','🍇','🍓','🍞','🧀','🍕','🥕'];
+    const ITEM = ['🚗','📚','🔑','✂️','⌚','💡','🪑','🧸'];
+
+    let i = 0, ok = 0, cur = '', isFood = true;
+    const t0 = performance.now();
+
+    head('快速分类', `1 / ${total}`);
+    const st = stage();
+    const prompt = el('p','prompt','这个是食物还是物品？');
+    const item = el('div');
+    item.style.cssText = 'font-size:70px;margin:12px 0 26px';
+    const row = el('div','row');
+    row.innerHTML = `<button class="btn ghost" data-a="1">食物</button>
+                     <button class="btn primary" data-a="0">物品</button>`;
+    st.append(prompt, item, row);
+
+    row.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        if ((b.dataset.a === '1') === isFood) ok++;
+        i++;
+        T(round, 90);
+      };
+    });
+
+    function round(){
+      if (tk !== TOKEN) return;
+      if (i >= total){
+        bar(100);
+        const sec = (performance.now() - t0) / 1000;
+        const acc = ok / total;
+        const score = Math.max(5, Math.min(98, Math.round(acc * 70 + Math.max(0, 30 - sec / 3))));
+        return resolve({ score, raw:{ ok, total, sec: +sec.toFixed(1) } });
+      }
+      head('快速分类', `${i+1} / ${total}`);
+      bar(i / total * 100);
+      isFood = Math.random() < .5;
+      cur = (isFood ? FOOD : ITEM)[Math.floor(Math.random()*8)];
+      item.textContent = cur;
+    }
+    round();
+  });
+}
+
+/* —— 点数闪现 —— */
+function playDots(level){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const range = { easy:[3,9], normal:[4,14], hard:[5,20] }[level];
+    const ROUNDS = 8;
+    let i = 0, ok = 0, answer = 0;
+
+    head('点数闪现', `1 / ${ROUNDS}`);
+    const st = stage();
+    const prompt = el('p','prompt','看清圆点数量');
+    const zone = el('div');
+    zone.style.cssText = 'width:200px;height:200px;position:relative;border-radius:16px;background:var(--card);border:1px solid var(--line)';
+    const opts = el('div','opts3');
+    opts.style.marginTop = '18px';
+    st.append(prompt, zone, opts);
+
+    function round(){
+      if (tk !== TOKEN) return;
+      if (i >= ROUNDS){
+        bar(100);
+        return resolve({ score: Math.max(5, Math.min(98, Math.round(ok/ROUNDS*100))), raw:{ ok, rounds: ROUNDS } });
+      }
+      head('点数闪现', `${i+1} / ${ROUNDS}`);
+      bar(i / ROUNDS * 100);
+      opts.innerHTML = '';
+      answer = range[0] + Math.floor(Math.random() * (range[1]-range[0]+1));
+      zone.innerHTML = '';
+      for (let k = 0; k < answer; k++){
+        const d = el('div');
+        const s = 10 + Math.random()*6;
+        d.style.cssText = `position:absolute;width:${s}px;height:${s}px;border-radius:50%;
+          background:var(--accent);left:${8+Math.random()*80}%;top:${8+Math.random()*80}%`;
+        zone.appendChild(d);
+      }
+      prompt.textContent = '数清了吗？';
+      T(() => {
+        if (tk !== TOKEN) return;
+        zone.innerHTML = '';
+        prompt.textContent = '刚才有多少个？';
+        const set = new Set([answer]);
+        while (set.size < 3) set.add(Math.max(range[0], answer + (Math.floor(Math.random()*5)-2)));
+        shuffle([...set]).forEach(v => {
+          const b = el('button','opt3', v);
+          b.onclick = () => { if (v === answer) ok++; i++; T(round, 200); };
+          opts.appendChild(b);
+        });
+      }, 900);
+    }
+    round();
+  });
+}
+
+const PLAY_FN = { flip:playFlip, schulte:playSchulte, rhythm:playRhythm, math:playMath,
+                  reverse:playReverse, simon:playSimon, sort:playSort, dots:playDots };
+
+/* =========================================================
+   报告
+   ========================================================= */
+const ADVICE = {
+  wm: '从每天 10 分钟的空间序列复现练起：记住 4–5 个位置再按顺序点回，练到稳定后再加到 6 个。',
+  ic: '做「反向指令」练习：看到向上就点向下。每天 3 组、每组 20 次，重点是压住第一反应。',
+  ps: '睡眠对反应速度的影响大于训练。先把入睡时间固定两周，再记录晨起后的反应时变化。',
+  em: '用间隔重复：同一份词表在当天、第 2 天、第 7 天各回忆一次，每次 5 分钟。'
+};
+
+function renderReport(){
+  const vals = DIMS.map(k => S[k]);
+  const avg = Math.round(vals.reduce((a,b)=>a+b,0)/4);
+  $('rp-score').innerHTML = avg + '<small> 分</small>';
+
+  const sorted = DIMS.map(k => [k,S[k]]).sort((a,b)=>b[1]-a[1]);
+  const best = sorted[0], worst = sorted[3];
+  $('rp-verdict').textContent = `你的${DIM_SHORT[best[0]]}相对突出，${DIM_SHORT[worst[0]]}还有提升空间`;
+
+  const rel = reliability();
+  const cls = rel === '高' ? 'hi' : rel === '中' ? 'mid' : 'lo';
+  const modeName = MODE_CFG[MODE].name;
+  $('rp-tags').innerHTML = `<span class="tag ${cls}">状态可信度：${rel}</span>
+    <span class="tag">${modeName}版 · ${MODE_CFG[MODE].minutes} 分钟</span>
+    <span class="tag">四项均分</span><span class="tag">未与人群比较</span>`;
+
+  DIMS.forEach(k => { $('bar-'+k).style.width = S[k]+'%'; $('v-'+k).textContent = S[k]; });
+
+  drawRadar(vals);
+
+  // 扩展观察（仅深度 / 完全）
+  const ext = $('rp-ext');
+  if (MODE_CFG[MODE].extra.length){
+    ext.style.display = 'block';
+    if (EXTRA.switch){
+      $('rp-ext-switch').style.display = 'flex';
+      const r = EXTRA.switch.raw;
+      $('rp-ext-switch').querySelector('b').textContent =
+        `${r.cost} ms（准确率 ${Math.round(r.acc*100)}%）`;
+    }
+    if (EXTRA.rotate){
+      $('rp-ext-rotate').style.display = 'flex';
+      const r = EXTRA.rotate.raw;
+      $('rp-ext-rotate').querySelector('b').textContent =
+        `${Math.round(r.acc*100)}%（${r.ok}/${r.total}）`;
+    }
+  } else {
+    ext.style.display = 'none';
+  }
+
+  // 测量细节（scoring-v2）
+  const c = RAW.corsi || {}, g = RAW.gn || {}, s = RAW.srt || {}, r = RAW.rec || {};
+  $('dt-span').textContent = c.span != null ? `${c.span} 个` : '--';
+  $('dt-comm').textContent = g.commRate != null
+    ? `${(g.commRate*100).toFixed(0)}%（${g.commission}/${g.nogoTotal}）` : '--';
+  $('dt-rt').textContent = s.median != null ? `${s.median} ms` : '--';
+  $('dt-iqr').textContent = s.iqr != null
+    ? `${s.iqr} ms${s.iqr > 300 ? '（波动较大）' : ''}` : '--';
+  $('dt-dp').textContent = r.dprime != null ? r.dprime : '--';
+
+  $('rp-weakname').textContent = DIM_CN[worst[0]];
+  $('rp-advice').textContent = ADVICE[worst[0]];
+
+  const self = Number(FORM.memory) || 3, obj = S.em;
+  let txt;
+  if (self <= 2 && obj >= 60) txt = `你自评记忆力 ${self}/5（偏低），客观再认成绩 ${obj} 分（中上）。你的主观感受比实际表现更悲观。`;
+  else if (self >= 4 && obj < 40) txt = `你自评记忆力 ${self}/5（偏高），客观再认成绩 ${obj} 分。主观感受比实际表现乐观。`;
+  else txt = `你自评记忆力 ${self}/5，客观再认成绩 ${obj} 分，两者基本一致。`;
+  $('rp-selfcard').style.display = 'block';
+  $('rp-selftext').textContent = txt;
+
+  let note = '本次结果误差范围约 ±6 分。单次测量受睡眠、情绪、设备延迟影响，建议间隔一周后复测。';
+  if (rel !== '高') note = (FORM.sleep === '<5'
+    ? '你昨晚睡眠不足 5 小时，反应速度与抑制控制可能被系统性低估。'
+    : '测试时精力偏低，成绩可能低于平时水平。') + note;
+  note += ' 四项均分仅供参考，不代表总体认知能力，也不与人群比较。MindMeter 不是医疗器械。';
+  $('rp-note').textContent = note;
+
+  saveAssess(avg, rel);
+  loadAdvice();
+}
+
+function drawRadar(vals){
+  const svg = $('rp-radar'), cx = 125, cy = 108, R = 70;
+  const labels = ['视空间记忆','抑制控制','反应速度','词语再认'];
+  const angs = [-90,0,90,180].map(a => a*Math.PI/180);
+  const pt = (a,r) => [cx+Math.cos(a)*r, cy+Math.sin(a)*r];
+  let h = '';
+  [.25,.5,.75,1].forEach(f => {
+    h += `<polygon points="${angs.map(a=>pt(a,R*f).join(',')).join(' ')}" fill="none" stroke="#252b3a"/>`;
+  });
+  angs.forEach(a => { const [x,y]=pt(a,R); h += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#252b3a"/>`; });
+  h += `<polygon points="${vals.map((v,i)=>pt(angs[i],R*v/100).join(',')).join(' ')}"
+        fill="rgba(91,140,255,.22)" stroke="#5b8cff" stroke-width="2" stroke-linejoin="round"/>`;
+  vals.forEach((v,i)=>{ const [x,y]=pt(angs[i],R*v/100); h += `<circle cx="${x}" cy="${y}" r="3" fill="#8fb0ff"/>`; });
+  const lp = [[0,-R-18],[R+46,0],[0,R+18],[-R-46,0]];
+  labels.forEach((l,i)=>{
+    h += `<text x="${cx+lp[i][0]}" y="${cy+lp[i][1]+4}" fill="#8a91a5" font-size="10"
+          text-anchor="middle" font-family="system-ui">${l}</text>`;
+  });
+  svg.innerHTML = h;
+}
+
+/* =========================================================
+   AI 教练接入位
+   ---------------------------------------------------------
+   暂时不接入。把 AGENT.enabled 改成 true 并部署 server.py
+   或换成自己的后端地址，即可启用；失败会自动回退到本地规则文案。
+   ========================================================= */
+const AGENT = {
+  enabled: false,                        // ← 唯一开关
+  endpoint: '/api/advice',               // ← 换成自己的后端地址
+  timeoutMs: 8000,
+  maxCallsPerDay: 5                      // 仅作提示，真正限流应在后端
+};
+
+/** 组装发给 agent 的档案（契约见 agent-接入位.md） */
+function buildProfile(){
+  return {
+    scores: { wm:S.wm, ic:S.ic, ps:S.ps, em:S.em },
+    raw: RAW,                                   // 原始指标：d′、commission rate、IQR
+    demographics: { age_band:FORM.age, edu:FORM.edu },
+    state: { sleep_h:FORM.sleep, energy:Number(FORM.energy), caffeine:FORM.caffeine==='1' },
+    self_report: { memory:Number(FORM.memory) },
+    reliability: reliability(),
+    history: (ls.get(K_A, []) || []).slice(-5),  // 最近 5 次
+    practice: ls.get(K_B, {}),                   // 各游戏最佳纪录
+    session_type: 'full'
+  };
+}
+
+/** 占位实现：接入后替换成真正的请求 */
+async function fetchAgentAdvice(profile){
+  if (!AGENT.enabled) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), AGENT.timeoutMs);
+  try {
+    const res = await fetch(AGENT.endpoint, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(profile), signal: ctrl.signal
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!j || !j.advice) return null;
+    const a = j.advice;
+    const parts = [a.action, a.how, a.when ? `建议时间：${a.when}` : ''].filter(Boolean);
+    if (!parts.length) return null;
+    return { text: parts.join(' '), caveat: j.caveat || '', source: j.source || 'model' };
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
+async function loadAdvice(){
+  const box = $('rp-advice'), src = $('rp-advice-src');
+  const original = box.textContent;
+
+  if (!AGENT.enabled){                    // 未接入：什么都不发，保持本地规则文案
+    src.textContent = '当前：本地规则文案（未接入 AI）';
+    return;
+  }
+
+  src.textContent = 'AI 生成中…';
+  const r = await fetchAgentAdvice(buildProfile());
+  if (!r){                                 // 失败 / 超时 → 回退
+    box.textContent = original;
+    src.textContent = 'AI 暂不可用，已回退为本地规则文案';
+    return;
+  }
+  box.textContent = r.text;
+  src.textContent = r.source === 'model' ? 'AI 生成' : '规则兜底';
+  if (r.caveat) $('rp-note').textContent = r.caveat + ' ' + $('rp-note').textContent;
+}
+
+function saveAssess(total, rel){
+  const h = ls.get(K_A, []);
+  h.push({ t:Date.now(), total, ...S, reliability:rel, mode:MODE,
+           extra: JSON.parse(JSON.stringify(EXTRA)),
+           form:{ age:FORM.age, edu:FORM.edu, sleep:FORM.sleep, energy:FORM.energy } });
+  if (h.length > 24) h.shift();
+  ls.set(K_A, h);
+}
+
+/* =========================================================
+   游戏中心
+   ========================================================= */
+const PLAY_KEYS = Object.keys(PLAY);
+
+function bestOf(game, level){
+  const b = ls.get(K_B, {});
+  return b[`${game}_${level}`] ?? null;
+}
+function bestAny(game){
+  const b = ls.get(K_B, {});
+  let m = null;
+  ['easy','normal','hard'].forEach(l => {
+    const v = b[`${game}_${l}`];
+    if (v != null && (m == null || v > m)) m = v;
+  });
+  return m;
+}
+
+function openArcade(){
+  // 顶部大卡：随机推荐
+  const pickKey = PLAY_KEYS[Math.floor(Math.random()*PLAY_KEYS.length)];
+  const p = PLAY[pickKey];
+  const hero = $('arcade-hero');
+  hero.innerHTML = `<span class="ico">${p.icon}</span>
+    <div><div class="tt">${p.name}</div><div class="ss">${p.dim} · ${p.desc}</div></div>
+    <span class="go">试一局 ›</span>`;
+  hero.onclick = () => openSetup(pickKey);
+
+  const grid = $('arcade-grid');
+  grid.innerHTML = '';
+  PLAY_KEYS.forEach(k => {
+    const g = PLAY[k], b = bestAny(k);
+    const d = el('div','gcard',
+      `<div class="ico">${g.icon}</div>
+       <div class="nm">${g.name}</div>
+       <div class="dm">${g.dim}</div>
+       <div class="bt">${b == null ? '最佳 —' : `最佳 <b>${b}</b>`}</div>`);
+    d.onclick = () => openSetup(k);
+    grid.appendChild(d);
+  });
+
+  show('arcade');
+}
+
+let currentGame = null, currentLevel = 'normal';
+
+function openSetup(game){
+  currentGame = game;
+  const g = PLAY[game];
+  $('setup-title').textContent = `${g.icon} ${g.name}`;
+  $('setup-sub').textContent = `${g.dim} · 不同难度的成绩不能互相比较`;
+
+  const box = $('setup-diffs');
+  box.innerHTML = '';
+  [['easy','简单'],['normal','标准'],['hard','挑战']].forEach(([lv,cn]) => {
+    const b = bestOf(game, lv);
+    const d = el('div','diff' + (lv === currentLevel ? ' sel' : ''),
+      `<span class="radio"></span><span class="dn">${cn}</span>
+       <span class="dd"><span class="p">${g.lv[lv]}</span>
+       <span class="b">${b == null ? '最佳 —' : `最佳 ${b}`}</span></span>`);
+    d.onclick = () => {
+      currentLevel = lv;
+      box.querySelectorAll('.diff').forEach(x => x.classList.remove('sel'));
+      d.classList.add('sel');
+    };
+    box.appendChild(d);
+  });
+  show('setup');
+}
+
+let lastResult = null;
+
+async function startPlay(){
+  const fn = PLAY_FN[currentGame];
+  const res = await fn(currentLevel);
+  finishPlay(res);
+}
+
+function finishPlay(res){
+  lastResult = res;
+  const key = `${currentGame}_${currentLevel}`;
+  const b = ls.get(K_B, {});
+  const prev = b[key] ?? null;
+  const isNew = prev == null || res.score > prev;
+  if (isNew){ b[key] = res.score; ls.set(K_B, b); }
+
+  $('rs-lab').textContent = (isNew && prev != null) ? '🎉 新纪录' : '本次成绩';
+  $('rs-score').textContent = res.score;
+
+  const cn = currentLevel === 'easy' ? '简单' : currentLevel === 'hard' ? '挑战' : '标准';
+  $('rs-best').innerHTML = isNew
+    ? (prev == null ? `这是你在「${cn}」的首个成绩，已记为最佳。`
+       : `原纪录 <b>${prev}</b> → <span class="newrec">${res.score}</span>，已更新最佳。`)
+    : `当前最佳 <b>${prev}</b>（${cn}），还差 ${prev - res.score} 分。`;
+
+  const canAdd = currentLevel === 'normal';
+  const btn = $('rs-add');
+  btn.disabled = !canAdd;
+  btn.textContent = canAdd ? '加入我的画像' : '仅标准难度可计入画像';
+
+  show('result');
+}
+
+function addToProfile(){
+  if (currentLevel !== 'normal') return;
+  const p = ls.get(K_P, {});
+  const today = new Date().toDateString();
+  if (p[currentGame] && p[currentGame].day === today){ toast('今天已记录过这个游戏了'); return; }
+  p[currentGame] = { score:lastResult.score, day:today, t:Date.now() };
+  ls.set(K_P, p);
+  const n = Object.keys(p).length;
+  toast(n >= 4 ? '已加入画像' : `已记录（完成度 ${n} / 4）`);
+  $('rs-add').disabled = true;
+  $('rs-add').textContent = '已加入';
+}
+
+/* =========================================================
+   历史
+   ========================================================= */
+function openHistory(){
+  const h = ls.get(K_A, []);
+  const list = $('hist-list');
+  list.innerHTML = '';
+
+  if (h.length < 2){
+    $('hist-empty').style.display = 'block';
+    list.style.display = 'none';
+  } else {
+    $('hist-empty').style.display = 'none';
+    list.style.display = 'block';
+    h.slice().reverse().forEach(r => {
+      const d = new Date(r.t);
+      const bars = DIMS.map(k => `<b><i style="width:${r[k]||0}%"></i></b>`).join('');
+      const m = r.mode || 'basic';
+      const badge = MODE_CFG[m] ? MODE_CFG[m].name : '基础';
+      const row = el('div','hist-item',
+        `<span class="d">${d.getMonth()+1}.${d.getDate()}<br>
+           <i style="font-style:normal;font-size:10px;color:var(--dim)">${badge}</i></span>
+         <span class="bars">${bars}</span><span class="s">${r.total}</span>`);
+      list.appendChild(row);
+    });
+    list.insertAdjacentHTML('beforeend',
+      `<p class="tiny" style="margin-top:12px">核心 4 项三档可比；扩展项仅在深度/完全版出现，不参与跨档比较。</p>`);
+  }
+  show('history');
+}
+</script>
+</body>
+</html>
