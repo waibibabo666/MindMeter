@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>MindMeter 心智镜 · 交互原型 v3</title>
+<title>MindMeter 心智镜 · 交互原型 v4（三档测评）</title>
 <style>
   :root{
     --bg:#0b0d13; --card:#161a24; --card2:#1c2130; --line:#252b3a;
@@ -57,6 +57,19 @@
     border:1px solid rgba(91,140,255,.35);border-radius:18px;padding:20px;margin-bottom:16px}
   .main-entry .t{font-size:19px;font-weight:700;margin-bottom:3px}
   .main-entry .s{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+
+  /* 模式选择 */
+  .mode-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:16px 18px;margin-bottom:11px;cursor:pointer;transition:.16s}
+  .mode-card:hover{border-color:#3a4258;transform:translateY(-1px)}
+  .mode-card[data-rec]{border-color:rgba(91,140,255,.4);background:rgba(91,140,255,.06)}
+  .mc-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px}
+  .mc-name{font-size:16px;font-weight:700}
+  .mc-rec{font-style:normal;font-size:10px;font-weight:600;color:var(--accent);
+    border:1px solid rgba(91,140,255,.45);border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+  .mc-time{font-size:12.5px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .mc-desc{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.55}
+  .mc-tags{font-size:11px;color:var(--dim)}
   .sub-entry{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;
     color:var(--muted);cursor:pointer;padding:10px;background:none;border:none;width:100%;font-family:inherit}
   .sub-entry:hover{color:var(--text)}.sub-entry b{color:var(--accent);font-weight:600}
@@ -221,7 +234,7 @@
 </head>
 <body>
 <div class="app">
-  <div class="topbar"><span class="name">MINDMETER</span><span class="badge">原型 v3</span></div>
+  <div class="topbar"><span class="name">MINDMETER</span><span class="badge">原型 v4</span></div>
   <main>
 
     <!-- P0 首页 -->
@@ -229,23 +242,61 @@
       <div class="hero">
         <div class="kicker">认知测评</div>
         <h1>玩一局，<br>看清你的<em>大脑</em></h1>
-        <p class="lead">4 个维度，5 道题，约 4 分钟。<br>不是给你一个分数，是告诉你下一步该练什么。</p>
+        <p class="lead">3 种模式，4 到 7 分钟。<br>不是给你一个分数，是告诉你下一步该练什么。</p>
         <div class="main-entry">
-          <div class="t">完整测评</div>
-          <div class="s">4 个维度 · 5 道题 · 约 4 分钟</div>
-          <button class="btn primary" onclick="toIntro()">开始测评</button>
+          <div class="t">开始测评</div>
+          <div class="s">3 种模式 · 4–7 分钟 · 按你有多少时间选</div>
+          <button class="btn primary" onclick="openMode()">选择模式</button>
         </div>
         <button class="sub-entry" onclick="openArcade()">想先随便玩玩？ 游戏中心 <b>›</b></button>
       </div>
     </section>
 
+    <!-- P0.5 模式选择 -->
+    <section id="s-mode" class="screen">
+      <h2>选一个模式</h2>
+      <p class="lead" style="margin-bottom:16px">核心 4 项三档完全一致，分数可以直接比较。<br>高档位只是多测，不改变已测的内容。</p>
+
+      <div class="mode-card" onclick="pickMode('basic')">
+        <div class="mc-head">
+          <span class="mc-name">基础</span>
+          <span class="mc-time">≈ 4 分钟</span>
+        </div>
+        <p class="mc-desc">4 个核心维度，出完整画像与分数。</p>
+        <p class="mc-tags">工作记忆 · 抑制控制 · 反应速度 · 词语再认</p>
+      </div>
+
+      <div class="mode-card" data-rec="1" onclick="pickMode('deep')">
+        <div class="mc-head">
+          <span class="mc-name">深度 <i class="mc-rec">推荐</i></span>
+          <span class="mc-time">≈ 6 分钟</span>
+        </div>
+        <p class="mc-desc">基础 + 认知灵活性，补上执行功能三成分的最后一块。</p>
+        <p class="mc-tags">+ 任务切换（切换代价）</p>
+      </div>
+
+      <div class="mode-card" onclick="pickMode('full')">
+        <div class="mc-head">
+          <span class="mc-name">完全</span>
+          <span class="mc-time">≈ 7 分钟</span>
+        </div>
+        <p class="mc-desc">深度 + 一个游戏化任务，覆盖视空间能力。</p>
+        <p class="mc-tags">+ 任务切换 + 心理旋转</p>
+      </div>
+
+      <p class="tiny" style="margin-top:14px">
+        扩展项为「描述性指标」：只和你自己的历史比较，不做人群百分位。
+      </p>
+      <button class="btn ghost" onclick="show('home')" style="margin-top:14px">返回</button>
+    </section>
+
     <!-- P1 说明 -->
     <section id="s-intro" class="screen">
       <h2>开始之前</h2>
-      <p class="lead" style="margin-bottom:16px">整个测评约 4 分钟，过程中请勿切换应用。</p>
+      <p class="lead" style="margin-bottom:16px" id="intro-time">整个测评约 4 分钟，过程中请勿切换应用。</p>
       <div class="list">
         <div class="li"><span class="num">1</span><span><b>5 道基本信息题</b>，约 30 秒</span></div>
-        <div class="li"><span class="num">2</span><span><b>4 个任务</b>，顺序固定：序列 → 抑制 → 反应 → 再认</span></div>
+        <div class="li"><span class="num">2</span><span id="intro-plan"><b>4 个任务</b>，顺序固定</span></div>
         <div class="li"><span class="num">3</span><span>测评中<b>不会提示对错</b>，凭第一反应作答</span></div>
       </div>
       <div class="consent">
@@ -253,6 +304,7 @@
         MindMeter 不是医疗器械，不提供诊断、治疗或医疗建议。
       </div>
       <button class="btn primary" onclick="toForm()">我已了解，开始</button>
+      <button class="btn ghost" onclick="openMode()" style="margin-top:10px">换个模式</button>
     </section>
 
     <!-- P2 表单 -->
@@ -327,6 +379,13 @@
         <p class="coach-contract">契约见 <code>agent-接入位.md</code> · 开关在 <code>AGENT.enabled</code></p>
       </div>
       <!-- ===== 接入位结束 ===== -->
+
+      <div class="card" id="rp-ext" style="display:none;border-style:dashed;border-color:#2f3648">
+        <div class="k" style="font-size:11.5px;letter-spacing:.1em;color:var(--dim);margin-bottom:6px">扩展观察 · 描述性指标</div>
+        <div class="detail" id="rp-ext-switch" style="display:none"><span>任务切换代价</span><b>--</b></div>
+        <div class="detail" id="rp-ext-rotate" style="display:none"><span>心理旋转正确率</span><b>--</b></div>
+        <p class="tiny" style="margin-top:8px">仅与你自己的历史比较，不做人群百分位，不构成诊断。</p>
+      </div>
 
       <div class="card" id="rp-selfcard" style="display:none">
         <div class="k" style="font-size:11.5px;letter-spacing:.1em;color:var(--accent);margin-bottom:6px">自评 vs 客观</div>
@@ -832,14 +891,206 @@ function reliability(){
   return '高';
 }
 
+/* =========================================================
+   扩展任务 ① 任务切换（认知灵活性）
+   ========================================================= */
+function runTaskSwitch(){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 16;
+    let i = 0, ok = 0, prevRule = null;
+    const rtRep = [], rtSw = [];
+
+    head('任务切换', '1 / ' + TOTAL);
+    const st = stage();
+    const prompt = el('p','prompt','按上方规则分类，越快越准');
+    const rule = el('div');
+    rule.style.cssText = 'font-size:13px;color:var(--accent);font-weight:600;margin-bottom:12px';
+    const figure = el('div');
+    figure.style.cssText = 'display:flex;align-items:center;justify-content:center;margin-bottom:24px';
+    const row = el('div','row');
+    st.append(prompt, rule, figure, row);
+
+    let cur = null, t0 = 0, answered = false;
+
+    function trial(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+
+      const r = Math.random() < .5 ? 'color' : 'shape';
+      const isSwitch = prevRule !== null && r !== prevRule;
+      const color = Math.random() < .5 ? 'red' : 'blue';
+      const shape = Math.random() < .5 ? 'circle' : 'square';
+      cur = { r, color, shape, isSwitch };
+      prevRule = r;
+
+      rule.textContent = r === 'color' ? '规则：按【颜色】分' : '规则：按【形状】分';
+      figure.innerHTML = `<div style="width:96px;height:96px;
+        background:${color === 'red' ? '#ef5f6b' : '#5b8cff'};
+        border-radius:${shape === 'circle' ? '50%' : '16px'}"></div>`;
+
+      const labels = r === 'color' ? ['红','蓝'] : ['圆','方'];
+      row.innerHTML = '';
+      labels.forEach((lab, idx) => {
+        const b = el('button', 'btn ' + (idx === 0 ? 'ghost' : 'primary'), lab);
+        b.onclick = () => answer(idx);
+        row.appendChild(b);
+      });
+
+      t0 = performance.now();
+      answered = false;
+      T(() => { if (!answered) answer(-1); }, 5000);   // 超时记为错误
+    }
+
+    function answer(idx){
+      if (answered) return;
+      answered = true;
+      const rt = performance.now() - t0;
+      const correct = cur.r === 'color'
+        ? (cur.color === 'red' ? 0 : 1)
+        : (cur.shape === 'circle' ? 0 : 1);
+      const right = idx === correct;
+      if (right) ok++;
+      const eff = right ? rt : rt + 600;
+      (cur.isSwitch ? rtSw : rtRep).push(eff);
+
+      i++;
+      T(trial, 220);
+    }
+
+    function finish(){
+      bar(100);
+      const acc = ok / TOTAL;
+      const rep = median(rtRep) || 700;
+      const sw = median(rtSw) || 900;
+      const cost = Math.max(0, Math.round(sw - rep));
+      const score = Math.max(5, Math.min(98,
+        Math.round(acc * 60 + Math.max(0, 40 - cost / 10))));
+      resolve({ score, raw:{ acc, cost, rep: Math.round(rep), sw: Math.round(sw) } });
+    }
+
+    trial();
+  });
+}
+
+/* =========================================================
+   扩展任务 ② 心理旋转（视空间）
+   ========================================================= */
+const ROT_BASE = [[-30,-30],[30,-20],[12,10],[30,30],[-20,22]];
+
+function rotPoints(mirror, deg){
+  const rad = deg * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad);
+  return ROT_BASE.map(([x0, y0]) => {
+    const x = mirror ? -x0 : x0;
+    return `${(x * c - y0 * s).toFixed(1)},${(x * s + y0 * c).toFixed(1)}`;
+  }).join(' ');
+}
+
+function rotSvg(pts, color){
+  return `<svg width="112" height="112" viewBox="-58 -58 116 116">
+    <polygon points="${pts}" fill="rgba(91,140,255,.16)" stroke="${color}" stroke-width="3"
+      stroke-linejoin="round"/></svg>`;
+}
+
+function runMentalRotate(){
+  return new Promise(resolve => {
+    show('game'); const tk = TOKEN;
+    const TOTAL = 12;
+    let i = 0, ok = 0, t0 = 0, answered = false, truth = true;
+
+    head('心理旋转', '1 / ' + TOTAL);
+    const st = stage();
+    const prompt = el('p','prompt','右边是不是左边转了一下？<b>镜像不算</b>');
+    const pair = el('div');
+    pair.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:center;margin-bottom:22px';
+    const row = el('div','row');
+    row.innerHTML = `<button class="btn ghost" data-a="0">镜像 / 不同</button>
+                     <button class="btn primary" data-a="1">同一个</button>`;
+    st.append(prompt, pair, row);
+
+    row.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        if (answered) return;
+        answered = true;
+        const said = b.dataset.a === '1';
+        if (said === truth) ok++;
+        i++;
+        T(trial, 260);
+      };
+    });
+
+    function trial(){
+      if (tk !== TOKEN) return;
+      if (i >= TOTAL) return finish();
+      $('g-count').textContent = `${i+1} / ${TOTAL}`;
+      bar(i / TOTAL * 100);
+
+      truth = Math.random() < .5;
+      const deg = 25 + Math.floor(Math.random() * 300);
+      const left = rotSvg(rotPoints(false, 0), '#8a91a5');
+      const right = rotSvg(rotPoints(!truth, deg), '#5b8cff');
+      pair.innerHTML = left + `<span style="color:#5d6579;font-size:20px">→</span>` + right;
+
+      t0 = performance.now();
+      answered = false;
+      T(() => { if (!answered){ answered = true; i++; T(trial, 260); } }, 7000);
+    }
+
+    function finish(){
+      bar(100);
+      const acc = ok / TOTAL;
+      const score = Math.max(5, Math.min(98, Math.round(acc * 100)));
+      resolve({ score, raw:{ acc, ok, total: TOTAL } });
+    }
+
+    trial();
+  });
+}
+
+/* =========================================================
+   测评模式
+   三档共用同一套核心 4 项；高档位只“加任务”，不改已测内容。
+   ========================================================= */
+let MODE = 'basic';
+const EXTRA = {};                    // 扩展项结果（不进画像、不做人群比较）
+
+const MODE_CFG = {
+  basic: { name:'基础', minutes:4, extra:[],
+           plan:'<b>4 个任务</b>，顺序固定：序列 → 抑制 → 反应 → 再认' },
+  deep:  { name:'深度', minutes:6, extra:['switch'],
+           plan:'<b>5 个任务</b>：核心 4 项 + 任务切换' },
+  full:  { name:'完全', minutes:7, extra:['switch','rotate'],
+           plan:'<b>6 个任务</b>：核心 4 项 + 任务切换 + 心理旋转' }
+};
+
+function openMode(){ show('mode'); }
+
+function pickMode(m){
+  MODE = m;
+  const cfg = MODE_CFG[m];
+  $('intro-time').textContent = `整个测评约 ${cfg.minutes} 分钟，过程中请勿切换应用。`;
+  $('intro-plan').innerHTML = cfg.plan;
+  show('intro');
+}
+
 async function submitForm(){
   S.wm = S.ic = S.ps = S.em = 0;
   for (const k in RAW) delete RAW[k];
+  for (const k in EXTRA) delete EXTRA[k];
 
+  const cfg = MODE_CFG[MODE];
+
+  // 编码放在最前，再认放在最后：中间所有任务天然充当保持间隔
   const enc = await runEncode(16);
   const corsi = await runCorsi();
   const gn = await runGoNoGo();
   const srt = await runSRT();
+
+  if (cfg.extra.includes('switch')) EXTRA.switch = await runTaskSwitch();
+  if (cfg.extra.includes('rotate')) EXTRA.rotate = await runMentalRotate();
+
   const rec = await runRecognition(16, enc.words);
 
   S.wm = corsi.score; S.ic = gn.score; S.ps = srt.score; S.em = rec.score;
@@ -1309,12 +1560,34 @@ function renderReport(){
 
   const rel = reliability();
   const cls = rel === '高' ? 'hi' : rel === '中' ? 'mid' : 'lo';
+  const modeName = MODE_CFG[MODE].name;
   $('rp-tags').innerHTML = `<span class="tag ${cls}">状态可信度：${rel}</span>
+    <span class="tag">${modeName}版 · ${MODE_CFG[MODE].minutes} 分钟</span>
     <span class="tag">四项均分</span><span class="tag">未与人群比较</span>`;
 
   DIMS.forEach(k => { $('bar-'+k).style.width = S[k]+'%'; $('v-'+k).textContent = S[k]; });
 
   drawRadar(vals);
+
+  // 扩展观察（仅深度 / 完全）
+  const ext = $('rp-ext');
+  if (MODE_CFG[MODE].extra.length){
+    ext.style.display = 'block';
+    if (EXTRA.switch){
+      $('rp-ext-switch').style.display = 'flex';
+      const r = EXTRA.switch.raw;
+      $('rp-ext-switch').querySelector('b').textContent =
+        `${r.cost} ms（准确率 ${Math.round(r.acc*100)}%）`;
+    }
+    if (EXTRA.rotate){
+      $('rp-ext-rotate').style.display = 'flex';
+      const r = EXTRA.rotate.raw;
+      $('rp-ext-rotate').querySelector('b').textContent =
+        `${Math.round(r.acc*100)}%（${r.ok}/${r.total}）`;
+    }
+  } else {
+    ext.style.display = 'none';
+  }
 
   // 测量细节（scoring-v2）
   const c = RAW.corsi || {}, g = RAW.gn || {}, s = RAW.srt || {}, r = RAW.rec || {};
@@ -1444,7 +1717,8 @@ async function loadAdvice(){
 
 function saveAssess(total, rel){
   const h = ls.get(K_A, []);
-  h.push({ t:Date.now(), total, ...S, reliability:rel,
+  h.push({ t:Date.now(), total, ...S, reliability:rel, mode:MODE,
+           extra: JSON.parse(JSON.stringify(EXTRA)),
            form:{ age:FORM.age, edu:FORM.edu, sleep:FORM.sleep, energy:FORM.energy } });
   if (h.length > 24) h.shift();
   ls.set(K_A, h);
@@ -1584,11 +1858,16 @@ function openHistory(){
     h.slice().reverse().forEach(r => {
       const d = new Date(r.t);
       const bars = DIMS.map(k => `<b><i style="width:${r[k]||0}%"></i></b>`).join('');
+      const m = r.mode || 'basic';
+      const badge = MODE_CFG[m] ? MODE_CFG[m].name : '基础';
       const row = el('div','hist-item',
-        `<span class="d">${d.getMonth()+1}.${d.getDate()}</span>
+        `<span class="d">${d.getMonth()+1}.${d.getDate()}<br>
+           <i style="font-style:normal;font-size:10px;color:var(--dim)">${badge}</i></span>
          <span class="bars">${bars}</span><span class="s">${r.total}</span>`);
       list.appendChild(row);
     });
+    list.insertAdjacentHTML('beforeend',
+      `<p class="tiny" style="margin-top:12px">核心 4 项三档可比；扩展项仅在深度/完全版出现，不参与跨档比较。</p>`);
   }
   show('history');
 }
