@@ -1,47 +1,37 @@
-# Core Engine（计分与心理测量引擎）
+# Core Engine（计分模块）
 
-项目的科学核心：把作答数据转换为可解释、可复现、可版本化的分数与报告素材。
+纯函数计分模块，不操作 DOM、不发网络请求，供前端调用、供测试直接验证。
 
-## 职责边界
+## 对外接口
 
-- 题目参数、计分键、常模表与版本管理。
-- 经典测量理论（CTT）与项目反应理论（IRT）计分；探索自适应测评（CAT）。
-- 效度校验：作答一致性、反应时异常、社会赞许、随机作答等。
-- 输出分数、置信区间、百分位、剖面与解释文本所需的中间结果。
-- 保证同一输入 + 同一版本 → 同一输出（可复现）。
+```js
+import { scoreSession, SCORING_VERSION } from './src/scoring.js';
 
-## 非目标
+const result = scoreSession({
+  workingMemory: { maxSpan: 5, accuracy: 0.75 },
+  inhibition: { accuracy: 0.88, commissionErrors: 3, meanRt: 420 },
+  speed: { medianRt: 310, omissions: 1 },
+  memory: { hits: 9, falseAlarms: 2 }
+});
+// { workingMemory: 62, inhibition: 78, speed: 71, memory: 58, overall: 67, version: 'scoring-v1' }
+```
 
-- 不做临床诊断或风险判定。
-- 不直接对外提供 HTTP 接口（由 backend 调用）。
-- 不维护用户身份与权限。
-
-## 计划技术栈
-
-【待定：建议 Python；依赖 `numpy`/`scipy`/`pandas` 等，需在算法评审后锁定版本】
-
-## 目录约定（待实现）
+## 目录
 
 ```text
 core_engine/
 ├─ src/
-│  ├─ scoring/      # CTT/IRT/CAT 计分
-│  ├─ validity/     # 效度与异常检测
-│  ├─ norms/        # 常模与百分位
-│  ├─ reporting/    # 报告素材组装
-│  └─ versioning/   # 量表与计分版本
-├─ data/            # 合成数据与脱敏样本（禁止真实用户数据）
-└─ tests/
+│  ├─ scoring.js    # 4 个维度 + 综合分
+│  └─ config.js     # 阈值、版本号
+├─ test/
+│  └─ scoring.test.js
+└─ README.md
 ```
 
-## 质量要求
+## 规则
 
-- 核心计分路径单元测试覆盖率 ≥ 80%，含边界与版本兼容用例。
-- 每个量表版本必须有：题目参数文件、计分说明、常模来源、信效度证据、变更记录。
-- 任何计分口径变更必须走评审，旧版本保留可重算能力。
-
-## 相关文档
-
-- [算法设计](../../docs/algorithm.md)
-- [功能需求规范](../../docs/requirements/functional_spec.md)
-- [非功能需求规范](../../docs/requirements/nonfunctional_spec.md)
+- 公式、阈值、版本以[算法设计](../../docs/algorithm/algorithm.md)为准；
+- 同一输入 + 同一配置必须返回同一结果；
+- 缺失超过 20% 的维度返回 `null`，由前端显示“数据不足”；
+- 任何公式修改都要升版本并补测试；
+- 不使用真实用户数据做测试，测试数据全部合成。
