@@ -29,13 +29,27 @@ jobs:
             docs/software/software.md \
             docs/mgmt/communication_mgmt_plan.md \
             docs/mgmt/risk_mgmt_plan.md \
-            docs/retrospection/retrospection.md \
-            work_for_submission/1.md \
-            work_for_submission/2.md \
-            work_for_submission/3.md
+            docs/retrospection/retrospection.md
           do
             if [ ! -f "$f" ]; then
               echo "Missing file: $f"
+              exit 1
+            fi
+          done
+
+      - name: Check submission files
+        run: |
+          set -e
+          # 三份作业文件，以下两种命名任一即可：
+          #   work_for_submission/1.md
+          #   work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md
+          for i in 1 2 3; do
+            if [ -f "work_for_submission/${i}.md" ]; then
+              echo "OK: work_for_submission/${i}.md"
+            elif ls work_for_submission/*assignment*"[${i}]"*_rev.md > /dev/null 2>&1; then
+              echo "OK: 提交文件 ${i} 已找到（assignment 命名）"
+            else
+              echo "Missing file: work_for_submission/${i}.md (或 *assignment[${i}]*_rev.md)"
               exit 1
             fi
           done
