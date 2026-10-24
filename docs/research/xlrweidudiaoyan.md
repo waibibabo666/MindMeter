@@ -1,5 +1,7 @@
 # 认知维度的依据调研与改动建议
 
+> **历史调研（2026-10-24 前）**：团队最终拍板改为 8 项能力，本文的“四项不换、不增加总时长、不做第五维”不再作为实现依据；当前口径见 [功能需求 v2.0](../requirements/functional_spec.md)、[算法设计 v3.0](../algorithm/algorithm.md)。保留本文仅用于追溯取舍过程。
+
 | 项目 | 内容 |
 | --- | --- |
 | 文档编号 | MM-REQ-005 |
@@ -8,7 +10,7 @@
 | 文档负责人 | xlr268 |
 | 评审人 | waibibabo666、song、1213lz |
 | 最后更新 | 2026-10-24 |
-| 关联文档 | [功能需求规范](functional_spec.md)、[非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md) |
+| 关联文档 | [功能需求规范](../requirements/functional_spec.md)、[非功能需求规范](../requirements/nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md) |
 
 ## 一、这次调研要回答什么
 

@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   structure:
-    name: Check required files and directories
+    name: Check required files, conflicts and links
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check files
+      - name: Check required docs
         run: |
           set -e
           for f in \
@@ -25,8 +25,14 @@ jobs:
             docs/requirements/problem_definition.md \
             docs/requirements/functional_spec.md \
             docs/requirements/nonfunctional_spec.md \
+            docs/requirements/xlragentdesign.md \
             docs/algorithm/algorithm.md \
+            docs/software/architecture.md \
             docs/software/software.md \
+            docs/research/user_stories.md \
+            docs/software/prototype/prototype.md \
+            docs/software/prototype/agent-接入位.md \
+            docs/software/prototype/index.html \
             docs/mgmt/communication_mgmt_plan.md \
             docs/mgmt/risk_mgmt_plan.md \
             docs/retrospection/retrospection.md
@@ -40,9 +46,6 @@ jobs:
       - name: Check submission files
         run: |
           set -e
-          # 三份作业文件，以下两种命名任一即可：
-          #   work_for_submission/1.md
-          #   work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md
           for i in 1 2 3; do
             if [ -f "work_for_submission/${i}.md" ]; then
               echo "OK: work_for_submission/${i}.md"
@@ -59,13 +62,16 @@ jobs:
           set -e
           for d in \
             docs/requirements \
+            docs/research \
             docs/algorithm \
             docs/software \
+            docs/software/prototype \
             docs/mgmt \
             docs/retrospection \
             code/backend \
             code/frontend \
             code/core_engine \
+            code/ai \
             tests/unit \
             tests/integration \
             .github/workflows
@@ -75,4 +81,52 @@ jobs:
               exit 1
             fi
           done
-          echo "Project structure OK"
+
+      - name: Reject merge conflict markers
+        run: |
+          set -e
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' --include='*.md' --include='*.html' --include='*.js' --include='*.css' .; then
+            echo "Found unresolved merge conflict markers"
+            exit 1
+          fi
+          echo "No conflict markers"
+
+      - name: Check relative markdown links
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const root = process.cwd();
+          const files = [];
+          (function walk(dir) {
+            for (const name of fs.readdirSync(dir)) {
+              if (name === '.git' || name === 'node_modules') continue;
+              const p = path.join(dir, name);
+              const st = fs.statSync(p);
+              if (st.isDirectory()) walk(p);
+              else if (name.endsWith('.md')) files.push(p);
+            }
+          })(root);
+          const bad = [];
+          for (const file of files) {
+            const text = fs.readFileSync(file, 'utf8');
+            const re = /\]\(([^)]+)\)/g;
+            let m;
+            while ((m = re.exec(text))) {
+              let target = m[1].trim();
+              if (!target || /^(https?:|#|mailto:)/.test(target)) continue;
+              if (target.startsWith('<') && target.endsWith('>')) target = target.slice(1, -1);
+              target = target.split('#')[0];
+              if (!target) continue;
+              const resolved = path.resolve(path.dirname(file), target);
+              if (!fs.existsSync(resolved)) {
+                bad.push(`${path.relative(root, file)} -> ${m[1]}`);
+              }
+            }
+          }
+          if (bad.length) {
+            console.error('Broken relative links:\n' + bad.join('\n'));
+            process.exit(1);
+          }
+          console.log(`Checked ${files.length} markdown files; links OK`);
+          NODE

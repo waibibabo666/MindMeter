@@ -1,7 +1,7 @@
-# AI 教练接入位说明
+# AI 接入位说明（BYOK）
 
-> 状态：**已留位，未接入**
-> 位置：`mindmeter-v3.html` 报告页 P5
+> 状态：**已留位，默认关闭；未配置 Key 时不发任何请求**
+> 位置：`index.html` 报告页 / 设置页
 > 更新：2026-10-24
 
 ---
@@ -10,12 +10,13 @@
 
 | 项目 | 状态 |
 | --- | --- |
-| 报告页「AI 教练」卡片 | ✅ 已占位（虚线框，按钮置灰） |
-| 前端请求逻辑 | ✅ 已写好，但被开关关闭 |
-| 实际网络请求 | ❌ 不发起（`AGENT.enabled = false`） |
-| 建议文案来源 | 本地规则表 `ADVICE`（4 条，按最弱维度触发） |
+| 报告页「AI 解读」卡片 | ✅ 已占位（默认显示模板） |
+| 设置页 BYOK 表单 | ✅ endpoint / model / key 三个字段 |
+| 实际网络请求 | ❌ 未配置或 `settings.enabled = false` 时不发起 |
+| 建议文案来源 | 本地规则表 `ADVICE`（8 个维度各 2 条，按最低的 1–2 个维度取 2–3 条） |
+| 后端 | ❌ 不存在；没有 `server.py`、没有网关、没有云端 Key |
 
-**当前行为**：报告页建议区块显示本地文案，下方标注「当前：本地规则文案（未接入 AI）」。
+**当前行为**：报告页显示模板解读，下方标注“当前：模板解释（未开启 AI）”。
 
 ---
 
@@ -23,61 +24,57 @@
 
 ### 2.1 前端开关
 
-`mindmeter-v3.html` 中搜索 `const AGENT`：
+`index.html` 中搜索 `let settings =`：
 
 ```js
-const AGENT = {
-  enabled: false,              // ← 改成 true 即启用
-  endpoint: '/api/advice',     // ← 换成自己的后端地址
-  timeoutMs: 8000,
-  maxCallsPerDay: 5            // 仅提示，真正限流应在后端
-};
+let settings = Object.assign({
+  enabled: false,          // 用户配置并勾选后才为 true
+  endpoint: '',            // OpenAI-compatible /chat/completions
+  model: '',               // 用户填写
+  apiKey: ''               // 只存本机 localStorage
+}, store.get(K.settings, {}));
 ```
 
-### 2.2 三个函数
+### 2.2 三个已实现函数 + 一个待抽出
 
-| 函数 | 职责 | 接入后要改吗 |
+| 函数 | 职责 | 说明 |
 | --- | --- | --- |
-| `buildProfile()` | 组装用户档案 | 否，按契约给全即可 |
-| `fetchAgentAdvice(profile)` | 发请求、解析、失败返回 `null` | 否，只要后端符合契约 |
-| `loadAdvice()` | 调用 + 渲染 + 回退 | 否 |
+| `buildFacts(session)` | 从 session 组装 facts | 只含维度分、完成度、建议 ID、复测差值 |
+| `callModel(facts, question)` | 发请求、解析、失败返回 `null` | 浏览器直连，无代理；校验目前内联 |
+| `validate(text, facts)` | 结构/ID/数字/禁用词/长度校验 | **正式实现从 `callModel` 抽出**；骨架内联在 `callModel` |
+| `renderAITemplate(session)` | 渲染 + 回退 | 失败时用模板；不是 `renderAdvice` |
 
-**所以接入只需要两件事：把 `enabled` 改 `true`，让 `endpoint` 有个真实服务。**
+**接入只需要两件事**：用户在设置页填 endpoint/model/key；`settings.enabled` 置 `true`。
 
 ---
 
 ## 3. 请求契约
 
-`POST {endpoint}`，`Content-Type: application/json`
+`POST {endpoint}`，`Content-Type: application/json`，`Authorization: Bearer {apiKey}`
 
 ```json
 {
-  "scores": { "wm": 62, "ic": 41, "ps": 78, "em": 55 },
-  "raw": {
-    "corsi": { "span": 6, "pass": 4, "total": 6, "acc": 0.67 },
-    "gn":    { "goAcc": 0.93, "nogoAcc": 0.73, "commRate": 0.27, "commission": 4, "nogoTotal": 15 },
-    "srt":   { "median": 318, "iqr": 64, "misses": 1, "n": 29 },
-    "rec":   { "dprime": 1.82, "hits": 13, "fa": 2, "n": 16 }
-  },
-  "demographics": { "age_band": "18-24", "edu": "本科" },
-  "state": { "sleep_h": "5-6", "energy": 2, "caffeine": false },
-  "self_report": { "memory": 2 },
-  "reliability": "中",
-  "history": [ { "t": 1730000000000, "total": 58, "wm": 58, "ic": 45, "ps": 75, "em": 52 } ],
-  "practice": { "schulte_normal": 74, "flip_easy": 82 },
-  "session_type": "full"
+  "model": "user-model",
+  "messages": [
+    { "role": "system", "content": "你是 MindMeter 的报告解释助手。只解释给定 facts，不算分、不诊断、不新增建议。" },
+    { "role": "user", "content": "{\"task\":\"report\",\"dims\":[{\"id\":\"vc\",\"score\":62},{\"id\":\"am\",\"score\":60}],\"completed\":[\"vc\",\"ps\",\"sv\",\"am\"],\"adviceIds\":[\"adv_vc_01\",\"adv_am_02\"],\"retestDelta\":{\"ps\":4},\"constraints\":{\"maxChars\":200}}" }
+  ],
+  "temperature": 0.3,
+  "max_tokens": 400
 }
 ```
 
-### 字段用途（缺了哪项，建议质量会掉）
+### 字段说明
 
-| 字段 | 缺了会怎样 |
-| --- | --- |
-| `raw` | 只能看到 0–100 的分数，说不出 d′、误报率这些细节 |
-| `reliability` | 会拿「只睡 5 小时」的成绩下确定结论 |
-| `history` | 说不出「比上周降了 4 分」 |
-| `practice` | 会推荐用户已经在玩的东西 |
-| `state` | 无法解释偏差来源 |
+| 字段 | 用途 | 缺了会怎样 |
+| --- | --- | --- |
+| `dims` | 八维分数（未测不传） | 只能泛泛而谈 |
+| `completed` | 完成度 | 可能把“未测”说成“低分” |
+| `adviceIds` | 固定建议 ID | 可能自创建议，校验会失败 |
+| `retestDelta` | 共同维度差值 | 复测解释缺失 |
+| `constraints` | 长度/禁诊断 | 输出不可控 |
+
+**绝不发送**：姓名、手机号、年龄、学历、学校、公司、原始试次、ASR 文本。
 
 ---
 
@@ -85,81 +82,83 @@ const AGENT = {
 
 ```json
 {
-  "headline": "你的反应速度很好，抑制控制是短板",
-  "advice": {
-    "focus": "抑制控制",
-    "action": "每天 5 分钟反向指令练习",
-    "how": "看到向上点向下，3 组 × 20 次",
-    "when": "状态放松时"
-  },
-  "caveat": "本次睡眠不足 6 小时，抑制控制可能被低估",
+  "headline": "你的空间视觉化相对突出，联想记忆还有提升空间",
+  "body": "这次你完成了标准档四项。……",
   "source": "model",
   "degraded": false
 }
 ```
 
-- `source`: `model` | `rule`
+- `source`: `model` | `template`
 - `degraded: true` 表示走了降级路径
-- **前端只读 `advice.action/how/when`、`caveat`、`source`**，其余字段可扩展
+- 前端只读 `headline/body/source`，其余字段忽略
 
 ---
 
-## 5. 开启步骤
+## 5. 校验（五条）
 
-1. **准备后端**：`server.py` 已有 `/api/advice` 实现，改造成接收上述完整档案
-2. **配置 Key**：环境变量 `DEEPSEEK_API_KEY`（或其他模型）
-3. **改开关**：`AGENT.enabled = true`
-4. **改地址**：如果后端不在同域，`AGENT.endpoint` 写成完整 URL，并配置 CORS
-5. **验证降级**：断网跑一次，确认回退到本地文案而不是空白
+1. JSON 结构合法，`headline/body` 是字符串；
+2. 建议 ID 必须在池内，不新增建议；
+3. 回答里的数字必须来自 facts；
+4. 禁用词命中 0：诊断、治疗、治愈、疗效、正常、异常、提升智商、脑龄、抑郁、痴呆、ADHD；
+5. 总长 ≤200 字，追问 ≤120 字。
+
+> 原型骨架的 `callModel` 目前内联做结构/长度/禁用词校验；建议 ID 与数字来源校验在正式实现中抽成 `validate(text, facts)` 补齐。
+
+不通过 → 重试一次 → 仍不通过 → 模板。
 
 ---
 
-## 6. 降级行为（已实现，不要改坏）
+## 6. 降级行为
 
 ```
-enabled = false          → 不发请求，显示本地文案 + 提示「未接入 AI」
-请求超时（8s）            → 回退本地文案 + 提示「AI 暂不可用」
-非 2xx / JSON 解析失败     → 同上
-返回结构缺 advice         → 同上
+未配置 Key / 未开启        → 不发请求，模板 + “未开启 AI”
+超时（8s）                → 模板 + “AI 暂不可用”
+非 2xx / JSON 解析失败     → 模板
+结构缺 headline/body       → 模板
+命中禁用词                → 重试一次 → 模板
+数字不在 facts 中          → 模板
+endpoint 不支持 CORS       → 提示换 endpoint + 模板
 ```
 
-**铁律：报告页永远不空。** 分数和图表是本地算的，只有「那段话」依赖 AI。
+**铁律：报告页永远不空。分数和图表是本地算的，只有“那段话”依赖 AI。**
 
 ---
 
-## 7. 三条红线（写进提示词，也要在代码里验）
+## 7. 三条红线
 
-1. **分数不由模型算** —— 模型只解释，不测量
-2. **不做疾病判断** —— 输出后扫描禁词：诊断、治疗、痴呆、抑郁、治愈、疗效
-3. **不虚构研究** —— 提示词明确禁止编造文献与数据
+1. **分数不由模型算** —— 模型只解释，不测量；
+2. **不做疾病判断** —— 输出后扫描禁词；
+3. **不虚构研究/数字** —— 提示词禁止编造，校验拦截 facts 之外的数字。
 
-命中禁词时的处理：直接丢弃模型输出，回退规则文案。（`server.py` 里已有实现）
+命中禁词/幻觉数字：丢弃输出，回退模板。
 
 ---
 
-## 8. 上线前检查清单
+## 8. 隐私与安全
 
-- [ ] `AGENT.enabled` 在生产环境为 `true`
-- [ ] API Key 只在后端环境变量，前端 bundle 里搜不到
-- [ ] 断网、超时、500 三种情况都回退正常
+| 项 | 要求 |
+| --- | --- |
+| Key 存储 | 只存本机 `mindmeter.settings.v1`；不写日志、不进导出 |
+| 公用设备 | 设置页提示“请勿在公用设备保存 Key” |
+| 数据出境 | 仅用户主动开启后，发维度分与 facts；由用户选择的模型厂商处理 |
+| 清除 | 清除数据时同时删除 Key |
+| CORS | endpoint 必须支持浏览器 CORS；不支持则 AI 不可用，不绕过 |
+| 无后端 | 项目组不托管 Key、不代理请求、不保存对话 |
+
+---
+
+## 9. 上线前检查清单
+
+- [ ] 默认 `settings.enabled = false`
+- [ ] 未配置 Key 时，网络面板无 AI 请求
+- [ ] Key 只在 localStorage，仓库/日志/导出里搜不到
+- [ ] 断网、超时、500、越界词四种情况都回退模板
 - [ ] 报告页首屏不依赖 AI（先出分数和雷达图）
-- [ ] 同一用户连续点击不会重复计费（后端缓存或前端节流）
-- [ ] 输出禁词扫描生效
-- [ ] 隐私政策里写明「认知数据会发送至第三方模型服务」
-
----
-
-## 9. 以后升级成对话式 agent 的路径
-
-当前是「单轮 + 结构化输出」。要升级时，按顺序做：
-
-| 阶段 | 增加什么 | 前置条件 |
-| --- | --- | --- |
-| 1 | 工具调用：`get_history` / `search_exercises` / `save_plan` | 有训练库 |
-| 2 | 多轮对话入口 | 单轮质量稳定 |
-| 3 | 计划持久化与打卡 | 有用户体系 |
-
-**不要跳过阶段 1 直接做对话。** 对话会放大所有质量问题。
+- [ ] 请求体不含身份/人口学/原始试次/ASR 文本
+- [ ] 输出禁词/数字/长度校验生效
+- [ ] 清除数据后 Key 也被删除
+- [ ] 页面提示“AI 生成·非诊断·可关闭”
 
 ---
 
@@ -167,6 +166,9 @@ enabled = false          → 不发请求，显示本地文案 + 提示「未接
 
 | 文件 | 作用 |
 | --- | --- |
-| `mindmeter-v3.html` | 前端接入位（`AGENT`、`buildProfile`、`fetchAgentAdvice`） |
-| `server.py` | 后端示例实现（零依赖，可跑） |
-| `维度依据调研.md` | 计分口径依据（scoring-v2） |
+| `index.html` | 前端接入位（`settings`、`buildFacts`、`callModel`、`renderAITemplate`） |
+| `../requirements/xlragentdesign.md` | AI 功能与边界 |
+| `../../algorithm/algorithm.md` | 八维计分与 facts 来源 |
+| `../../software/architecture.md` | 无后端/BYOK 架构 |
+
+> 没有 `server.py`，没有 `mindmeter-v3.html`，没有 serverless 网关。旧文档中的这些引用已删除。
