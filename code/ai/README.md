@@ -1,15 +1,15 @@
-# AI（仅契约，无服务端）
+# AI（L1 历史）
 
-本目录只放 AI 的**契约与校验说明**，不是后端，不部署任何服务。
+> L2 起，Agent 在 `code/backend/app/agent/`（LangGraph），RAG 在 `code/backend/app/rag/`。
+> 本目录只保留 L1 的 BYOK 直连契约说明，作为历史参考。
 
-- 运行时请求在 `code/frontend/src/ai/byok.js` 中由浏览器发起；
-- endpoint / model / API Key 由用户在设置页填写，Key 只存本机；
-- 只发送维度分、完成度、建议 ID、复测差值；不发送身份、人口学、原始试次、ASR 文本；
-- 超时 8 秒、失败/越界/幻觉数字一律回退模板；
-- 没有 `server.py`、没有网关、没有云端 Key。
+## L2 位置
 
-契约见：
+- Agent 设计：[docs/requirements/xlragentdesign.md](../../docs/requirements/xlragentdesign.md)
+- 技术方案：[docs/software/architecture.md](../../docs/software/architecture.md)
+- 后端 Agent：`code/backend/app/agent/`
+- RAG：`code/backend/app/rag/`
 
-- [Agent 设计](../../docs/requirements/xlragentdesign.md)
-- [AI 接入位](../../docs/software/prototype/agent-接入位.md)
-- [技术方案](../../docs/software/architecture.md)
+## L1 历史
+
+L1 是“浏览器直连 BYOK、无后端”；L2 改为“后端代理 + BYOK 加密存库 + LangGraph + RAG + 记忆”。L1 契约不再作为实现依据。

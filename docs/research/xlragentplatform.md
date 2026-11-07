@@ -1,6 +1,6 @@
 # Agent 平台调研与我们的 AI 用法
 
-> **历史调研（2026-10-24 前）**：最终 AI 只做报告解读/追问/复测解释，采用用户 BYOK、无后端、无网关；本文的平台对比仍可参考，serverless/网关相关结论不再作为实现依据。当前口径见 [Agent 设计 v2.0](../requirements/xlragentdesign.md)。
+> **历史调研（2026-10-24 前）**：最终 AI 只做报告解读/追问/复测解释，采用用户 BYOK、无后端、无网关；本文的平台对比仍可参考，serverless/网关相关结论不再作为实现依据。当前口径见 [Agent 设计 v3.0（L2）](../requirements/xlragentdesign.md)。
 
 ## 一句话结论
 
