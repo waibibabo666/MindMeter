@@ -17,6 +17,7 @@
     "test:memory": "node scripts/test_memory.js",
     "test:kb": "node scripts/test_kb.js",
     "test:eval": "node scripts/test_eval.js",
+    "test:e2e": "playwright test",
     "lint": "eslint scripts code/frontend/src",
     "lint:frontend": "eslint code/frontend/src",
     "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"tests/e2e/**/*.js\" \"*.{json,mjs}\"",
