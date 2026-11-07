@@ -105,6 +105,27 @@ async function main() {
     assert(memory.memoryOverview().summaries.length === 0, 'summary should be removed');
   });
 
+  test('删除：按类型移除单条建议', () => {
+    memory.clearAllMemory();
+    memory.recordAdvice({ id: 'kb-plan-01', title: '分散练习' });
+    memory.recordAdvice({ id: 'kb-plan-02', title: '转介通道' });
+    assert(memory.memoryOverview().advice.length === 2, 'two advice expected');
+    memory.removeMemory('advice', 'kb-plan-01');
+    const rest = memory.memoryOverview().advice;
+    assert(rest.length === 1 && rest[0].id === 'kb-plan-02', 'only kb-plan-01 should be removed');
+  });
+
+  test('删除：按类型移除单条消息，其余保持顺序', () => {
+    memory.clearAllMemory();
+    storage.addMessage({ id: 'm1', role: 'user', content: '为什么联想记忆低' });
+    storage.addMessage({ id: 'm2', role: 'assistant', content: '模板回答' });
+    storage.addMessage({ id: 'm3', role: 'user', content: '怎么练' });
+    memory.removeMemory('message', 'm2');
+    const messages = memory.memoryOverview().messages;
+    assert(messages.length === 2, `expected 2 messages, got ${messages.length}`);
+    assert(messages[0].id === 'm1' && messages[1].id === 'm3', 'order should be preserved');
+  });
+
   test('消息：只保留最近 20 条', () => {
     memory.clearAllMemory();
     for (let index = 0; index < 25; index += 1) {
