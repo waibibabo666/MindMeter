@@ -218,7 +218,7 @@ Agent 回答"我这个分数低是什么意思"时，不能只靠模型自由发
 
 ### 7.2 流程
 
-```
+```text
 AI 起草（status=draft）
    → Owner 核来源、改文案（status=reviewed, by/date 填写）
    → Support 抽检 30%

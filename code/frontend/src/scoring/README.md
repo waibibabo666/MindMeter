@@ -24,14 +24,14 @@
 
 ## 文件
 
-```
+```text
 src/scoring/
 ├─ config.js     版本号、八维清单、全部阈值
 ├─ stats.js      clamp01 / median / filterRts / zInv
 ├─ formulas.js   8 个纯函数（vc/vf/nc/ps/ir/sv/am/ni）
 ├─ index.js      scoreSession(results) 入口
 └─ README.md     本文件
-```
+```text
 
 ## 接口
 
@@ -45,7 +45,7 @@ const result = scoreSession(store.results);
 //   measured: ['vc', 'ps', 'sv', 'am'],
 //   missing:  ['vf', 'nc', 'ir', 'ni'],
 // }
-```
+```text
 
 **返回值里没有 `total` / `mean` / `composite`** —— M1 不设总分，结构上就不给这个字段。
 
@@ -85,7 +85,7 @@ const result = scoreSession(store.results);
 
 ```bash
 node scripts/test_scoring.js
-```
+```text
 
 14 条检查：4 组金标准 + 6 条缺失/边界 + 结构约束 + 复现 + 性能（1000 次 <100ms，实测约 6ms）。
 
