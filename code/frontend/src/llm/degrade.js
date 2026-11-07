@@ -56,6 +56,26 @@ export function buildMessages(metrics) {
   ];
 }
 
+function canUseLlm(settings, forceTemplate) {
+  return Boolean(!forceTemplate && settings && settings.enabled && isConfigured(settings));
+}
+
+function fallback(metrics, code) {
+  return {
+    text: templateExplanation(metrics),
+    source: 'template',
+    code,
+    reason: FALLBACK_REASON[code] || FALLBACK_REASON.unknown,
+  };
+}
+
+async function askLlm(call, settings, metrics) {
+  const result = await call({ settings, messages: buildMessages(metrics) });
+  const text = String(result && result.text ? result.text : '').trim();
+  if (!text) throw new Error('empty');
+  return text;
+}
+
 /**
  * 生成解读。
  * @returns {Promise<{text:string, source:'llm'|'template', code:string|null, reason:string}>}
@@ -63,27 +83,13 @@ export function buildMessages(metrics) {
 export async function explain(options = {}) {
   const { metrics, settings, call = callLlm, forceTemplate = false } = options;
 
-  if (forceTemplate || !settings || !settings.enabled || !isConfigured(settings)) {
-    return {
-      text: templateExplanation(metrics),
-      source: 'template',
-      code: 'not_configured',
-      reason: FALLBACK_REASON.not_configured,
-    };
-  }
+  if (!canUseLlm(settings, forceTemplate)) return fallback(metrics, 'not_configured');
 
   try {
-    const result = await call({ settings, messages: buildMessages(metrics) });
-    const text = String(result && result.text ? result.text : '').trim();
-    if (!text) throw new Error('empty');
+    const text = await askLlm(call, settings, metrics);
     return { text, source: 'llm', code: null, reason: '' };
   } catch (error) {
     const code = error && error.code ? error.code : 'unknown';
-    return {
-      text: templateExplanation(metrics),
-      source: 'template',
-      code,
-      reason: FALLBACK_REASON[code] || FALLBACK_REASON.unknown,
-    };
+    return fallback(metrics, code);
   }
 }

@@ -26,4 +26,12 @@ export default [
       'max-lines-per-function': ['warn', 80],
     },
   },
+  {
+    // 测试文件是扁平 case 列表；长度放宽，但仍检查圈复杂度/嵌套/参数。
+    files: ['scripts/test_*.js'],
+    rules: {
+      'max-lines': ['warn', 400],
+      'max-lines-per-function': ['warn', 300],
+    },
+  },
 ];

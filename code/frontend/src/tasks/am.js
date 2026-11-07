@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 联想记忆：先学 12 组词对，再做 16 题配对再认。
  * 记录命中、漏报、虚报、正确拒绝；不计分。
  */
@@ -51,6 +51,74 @@ export function summarizeAm(trials) {
   };
 }
 
+function pairLine(left, right, className = 'pair-li') {
+  return el('li', { class: className }, [
+    el('span', { class: 'pair-word', text: left }),
+    el('span', { class: 'pair-dash', text: '—' }),
+    el('span', { class: 'pair-word', text: right }),
+  ]);
+}
+
+function pairCard(trial) {
+  return el('div', { class: 'pair-card', 'aria-label': '词对' }, [
+    el('span', { class: 'pair-word', text: trial.left }),
+    el('span', { class: 'pair-dash', text: '—' }),
+    el('span', { class: 'pair-word', text: trial.right }),
+  ]);
+}
+
+function renderTest(root, view, answer) {
+  const { trial, index, total } = view;
+  const yes = button('见过（1）', () => answer(true), { variant: 'option' });
+  const no = button('没见过（2）', () => answer(false), { variant: 'option' });
+
+  clear(root);
+  root.appendChild(
+    el('div', { class: 'task-head' }, [
+      el('span', { class: 'kicker', text: `再认 ${index + 1} / ${total}` }),
+      el('span', { class: 'muted', text: '按键 1 / 2 也可作答' }),
+    ]),
+  );
+  root.appendChild(pairCard(trial));
+  root.appendChild(el('p', { class: 'muted center', text: '这组词对刚才出现过吗？' }));
+  root.appendChild(el('div', { class: 'options', role: 'group', 'aria-label': '选择' }, [yes, no]));
+
+  const onKey = (event) => {
+    if (event.key === '1') {
+      event.preventDefault();
+      answer(true);
+    }
+    if (event.key === '2') {
+      event.preventDefault();
+      answer(false);
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  yes.focus({ preventScroll: true });
+  return () => document.removeEventListener('keydown', onKey);
+}
+
+function renderStudy(root, onStart) {
+  const list = AM_PAIRS.map(([left, right]) => pairLine(left, right));
+  const remain = el('span', { class: 'timer', text: `剩余 ${STUDY_SECONDS} 秒` });
+
+  clear(root);
+  root.appendChild(
+    el('div', { class: 'task-head' }, [el('span', { class: 'kicker', text: '学习阶段' }), remain]),
+  );
+  root.appendChild(el('h2', { class: 'task-question', text: '记住下面 12 组词对' }));
+  root.appendChild(el('ul', { class: 'pair-list', 'aria-label': '词对列表' }, list));
+  root.appendChild(button('我记住了，开始再认', onStart, { variant: 'primary' }));
+
+  return ticker(
+    STUDY_SECONDS,
+    (left) => {
+      remain.textContent = `剩余 ${left} 秒`;
+    },
+    onStart,
+  );
+}
+
 export const amTask = {
   id: 'am',
   mount(root, ctx) {
@@ -89,43 +157,8 @@ export const amTask = {
     const drawTest = () => {
       const trial = trials[index];
       shownAt = now();
-
-      const yes = button('见过（1）', () => answer(true), { variant: 'option' });
-      const no = button('没见过（2）', () => answer(false), { variant: 'option' });
-
-      clear(root);
-      root.appendChild(
-        el('div', { class: 'task-head' }, [
-          el('span', { class: 'kicker', text: `再认 ${index + 1} / ${trials.length}` }),
-          el('span', { class: 'muted', text: '按键 1 / 2 也可作答' }),
-        ]),
-      );
-      root.appendChild(
-        el('div', { class: 'pair-card', 'aria-label': '词对' }, [
-          el('span', { class: 'pair-word', text: trial.left }),
-          el('span', { class: 'pair-dash', text: '—' }),
-          el('span', { class: 'pair-word', text: trial.right }),
-        ]),
-      );
-      root.appendChild(el('p', { class: 'muted center', text: '这组词对刚才出现过吗？' }));
-      root.appendChild(
-        el('div', { class: 'options', role: 'group', 'aria-label': '选择' }, [yes, no]),
-      );
-
       cleanupKeys();
-      const onKey = (event) => {
-        if (event.key === '1') {
-          event.preventDefault();
-          answer(true);
-        }
-        if (event.key === '2') {
-          event.preventDefault();
-          answer(false);
-        }
-      };
-      document.addEventListener('keydown', onKey);
-      cleanupKeys = () => document.removeEventListener('keydown', onKey);
-      yes.focus({ preventScroll: true });
+      cleanupKeys = renderTest(root, { trial, index, total: trials.length }, answer);
     };
 
     const startTest = () => {
@@ -138,33 +171,8 @@ export const amTask = {
     };
 
     const drawStudy = () => {
-      const list = AM_PAIRS.map(([left, right]) =>
-        el('li', { class: 'pair-li' }, [
-          el('span', { class: 'pair-word', text: left }),
-          el('span', { class: 'pair-dash', text: '—' }),
-          el('span', { class: 'pair-word', text: right }),
-        ]),
-      );
-      const remain = el('span', { class: 'timer', text: `剩余 ${STUDY_SECONDS} 秒` });
-
-      clear(root);
-      root.appendChild(
-        el('div', { class: 'task-head' }, [
-          el('span', { class: 'kicker', text: '学习阶段' }),
-          remain,
-        ]),
-      );
-      root.appendChild(el('h2', { class: 'task-question', text: '记住下面 12 组词对' }));
-      root.appendChild(el('ul', { class: 'pair-list', 'aria-label': '词对列表' }, list));
-      root.appendChild(button('我记住了，开始再认', startTest, { variant: 'primary' }));
-
-      stopTimer = ticker(
-        STUDY_SECONDS,
-        (left) => {
-          remain.textContent = `剩余 ${left} 秒`;
-        },
-        startTest,
-      );
+      stopTimer();
+      stopTimer = renderStudy(root, startTest);
     };
 
     if (phase === 'test') {
