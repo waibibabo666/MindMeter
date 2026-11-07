@@ -134,6 +134,7 @@ MindMeter/
 ```bash
 npm ci
 npm run check          # ESLint + Prettier + 5 套测试
+npm run complexity     # 复杂度报告（warn，不阻塞）
 
 python scripts/check_docs.py
 python scripts/check_secrets.py
