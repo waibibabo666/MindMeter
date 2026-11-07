@@ -50,6 +50,7 @@ REQUIRED_FILES = [
     "scripts/test_storage.js",
     "scripts/test_llm_client.js",
     "scripts/test_report_trend.js",
+    "scripts/test_scoring.js",
     "scripts/export_issues.py",
     "scripts/create_issues.py",
     "package.json",

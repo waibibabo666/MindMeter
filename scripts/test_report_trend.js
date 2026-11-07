@@ -159,6 +159,13 @@ async function main() {
     assert(trend.repeatHint(null) === null, '缺少天数不提示');
   });
 
+  test('两次口径不同时提示', () => {
+    assert(trend.versionHint({ scoringVersion: 'a' }, { scoringVersion: 'a' }) === null, '相同口径不提示');
+    assert(trend.versionHint({}, {}) === null, '缺版本不提示');
+    const hint = trend.versionHint({ scoringVersion: 'local-provisional-v1' }, { scoringVersion: 'local-provisional-v2' });
+    assert(hint && hint.includes('口径不同'), '不同口径应提示');
+  });
+
   test('页面文件存在且引用正确模块', () => {
     for (const rel of [
       'pages/report.js',

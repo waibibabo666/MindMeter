@@ -1,25 +1,53 @@
 /**
- * 本地参考分（L-08 临时代管）。
+ * 本地计分（L-02）：scoring-v3 的 8 个维度公式。
  *
- * 正式分数由 L-02 的 `scoring-v3` 产生；这里只把当前壳的 4 项原始指标
- * 折算成 0–100 的整数，用来出雷达图和趋势。差异点：
- *   - 题目数量比 scoring-v3 的设计短（言语理解 6 题而非 15 题），
- *     因此按“实际题量”缩放，而不是按算法文档里的固定分母；
- *   - 没有常模、没有百分位，分数只代表本次任务表现。
+ * 口径说明（重要）：
+ *   - `full`  —— 与 docs/algorithm/algorithm.md 完全一致：言语理解 15 题、
+ *                知觉速度以 60 次匹配为满分基准、空间 20 题、记忆 12 目标 + 12 干扰；
+ *   - `short` —— 本壳当前的实际题量（言语 6、空间 8、记忆 8+8），
+ *                分母按实际题数缩放，否则满分只有 40 分。
  *
- * 一旦 L-02 合入，把 `scoreSession` 换成它的实现即可，页面无需改动。
+ * M1 用 short；M2 接后端后由服务端用 full。两者共用同一套公式与边界规则，
+ * 只是分母不同，切换只需传第二个参数。
+ *
+ * 规则（来自算法文档）：
+ *   - 结果截断到 0–100 的整数，不人为压到 5–98；
+ *   - 缺失/未测返回 null，绝不补 0；
+ *   - 空间视觉化正确试次不足一半 → null；
+ *   - 联想记忆用 d′，命中与虚报都做 +0.5 / +1 校正。
  */
 
-export const SCORING_VERSION = 'local-provisional-v1';
+export const SCORING_VERSION = 'local-provisional-v2';
+
+export const FORM = Object.freeze({ FULL: 'full', SHORT: 'short' });
+
+export const CONFIG = Object.freeze({
+  full: {
+    vc: 15,
+    vf: { floor: 10, span: 20 },
+    nc: 20,
+    ps: { base: 20, span: 40 },
+    ir: 15,
+    sv: { items: 20, minCorrect: 10, rtFloor: 5000, rtSpan: 3000, accWeight: 0.7, rtWeight: 0.3 },
+    am: { targets: 12, foils: 12 },
+    ni: 20,
+  },
+  short: {
+    vc: 6,
+    vf: { floor: 10, span: 20 },
+    nc: 20,
+    ps: { ratio: true },
+    ir: 15,
+    sv: { items: 8, minCorrect: 4, rtFloor: 5000, rtSpan: 3000, accWeight: 0.7, rtWeight: 0.3 },
+    am: { targets: 8, foils: 8 },
+    ni: 20,
+  },
+});
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value));
+const toScore = (ratio) => Math.round(100 * clamp01(ratio));
 
-function percent(numerator, denominator) {
-  if (!denominator || denominator <= 0) return null;
-  return Math.round(100 * clamp01(numerator / denominator));
-}
-
-/** 标准正态分位数，Acklam 近似；用于联想记忆的 d'。 */
+/** 标准正态分位数，Acklam 近似。 */
 export function zscore(p) {
   const value = Math.min(1 - 1e-9, Math.max(1e-9, p));
   const a = [
@@ -60,53 +88,113 @@ export function zscore(p) {
   );
 }
 
-export function scoreVc(metrics) {
-  return metrics ? percent(metrics.correct, metrics.total) : null;
+function resolveTotal(metrics, form, dim) {
+  if (form === FORM.FULL) return CONFIG.full[dim];
+  return typeof metrics.total === 'number' ? metrics.total : CONFIG.short[dim];
 }
 
-/** 45 秒窗口内的匹配正确率；题量随人而异，按实际完成的题数缩放。 */
-export function scorePs(metrics) {
-  return metrics ? percent(metrics.correct, metrics.trials) : null;
+export function scoreVc(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.correct !== 'number') return null;
+  const denominator = resolveTotal(metrics, form, 'vc');
+  if (!denominator) return null;
+  return toScore(metrics.correct / denominator);
 }
 
-export function scoreSv(metrics) {
+export function scoreVf(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.validCount !== 'number') return null;
+  const { floor, span } = CONFIG[form].vf;
+  return toScore((metrics.validCount - floor) / span);
+}
+
+export function scoreNc(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.correct !== 'number') return null;
+  const denominator = resolveTotal(metrics, form, 'nc');
+  if (!denominator) return null;
+  return toScore(metrics.correct / denominator);
+}
+
+export function scorePs(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.correct !== 'number') return null;
+  if (form === FORM.FULL) {
+    const { base, span } = CONFIG.full.ps;
+    return toScore((metrics.correct - base) / span);
+  }
+  const trials = metrics.trials || 0;
+  if (!trials) return null;
+  return toScore(metrics.correct / trials);
+}
+
+export function scoreIr(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.correct !== 'number') return null;
+  const denominator = resolveTotal(metrics, form, 'ir');
+  if (!denominator) return null;
+  return toScore(metrics.correct / denominator);
+}
+
+export function scoreSv(metrics, form = FORM.SHORT) {
   if (!metrics || !metrics.total) return null;
+  const cfg = CONFIG[form].sv;
+  const minCorrect =
+    form === FORM.FULL ? cfg.minCorrect : Math.max(1, Math.ceil(metrics.total / 2));
+  if (metrics.correct < minCorrect) return null;
+
   const accuracy = clamp01(metrics.correct / metrics.total);
   const rt = typeof metrics.medianRtMs === 'number' ? metrics.medianRtMs : metrics.meanRtMs;
-  if (typeof rt !== 'number') {
-    // 没有反应时数据时只看正确率，不做 0.7/0.3 加权。
-    return Math.round(100 * accuracy);
-  }
-  const rtScore = clamp01((5000 - rt) / 3000);
-  return Math.round(100 * (0.7 * accuracy + 0.3 * rtScore));
+  if (typeof rt !== 'number') return toScore(accuracy);
+
+  const rtScore = clamp01((cfg.rtFloor - rt) / cfg.rtSpan);
+  return toScore(cfg.accWeight * accuracy + cfg.rtWeight * rtScore);
 }
 
-export function scoreAm(metrics) {
-  if (!metrics || !metrics.trials) return null;
+export function scoreAm(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.hits !== 'number') return null;
+  const cfg = CONFIG[form].am;
+  const targets =
+    typeof metrics.targets === 'number' ? metrics.targets : metrics.hits + (metrics.misses || 0);
   const foils =
     typeof metrics.foils === 'number'
       ? metrics.foils
-      : Math.max(0, metrics.trials - (metrics.targets || metrics.hits + metrics.misses));
-  const targets =
-    typeof metrics.targets === 'number' ? metrics.targets : metrics.hits + metrics.misses;
+      : typeof metrics.trials === 'number'
+        ? Math.max(0, metrics.trials - targets)
+        : cfg.foils;
   if (!targets || !foils) return null;
+
   const hitRate = (metrics.hits + 0.5) / (targets + 1);
-  const faRate = (metrics.falseAlarms + 0.5) / (foils + 1);
+  const faRate = ((metrics.falseAlarms || 0) + 0.5) / (foils + 1);
   const dPrime = zscore(hitRate) - zscore(faRate);
-  return Math.round(100 * clamp01((dPrime + 1) / 5));
+  return toScore((dPrime + 1) / 5);
 }
 
-const SCORERS = { vc: scoreVc, ps: scorePs, sv: scoreSv, am: scoreAm };
+export function scoreNi(metrics, form = FORM.SHORT) {
+  if (!metrics || typeof metrics.correct !== 'number') return null;
+  const denominator = resolveTotal(metrics, form, 'ni');
+  if (!denominator) return null;
+  return toScore(metrics.correct / denominator);
+}
+
+export const SCORERS = Object.freeze({
+  vc: scoreVc,
+  vf: scoreVf,
+  nc: scoreNc,
+  ps: scorePs,
+  ir: scoreIr,
+  sv: scoreSv,
+  am: scoreAm,
+  ni: scoreNi,
+});
+
+export const DIM_IDS = Object.freeze(Object.keys(SCORERS));
 
 /**
- * @param {{[dimId: string]: {metrics?: object}}} results 形如 {vc: {taskId, metrics}}
- * @returns {{version: string, scores: {[dimId: string]: number|null}}}
+ * @param {{[dimId: string]: {metrics?: object}}} results
+ * @param {'full'|'short'} form
+ * @returns {{version: string, form: string, scores: {[dimId: string]: number|null}}}
  */
-export function scoreSession(results) {
+export function scoreSession(results, form = FORM.SHORT) {
   const scores = {};
   for (const [id, scorer] of Object.entries(SCORERS)) {
     const payload = results && results[id];
-    scores[id] = payload && payload.metrics ? scorer(payload.metrics) : null;
+    scores[id] = payload && payload.metrics ? scorer(payload.metrics, form) : null;
   }
-  return { version: SCORING_VERSION, scores };
+  return { version: SCORING_VERSION, form, scores };
 }

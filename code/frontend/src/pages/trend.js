@@ -1,7 +1,7 @@
 import { el, button } from '../ui.js';
 import { DIMS, LIMITS } from '../data.js';
 import { readSessions } from '../storage.js';
-import { buildTrend, repeatHint, REPEAT_MIN_DAYS } from '../trend.js';
+import { buildTrend, repeatHint, versionHint, REPEAT_MIN_DAYS } from '../trend.js';
 
 const DIM_NAME = Object.fromEntries(DIMS.map((d) => [d.id, d.name]));
 
@@ -54,6 +54,7 @@ export function renderTrend(root, ctx) {
   const prev = sessions[1];
   const trend = buildTrend(prev, next, DIM_NAME);
   const hint = repeatHint(trend.days);
+  const scoringHint = versionHint(prev, next);
 
   const rows = trend.rows.map((row) =>
     el('tr', {}, [
@@ -78,6 +79,7 @@ export function renderTrend(root, ctx) {
       }),
 
       hint ? el('div', { class: 'notice', role: 'status' }, [hint]) : null,
+      scoringHint ? el('div', { class: 'notice', role: 'status' }, [scoringHint]) : null,
 
       trend.rows.length === 0
         ? el('div', { class: 'card' }, [

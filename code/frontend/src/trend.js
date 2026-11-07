@@ -58,3 +58,11 @@ export function repeatHint(days) {
   }
   return null;
 }
+
+/** 两次分数的计分口径不同时，提示不要直接对比。 */
+export function versionHint(prev, next) {
+  const before = prev && prev.scoringVersion;
+  const after = next && next.scoringVersion;
+  if (!before || !after || before === after) return null;
+  return `两次分数的计分口径不同（${before} → ${after}），对比仅供参考。`;
+}
