@@ -1,0 +1,50 @@
+[project]
+name = "mindmeter"
+version = "0.1.0"
+description = "MindMeter 心智镜 — 认知测评课程项目（FastAPI + LangGraph）"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["backend", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "SIM", # flake8-simplify
+  "RUF", # ruff-specific
+]
+ignore = [
+  "E501",   # 行长由 formatter 处理
+  "RUF001", # 中文文案中的全角标点属正常用法
+  "RUF002",
+  "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pylint.main]
+py-version = "3.11"
+ignore-paths = ["node_modules", ".venv", "build", "dist"]
+
+[tool.pylint."messages control"]
+# 脚本类文件不强求模块/类/函数 docstring；参数过多单独提示
+disable = ["C0114", "C0115", "C0116", "R0913", "R0914"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

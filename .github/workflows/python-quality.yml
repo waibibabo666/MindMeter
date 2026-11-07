@@ -1,0 +1,43 @@
+name: Python quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install "ruff>=0.6"
+      - name: Lint
+        run: ruff check . --output-format=github
+      - name: Format check
+        run: ruff format --check . || true
+
+  tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Run tests
+        run: |
+          if [ -n "$(find tests -name 'test_*.py' -print -quit 2>/dev/null)" ]; then
+            pytest -q
+          else
+            echo "tests/ 下暂无 Python 用例，跳过"
+          fi

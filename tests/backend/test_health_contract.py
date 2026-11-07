@@ -8,9 +8,8 @@ import pytest
 
 pytest.importorskip("app.main", reason="backend not scaffolded yet")
 
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.main import app  # noqa: E402
+from app.main import app
+from fastapi.testclient import TestClient
 
 
 def test_health_endpoint():

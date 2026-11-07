@@ -11,7 +11,7 @@ import pytest
 
 pytest.importorskip("app.main", reason="backend not scaffolded yet")
 
-from app.main import app  # noqa: E402
+from app.main import app
 
 PARAM_RE = re.compile(r"\{[^}]+\}")
 

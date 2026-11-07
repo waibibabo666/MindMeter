@@ -167,7 +167,7 @@ def check_duplicates():
             continue
         digest = hashlib.md5(path.read_bytes()).hexdigest()
         groups.setdefault(digest, []).append(str(path.relative_to(ROOT)))
-    for digest, paths in groups.items():
+    for _digest, paths in groups.items():
         if len(paths) > 1:
             errors.append("duplicate files: " + ", ".join(sorted(paths)))
     return errors
