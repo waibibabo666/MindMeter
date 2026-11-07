@@ -32,6 +32,7 @@ frontend/
    ├─ router.js          # hash 路由解析与导航
    ├─ store.js           # L-01 app shell 状态（版本与降级）
    ├─ storage.js         # L-03 版本化本地存储（四类 key + 导出/清除）
+   ├─ log.js             # 诊断日志：200 条环形缓冲、脱敏、导出/清除
    ├─ data.js            # 维度、档位、题库、词对、图案
    ├─ scoring/           # scoring-v3.1：config / formulas / stats / index
    ├─ charts/radar.js    # 八维雷达几何与 SVG
@@ -58,6 +59,18 @@ frontend/
 - `exportData()` 导出 JSON，**永远剥离 `apiKey`**；
 - `clearAllData()` 连同 app shell 状态一起清除；
 - localStorage 不可用时退化为内存 Map，页面仍可用。
+
+## 诊断日志
+
+`src/log.js` 提供统一日志：
+
+- 只写 `globalThis.__MM_LOG__` 内存环形缓冲，最多 200 条；
+- **不写 `console`**，避免 Key 被浏览器日志/扩展采集；
+- 入库前脱敏 `apiKey` / `Authorization` / `Bearer` / `sk-*` / `ghp_*`；
+- 设置页可「导出诊断日志 / 清除日志」；导出 JSON 已脱敏；
+- 刷新页面后清空，不落盘。
+
+排查时可在控制台查看 `__MM_LOG__`，或从设置页导出。
 
 ## L-04：BYOK 与降级
 
@@ -109,6 +122,7 @@ python -m http.server 8000 --directory code/frontend
 node scripts/test_app_shell.js     # 12 项：结构、路由、题库、状态
 node scripts/test_storage.js       # 本地存储：四类 key、24h 过期、20 条、导出不含 Key
 node scripts/test_llm_client.js    # 16 项：错误码、Key 位置、超时、降级
+node scripts/test_log.js           # 5 项：日志上限、脱敏、导出、清除
 node scripts/test_prototype.js     # 7 项：L1 原型未受影响
 # 或根目录 npm test
 ```

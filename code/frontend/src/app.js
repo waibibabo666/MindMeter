@@ -8,6 +8,7 @@ import { createRouter } from './router.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
+import { log } from './log.js';
 import { STANDARD_ORDER } from './data.js';
 import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
@@ -18,16 +19,6 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
-
-/**
- * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
- * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
- */
-const log = (level, ...args) => {
-  const buffer = (globalThis.__MM_LOG__ ||= []);
-  buffer.push({ at: Date.now(), level, args });
-  if (buffer.length > 200) buffer.shift();
-};
 
 /**
  * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
@@ -249,4 +240,5 @@ window.addEventListener('unhandledrejection', (event) => {
   toast('有一次请求没有完成，可稍后重试');
 });
 
+log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
 router.start();

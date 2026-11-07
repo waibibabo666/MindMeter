@@ -71,6 +71,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [算法设计](docs/algorithm/algorithm.md) | 8 项公式、`scoring-v3`、服务端计分 |
 | [技术方案](docs/software/architecture.md) | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
 | [软件设计](docs/software/software.md) | 模块总览 |
+| [诊断日志](docs/software/logging.md) | 前端内存日志、脱敏、导出 |
 | [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
 | [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |
 | [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |

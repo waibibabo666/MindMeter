@@ -4,7 +4,6 @@
   "private": true,
   "description": "MindMeter M1: local-first assessment + user-provided LLM API",
   "scripts": {
-    "test": "npm run test:prototype && npm run test:app-shell && npm run test:storage && npm run test:llm && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:agent-run && npm run test:memory && npm run test:kb && npm run test:units && npm run test:eval",
     "test:prototype": "node scripts/test_prototype.js",
     "test:app-shell": "node scripts/test_app_shell.js",
     "test:storage": "node scripts/test_storage.js",
@@ -18,6 +17,8 @@
     "test:kb": "node scripts/test_kb.js",
     "test:eval": "node scripts/test_eval.js",
     "test:e2e": "playwright test",
+    "test:log": "node scripts/test_log.js",
+    "test": "npm run test:prototype && npm run test:app-shell && npm run test:storage && npm run test:llm && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:agent-run && npm run test:memory && npm run test:kb && npm run test:units && npm run test:eval && npm run test:log",
     "lint": "eslint scripts code/frontend/src",
     "lint:frontend": "eslint code/frontend/src",
     "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"tests/e2e/**/*.js\" \"*.{json,mjs}\"",

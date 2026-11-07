@@ -8,19 +8,10 @@
  */
 
 import { KEYS } from './storage.js';
+import { log } from './log.js';
 
 export const STORAGE_KEY = KEYS.app;
 export const STATE_VERSION = 1;
-
-/**
- * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
- * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
- */
-const log = (level, ...args) => {
-  const buffer = (globalThis.__MM_LOG__ ||= []);
-  buffer.push({ at: Date.now(), level, args });
-  if (buffer.length > 200) buffer.shift();
-};
 
 export function defaultState() {
   return {
