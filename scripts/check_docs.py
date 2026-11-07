@@ -46,6 +46,7 @@ REQUIRED_FILES = [
     "scripts/check_docs.py",
     "scripts/check_secrets.py",
     "scripts/test_prototype.js",
+    "scripts/test_app_shell.js",
     "scripts/export_issues.py",
     "scripts/create_issues.py",
     "package.json",
