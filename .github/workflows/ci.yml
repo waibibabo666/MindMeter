@@ -1,0 +1,108 @@
+name: CI
+
+"on":
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prototype:
+    name: Prototype lint/format/smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      - name: Lint scripts + frontend
+        run: npm run lint
+
+      - name: Format check scripts + frontend
+        run: npm run format:check
+
+      - name: Complexity report (non-blocking)
+        run: npm run complexity
+
+      - name: Run prototype checks
+        run: npm test
+
+  backend:
+    name: Backend contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Detect backend scaffold
+        id: detect
+        shell: bash
+        run: |
+          if [ -f code/backend/pyproject.toml ] || [ -f code/backend/requirements.txt ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Backend scaffold detected."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Backend tests skipped::code/backend/pyproject.toml or requirements.txt not found yet."
+          fi
+
+      - name: Check backend entrypoint
+        if: steps.detect.outputs.ready == 'true'
+        run: |
+          if [ ! -f code/backend/app/main.py ]; then
+            echo "Backend dependency file exists but code/backend/app/main.py is missing."
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        if: steps.detect.outputs.ready == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f code/backend/pyproject.toml ]; then
+            python -m pip install -e ./code/backend
+          else
+            python -m pip install -r code/backend/requirements.txt
+          fi
+          python -m pip install pytest httpx
+
+      - name: Run backend contract tests
+        if: steps.detect.outputs.ready == 'true'
+        run: pytest -q tests/backend -rs
+
+  security:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scan for committed secrets
+        run: python scripts/check_secrets.py

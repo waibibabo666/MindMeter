@@ -1,37 +1,15 @@
-# Core Engine（计分模块）
+﻿# Core Engine（L1 历史）
 
-纯函数计分模块，不操作 DOM、不发网络请求，供前端调用、供测试直接验证。
+> L2 起，计分迁移到 `code/backend/app/scoring/`，由服务端 Python 唯一权威计算。
+> 本目录的 JS 计分只保留为 L1 原型/回归对照，不参与 L2 计分。
 
-## 对外接口
+## L2 计分位置
 
-```js
-import { scoreSession, SCORING_VERSION } from './src/scoring.js';
+- 公式与阈值：[docs/algorithm/algorithm.md](../../docs/algorithm/algorithm.md)
+- Python 实现：`code/backend/app/scoring/`
+- 版本：`scoring-v3`
+- 规则：8 维、无总分、无常模、无百分位；缺失返回 `null`。
 
-const result = scoreSession({
-  workingMemory: { maxSpan: 5, accuracy: 0.75 },
-  inhibition: { accuracy: 0.88, commissionErrors: 3, meanRt: 420 },
-  speed: { medianRt: 310, omissions: 1 },
-  memory: { hits: 9, falseAlarms: 2 }
-});
-// { workingMemory: 62, inhibition: 78, speed: 71, memory: 58, overall: 67, version: 'scoring-v1' }
-```
+## L1 历史
 
-## 目录
-
-```text
-core_engine/
-├─ src/
-│  ├─ scoring.js    # 4 个维度 + 综合分
-│  └─ config.js     # 阈值、版本号
-├─ test/
-│  └─ scoring.test.js
-└─ README.md
-```
-
-## 规则
-
-- 公式、阈值、版本以[算法设计](../../docs/algorithm/algorithm.md)为准；
-- 同一输入 + 同一配置必须返回同一结果；
-- 缺失超过 20% 的维度返回 `null`，由前端显示“数据不足”；
-- 任何公式修改都要升版本并补测试；
-- 不使用真实用户数据做测试，测试数据全部合成。
+L1 的 `scoring.js`/`config.js` 曾用于静态原型；L2 不再使用。若保留，只用于对照金标准，不得作为线上结果。

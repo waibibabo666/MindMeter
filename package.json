@@ -1,0 +1,37 @@
+{
+  "name": "mindmeter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MindMeter M1: local-first assessment + user-provided LLM API",
+  "scripts": {
+    "test": "npm run test:prototype && npm run test:app-shell && npm run test:storage && npm run test:llm && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:agent-run && npm run test:memory && npm run test:kb && npm run test:units && npm run test:eval",
+    "test:prototype": "node scripts/test_prototype.js",
+    "test:app-shell": "node scripts/test_app_shell.js",
+    "test:storage": "node scripts/test_storage.js",
+    "test:llm": "node scripts/test_llm_client.js",
+    "test:report": "node scripts/test_report_trend.js",
+    "test:units": "node scripts/test_units.js",
+    "test:scoring": "node scripts/test_scoring.js",
+    "test:agent": "node scripts/test_agent.js",
+    "test:agent-run": "node scripts/test_agent_run.js",
+    "test:memory": "node scripts/test_memory.js",
+    "test:kb": "node scripts/test_kb.js",
+    "test:eval": "node scripts/test_eval.js",
+    "lint": "eslint scripts code/frontend/src",
+    "lint:frontend": "eslint code/frontend/src",
+    "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"*.{json,mjs}\"",
+    "format:check": "prettier --check \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"*.{json,mjs}\"",
+    "complexity": "eslint --config eslint.complexity.config.mjs scripts code/frontend/src",
+    "check": "npm run lint && npm run format:check && npm test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10"
+  }
+}

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindMeter · 八维能力画像（v5 骨架）</title>
+<style>
+  :root{
+    --bg:#0b0d13; --card:#161a24; --card2:#1c2130; --line:#252b3a;
+    --text:#e8ecf5; --muted:#8a91a5; --dim:#5b6376;
+    --accent:#5b8cff; --accent2:#8f6bff; --good:#3ddc84; --warn:#f0a33a; --bad:#ef5f6b;
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(900px 600px at 50% -10%,rgba(91,140,255,.12),transparent 60%),var(--bg);
+    color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.6;min-height:100vh;
+  }
+  .app{max-width:620px;margin:0 auto;padding:0 18px 48px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 10px;
+    font-size:11px;letter-spacing:.18em;color:var(--dim);position:sticky;top:0;z-index:20;
+    background:linear-gradient(var(--bg),rgba(11,13,19,.86),transparent)}
+  .screen{display:none;animation:in .18s ease}
+  .screen.active{display:block}
+  @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  h1{font-size:34px;line-height:1.22;letter-spacing:-.6px;margin:18px 0 10px}
+  h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:22px;margin:18px 0 8px}
+  h3{font-size:15px;margin:0 0 8px}
+  p{margin:8px 0}
+  .kicker{font-size:11px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase}
+  .lead{color:var(--muted);font-size:14px}
+  .tiny{font-size:11.5px;color:var(--dim);line-height:1.7}
+  .warn{color:var(--warn);font-size:12.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+  .card2{background:var(--card2)}
+  .main-entry{background:linear-gradient(160deg,rgba(91,140,255,.18),rgba(143,107,255,.08));
+    border-color:rgba(91,140,255,.35)}
+  .main-entry .t{font-size:17px;font-weight:700}
+  .main-entry .s{font-size:12.5px;color:var(--muted);margin:4px 0 14px}
+  .btn{font-family:inherit;font-size:14px;font-weight:600;border:1px solid transparent;cursor:pointer;
+    border-radius:13px;padding:13px 18px;transition:.15s;background:var(--card2);color:var(--text);width:100%}
+  .btn:hover{filter:brightness(1.12)}
+  .btn:active{transform:scale(.99)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#6f7dff);color:#fff}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
+  .btn.small{width:auto;padding:9px 14px;font-size:12.5px;border-radius:10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+  .row .btn{flex:1;min-width:120px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:420px){.grid{grid-template-columns:1fr}}
+  .mode-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:15px 16px;margin:10px 0;cursor:pointer;transition:.15s}
+  .mode-card:hover{border-color:#3a4258;transform:translateY(-1px)}
+  .mode-card.disabled{opacity:.45;cursor:not-allowed}
+  .mc-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .mc-name{font-size:16px;font-weight:700}
+  .mc-time{font-size:12px;color:var(--accent)}
+  .mc-tags{font-size:12px;color:var(--muted);margin:6px 0 0}
+  .pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
+    padding:3px 9px;color:var(--muted);margin:2px 4px 2px 0}
+  .pill.hi{border-color:rgba(61,220,132,.4);color:#9be9bb}
+  .pill.mid{border-color:rgba(240,163,58,.4);color:#e8c08a}
+  .pill.lo{border-color:rgba(239,95,107,.4);color:#f2a6ac}
+  .consent{background:rgba(240,163,58,.07);border:1px solid rgba(240,163,58,.22);
+    border-radius:12px;padding:13px 14px;font-size:12.5px;color:#d8b98a;line-height:1.8}
+  label.check{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:13.5px;color:var(--text)}
+  label.check input{margin-top:4px;width:18px;height:18px;flex:none;accent-color:var(--accent)}
+  .hud{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);
+    letter-spacing:.04em;margin:6px 0 8px}
+  .bar{height:6px;background:var(--card2);border-radius:999px;overflow:hidden;margin:0 0 14px}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.2s}
+  .stage{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:18px;min-height:150px;margin:12px 0}
+  .stage .big{font-size:26px;font-weight:800;letter-spacing:-.4px}
+  .stage .muted{color:var(--muted);font-size:13px}
+  .radar-wrap{display:flex;justify-content:center;margin:8px 0 2px}
+  svg{max-width:100%;height:auto}
+  .dimrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(37,43,58,.6)}
+  .dimrow:last-child{border-bottom:none}
+  .dimrow .n{font-size:13px;width:92px;flex:none;color:var(--muted)}
+  .dimrow .t{flex:1;height:7px;background:var(--card2);border-radius:999px;overflow:hidden}
+  .dimrow .t b{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .dimrow .v{width:44px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums}
+  .advice-item{padding:9px 0;border-bottom:1px solid rgba(37,43,58,.6);font-size:13.5px}
+  .advice-item:last-child{border-bottom:none}
+  .advice-item b{color:var(--accent)}
+  .input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-family:inherit;font-size:13.5px;padding:11px 12px;margin:4px 0 10px}
+  .input:focus{outline:none;border-color:var(--accent)}
+  .kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);
+    padding:5px 0;border-bottom:1px dashed rgba(37,43,58,.7)}
+  .kv:last-child{border-bottom:none}
+  .hist-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;margin:9px 0}
+  .hist-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .hist-scores{display:flex;flex-wrap:wrap;gap:6px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);background:#232838;
+    border:1px solid var(--line);color:var(--text);font-size:12.5px;padding:10px 14px;border-radius:10px;
+    opacity:0;pointer-events:none;transition:.2s;z-index:99;max-width:90%}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .disclaimer{font-size:11px;color:var(--dim);line-height:1.75;margin-top:14px}
+  .footer{font-size:10.5px;color:#4a5163;text-align:center;margin-top:28px;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <span>MINDMETER</span>
+    <span>L1 原型 · 仅 UI 参考 · L2 后端版开发中</span>
+  </header>
+
+  <!-- 首页 -->
+  <section id="s-home" class="screen active">
+    <div class="kicker">能力测评</div>
+    <h1>玩一局，<br>看清你的<em>能力结构</em></h1>
+    <p class="lead">8 项能力 · 3 种深度 · 5 / 13 / 28 分钟。<br>不设总分，没有常模，只给你自己的八维画像。</p>
+
+    <div class="card main-entry">
+      <div class="t">开始测评</div>
+      <div class="s">快测 2 项 · 标准 4 项 · 深度 8 项</div>
+      <button class="btn primary" onclick="openMode()">选择档位</button>
+    </div>
+
+    <div class="row">
+      <button class="btn ghost" onclick="openPractice()">补充练习</button>
+      <button class="btn ghost" onclick="openHistory()">历史</button>
+      <button class="btn ghost" onclick="openSettings()">设置</button>
+    </div>
+
+    <div id="resume-box" class="card" style="display:none">
+      <h3>上次未完成</h3>
+      <p class="tiny" id="resume-text"></p>
+      <div class="row">
+        <button class="btn primary small" onclick="resumeDraft()">继续</button>
+        <button class="btn ghost small" onclick="discardDraft()">放弃</button>
+      </div>
+    </div>
+
+    <p class="tiny">数据只存本机 · 可随时清除 · 非临床诊断 · 18+</p>
+    <p class="disclaimer">MindMeter 不是医疗器械，不提供诊断、治疗或医疗建议。报告中的分数是课程演示参考分，非常模、非临床、不与人群比较。</p>
+    <div class="footer">v5 原型骨架 · 任务内部逻辑待接入</div>
+  </section>
+
+  <!-- 档位 -->
+  <section id="s-mode" class="screen">
+    <h2>选择深度</h2>
+    <p class="lead">三档的维度不同，所以不设总分；跨档只比较共同维度。</p>
+    <div id="mode-list"></div>
+    <p class="tiny" id="asr-note"></p>
+    <button class="btn ghost" onclick="show('home')">返回</button>
+  </section>
+
+  <!-- 同意 -->
+  <section id="s-consent" class="screen">
+    <h2>开始之前</h2>
+    <p class="lead" id="consent-mode"></p>
+    <div class="consent">
+      数据仅保存在本机浏览器，可随时清除，清除后不可恢复。<br>
+      本产品不是医疗器械，不提供诊断、治疗或医疗建议；报告不构成临床结论。<br>
+      本期不测工作记忆、抑制控制、认知灵活性；不设总分、没有常模、不做百分位。
+    </div>
+    <label class="check"><input type="checkbox" id="c-age" onchange="updateConsent()"> 我已满 18 岁</label>
+    <label class="check"><input type="checkbox" id="c-priv" onchange="updateConsent()"> 我理解本产品非诊断用途，且数据只存本机</label>
+    <button class="btn primary" id="consent-start" disabled onclick="startAssessment()">开始测评</button>
+    <button class="btn ghost" onclick="openMode()">换个档位</button>
+  </section>
+
+  <!-- 任务 -->
+  <section id="s-task" class="screen">
+    <div class="hud"><span id="t-progress"></span><span id="t-timer">--:--</span></div>
+    <div class="bar"><i id="t-bar"></i></div>
+    <h2 id="t-name"></h2>
+    <p class="lead" id="t-desc"></p>
+    <div id="t-stage" class="stage"></div>
+    <div class="row">
+      <button class="btn primary" id="t-start" onclick="beginTask()">开始任务</button>
+      <button class="btn primary" id="t-finish" style="display:none" onclick="completeDemoTask()">完成（演示）</button>
+      <button class="btn ghost" onclick="confirmExitTask()">退出</button>
+    </div>
+    <p class="tiny">原型骨架：任务内部逻辑待接入；这里只验证三档流程、断点恢复与八维报告结构。演示分不代表真实计分。</p>
+  </section>
+
+  <!-- 报告 -->
+  <section id="s-report" class="screen">
+    <div class="kicker">你的八维画像</div>
+    <h2 id="r-title">本次结果</h2>
+    <p class="lead" id="r-summary"></p>
+    <div class="radar-wrap"><svg id="radar" viewBox="0 0 340 330" width="340" height="330" role="img" aria-label="八维雷达图"></svg></div>
+    <div class="card" id="r-cards"></div>
+    <div class="card">
+      <h3>行动建议</h3>
+      <div id="r-advice"></div>
+      <p class="tiny">建议来自固定建议库；不承诺疗效，不替代专业意见。</p>
+    </div>
+    <div class="card" id="r-ai-card">
+      <h3>AI 解读 <span class="pill" id="ai-badge">模板</span></h3>
+      <p class="tiny" id="ai-note">默认模板解释，不发起网络请求。可在设置里用自己的 API Key 开启。</p>
+      <p id="ai-text" style="font-size:13.5px"></p>
+      <input class="input" id="ai-q" placeholder="追问：为什么这项低？" style="margin-top:8px">
+      <div class="row">
+        <button class="btn ghost small" onclick="askAI()">发送追问</button>
+        <button class="btn ghost small" onclick="openSettings()">AI 设置</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>局限</h3>
+      <p class="tiny">样本少、无临床常模、受睡眠/情绪/设备影响；复测变化不等于训练效果。本期不测工作记忆、抑制控制、认知灵活性；8 项是产品口径，不是学界公认的“8 种智力”。不同档位只比较共同维度，不比较总分。</p>
+    </div>
+    <div class="row">
+      <button class="btn ghost" onclick="openHistory()">历史</button>
+      <button class="btn ghost" onclick="openMode()">再测</button>
+      <button class="btn ghost" onclick="openSettings()">设置</button>
+    </div>
+    <p class="disclaimer">课程演示参考分，非常模、非临床、无人群比较。MindMeter 不是医疗器械。</p>
+  </section>
+
+  <!-- 历史 -->
+  <section id="s-history" class="screen">
+    <h2>历史</h2>
+    <p class="lead">看趋势，不看单次分数；只比较共同维度。</p>
+    <div id="h-list"></div>
+    <div class="row">
+      <button class="btn ghost" onclick="show('home')">返回</button>
+      <button class="btn ghost" onclick="clearAll()">清除全部数据</button>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="s-settings" class="screen">
+    <h2>设置</h2>
+    <div class="card">
+      <h3>AI 解读（BYOK）</h3>
+      <p class="tiny">默认关闭。开启后，浏览器会把维度分与 facts 发到你填写的模型服务；不经过项目组服务器。Key 只存本机，公用设备请勿保存。</p>
+      <label class="check"><input type="checkbox" id="set-ai"> 开启 AI</label>
+      <label class="tiny">Endpoint（OpenAI-compatible /chat/completions）</label>
+      <input class="input" id="set-endpoint" placeholder="https://.../v1/chat/completions">
+      <label class="tiny">模型名</label>
+      <input class="input" id="set-model" placeholder="例如 deepseek-chat">
+      <label class="tiny">API Key</label>
+      <input class="input" id="set-key" type="password" placeholder="sk-...">
+      <div class="row">
+        <button class="btn primary small" onclick="saveSettings()">保存</button>
+        <button class="btn ghost small" onclick="saveSettings(true)">保存并开启</button>
+      </div>
+      <p class="tiny">Endpoint 必须支持浏览器 CORS；不支持时 AI 不可用，页面会回退模板。</p>
+    </div>
+    <div class="card">
+      <h3>言语流畅性 / ASR</h3>
+      <p class="tiny">使用浏览器 Web Speech API（Chrome/Edge）。音频不落库；识别文本只用于计数。麦克风被拒或不支持时，快测不可用，深度档该维度记“未测”。</p>
+    </div>
+    <div class="card">
+      <h3>数据</h3>
+      <p class="tiny">本地保存：sessions / draft / settings（含 Key）/ practice。清除后不可恢复。</p>
+      <button class="btn ghost" onclick="clearAll()">清除全部数据</button>
+    </div>
+    <button class="btn ghost" onclick="show('home')">返回</button>
+  </section>
+
+  <!-- 补充练习 -->
+  <section id="s-practice" class="screen">
+    <h2>补充练习</h2>
+    <p class="lead">4 款，随便玩；不计分、不进报告、不进雷达图。</p>
+    <div class="grid" id="practice-grid"></div>
+    <p class="tiny">P2：时间不够可整体延期；最佳纪录只存本机。</p>
+    <button class="btn ghost" onclick="show('home')">返回</button>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =========================================================
+   常量与状态
+   ========================================================= */
+const DIMS = [
+  { id:'vc', name:'言语理解' },
+  { id:'vf', name:'言语流畅性' },
+  { id:'nc', name:'数字运算' },
+  { id:'ps', name:'知觉速度' },
+  { id:'ir', name:'归纳推理' },
+  { id:'sv', name:'空间视觉化' },
+  { id:'am', name:'联想记忆' },
+  { id:'ni', name:'自然探索' }
+];
+const DIM = Object.fromEntries(DIMS.map(d => [d.id, d]));
+
+const MODE_CFG = {
+  quick:    { name:'快测', minutes:5,  tasks:['ps','vf'] },
+  standard: { name:'标准', minutes:13, tasks:['vc','ps','sv','am'] },
+  deep:     { name:'深度', minutes:28, tasks:['vc','nc','ir','ps','sv','am','ni','vf'] }
+};
+
+const TASKS = {
+  vc: { name:'言语理解', duration:180, desc:'15 道近义词/反义词/句子理解四选一；限时 3 分钟。', demo:62,
+        stage:'<div class="big">题库接入位</div><p class="muted">15 题 · 四选一 · 记录正确数</p>' },
+  vf: { name:'言语流畅性', duration:60, desc:'60 秒动物命名；使用 ASR 转写，只计不重复的有效动物名。', demo:55,
+        stage:'<div class="big">ASR 接入位</div><p class="muted">点击“开始任务”后授权麦克风；Chrome/Edge 可用。</p><p class="tiny" id="asr-status"></p>' },
+  nc: { name:'数字运算', duration:180, desc:'20 道两位数加减/简单乘法四选一；限时 3 分钟。', demo:70,
+        stage:'<div class="big">题库接入位</div><p class="muted">20 题 · 四选一 · 记录正确数</p>' },
+  ps: { name:'知觉速度', duration:60, desc:'60 秒内从四个选项中选出与目标相同的符号。', demo:68,
+        stage:'<div class="big">符号匹配接入位</div><p class="muted">60 秒 · 记录正确匹配数</p>' },
+  ir: { name:'归纳推理', duration:300, desc:'15 道数列/字母序列/简单矩阵四选一；限时 5 分钟。', demo:51,
+        stage:'<div class="big">题库接入位</div><p class="muted">15 题 · 四选一 · 记录正确数</p>' },
+  sv: { name:'空间视觉化', duration:180, desc:'20 道心理旋转四选一；记录正确数和中位反应时。', demo:74,
+        stage:'<div class="big">旋转题接入位</div><p class="muted">20 题 · 四选一 · 记录正确数与中位 RT</p>' },
+  am: { name:'联想记忆', duration:180, desc:'12 组词对学习 30 秒，再完成 24 题配对再认。', demo:60,
+        stage:'<div class="big">词对学习接入位</div><p class="muted">12 组词对 · 24 题再认 · 记录命中/虚报</p>' },
+  ni: { name:'自然探索', duration:180, desc:'20 张自然图片四选一分类；限时 3 分钟。', demo:66,
+        stage:'<div class="big">图片题库接入位</div><p class="muted">20 张 · 四选一 · 记录正确数</p>' }
+};
+
+const ADVICE = {
+  vc: ['每天 10 分钟做近义词/反义词辨析，先说出理由再选答案。', '读一段 300 字短文，用一句话概括主旨，再回看是否抓住了关键词。'],
+  vf: ['每天 1 分钟动物命名，先按“陆地/水生/鸟类”分组说，再说稀有类别。', '用“类别—子类—例子”的方式扩展词汇，不要重复同一个词。'],
+  nc: ['每天 10 分钟两位数加减心算，先保证正确率，再逐步限时。', '把乘除法拆成可心算的步骤，避免连续多步工作记忆负荷。'],
+  ps: ['做 60 秒符号匹配练习，先固定扫视顺序，再提速。', '减少多任务切换；每次只做一件需要视觉搜索的事。'],
+  ir: ['每天 3 道数列/图形规律题，先写出“规则假设”再验证。', '练习把具体例子归纳成一句话规则，再套到新例子上。'],
+  sv: ['每天 10 分钟心理旋转练习：先判断旋转角度，再比较形状。', '用纸笔画出旋转后的轮廓，逐步过渡到只在脑中旋转。'],
+  am: ['用间隔重复：词对在当天、第 2 天、第 7 天各回忆一次，每次 5 分钟。', '把词对编成有画面的短句，比机械重复更容易提取。'],
+  ni: ['每天看 5 张自然图片，先说“类别—特征—相似物种”，再查答案。', '建立自己的自然分类笔记：动物/植物/岩石/云，各记 3 个特征。']
+};
+const GENERAL_ADVICE = '先固定睡眠和作息，再复测；单次分数受状态影响，不要把一次结果当成能力定论。';
+
+const K = {
+  sessions:'mindmeter.sessions.v1',
+  draft:'mindmeter.draft.v1',
+  settings:'mindmeter.settings.v1',
+  practice:'mindmeter.practice.v1'
+};
+
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+
+let settings = Object.assign({ enabled:false, endpoint:'', model:'', apiKey:'' }, store.get(K.settings, {}));
+let state = { mode:null, index:0, scores:{}, tasks:{}, startedAt:null };
+let currentTask = null;
+let timerId = null;
+let asr = { rec:null, text:'', supported:false, started:false, count:0 };
+let lastSession = null;
+
+/* =========================================================
+   基础 UI
+   ========================================================= */
+function $(id){ return document.getElementById(id); }
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + id));
+  window.scrollTo({ top:0, behavior:'auto' });
+}
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function fmtTime(sec){
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function hasASR(){
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+/* =========================================================
+   首页 / 档位 / 同意
+   ========================================================= */
+function renderModes(){
+  const box = $('mode-list');
+  box.innerHTML = '';
+  Object.entries(MODE_CFG).forEach(([key, cfg]) => {
+    const names = cfg.tasks.map(id => DIM[id].name).join(' · ');
+    const disabled = key === 'quick' && !hasASR();
+    box.innerHTML += `
+      <div class="mode-card ${disabled ? 'disabled' : ''}" onclick="${disabled ? "toast('当前浏览器不支持 ASR，快测不可用；请选标准或深度')" : `pickMode('${key}')`}">
+        <div class="mc-head"><span class="mc-name">${cfg.name}</span><span class="mc-time">≈ ${cfg.minutes} 分钟</span></div>
+        <p class="mc-tags">${names}</p>
+        <p class="tiny">${cfg.tasks.length} 项 · ${key === 'quick' ? '先看两项' : key === 'standard' ? '看四项结构' : '看完整八维'}</p>
+      </div>`;
+  });
+  $('asr-note').innerHTML = hasASR()
+    ? '言语流畅性使用浏览器 ASR（Chrome/Edge）；音频不落库。'
+    : '当前浏览器不支持 Web Speech API：快测不可用；标准档可做；深度档的言语流畅性会记为“未测”。';
+}
+function openMode(){ renderModes(); show('mode'); }
+function pickMode(mode){
+  if (mode === 'quick' && !hasASR()) { toast('当前浏览器不支持 ASR，快测不可用'); return; }
+  state.mode = mode;
+  $('consent-mode').textContent = `${MODE_CFG[mode].name}档 · ${MODE_CFG[mode].tasks.length} 项 · 约 ${MODE_CFG[mode].minutes} 分钟`;
+  $('c-age').checked = false; $('c-priv').checked = false; updateConsent();
+  show('consent');
+}
+function updateConsent(){
+  $('consent-start').disabled = !($('c-age').checked && $('c-priv').checked);
+}
+function startAssessment(){
+  if (!$('c-age').checked || !$('c-priv').checked) return;
+  state = { mode:state.mode, index:0, scores:{}, tasks:{}, startedAt:Date.now() };
+  store.del(K.draft);
+  showTask();
+}
+
+/* =========================================================
+   任务流程
+   ========================================================= */
+function seq(){ return MODE_CFG[state.mode].tasks; }
+function showTask(){
+  const list = seq();
+  if (state.index >= list.length) { finishAssessment(); return; }
+  currentTask = list[state.index];
+  const task = TASKS[currentTask];
+  $('t-progress').textContent = `第 ${state.index + 1} / ${list.length} 个任务 · ${MODE_CFG[state.mode].name}档`;
+  $('t-name').textContent = task.name;
+  $('t-desc').textContent = task.desc;
+  $('t-timer').textContent = '--:--';
+  $('t-bar').style.width = Math.round((state.index / list.length) * 100) + '%';
+  $('t-stage').innerHTML = task.stage;
+  $('t-start').style.display = '';
+  $('t-finish').style.display = 'none';
+  $('t-start').textContent = '开始任务';
+  $('t-finish').textContent = '完成（演示）';
+  clearInterval(timerId);
+  asr = { rec:null, text:'', supported:hasASR(), started:false, count:0 };
+  if (currentTask === 'vf' && !hasASR()) {
+    $('t-stage').innerHTML += '<p class="warn">当前浏览器不支持 Web Speech API；本任务将记为“未测”。</p>';
+  }
+  show('task');
+}
+function beginTask(){
+  if (!currentTask) return;
+  const task = TASKS[currentTask];
+  let left = task.duration;
+  $('t-start').style.display = 'none';
+  $('t-finish').style.display = '';
+  $('t-timer').textContent = fmtTime(left);
+  $('t-bar').style.width = Math.round(((state.index + 0.15) / seq().length) * 100) + '%';
+  if (currentTask === 'vf' && hasASR()) startASR();
+  clearInterval(timerId);
+  timerId = setInterval(() => {
+    left--;
+    $('t-timer').textContent = fmtTime(Math.max(0,left));
+    $('t-bar').style.width = Math.round(((state.index + (1 - left / task.duration)) / seq().length) * 100) + '%';
+    if (left <= 0) {
+      clearInterval(timerId);
+      $('t-finish').textContent = '时间到，完成';
+    }
+  }, 1000);
+}
+function startASR(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  try {
+    asr.rec = new SR();
+    asr.rec.lang = 'zh-CN';
+    asr.rec.continuous = true;
+    asr.rec.interimResults = true;
+    asr.rec.onresult = (e) => {
+      let add = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) add += e.results[i][0].transcript;
+      asr.text += add;
+      const parts = asr.text.split(/[，,、。；;\s]+/).filter(Boolean);
+      const uniq = new Set(parts);
+      asr.count = uniq.size > 1 ? uniq.size : Math.max(1, Math.floor(asr.text.replace(/\s/g,'').length / 2));
+      const st = $('asr-status');
+      if (st) st.textContent = `已识别约 ${asr.count} 个候选词（演示计数）；原始文本不保存。`;
+    };
+    asr.rec.onerror = () => {
+      const st = $('asr-status');
+      if (st) st.textContent = 'ASR 出错或被拒绝；本任务将记为“未测”。';
+    };
+    asr.rec.start();
+    asr.started = true;
+    const st = $('asr-status');
+    if (st) st.textContent = '正在聆听…请连续说出动物名称。';
+  } catch(e) {
+    const st = $('asr-status');
+    if (st) st.textContent = 'ASR 启动失败；本任务将记为“未测”。';
+  }
+}
+function stopASR(){
+  if (asr.rec && asr.started) { try { asr.rec.stop(); } catch(e){} }
+  asr.started = false;
+}
+function completeDemoTask(){
+  clearInterval(timerId);
+  stopASR();
+  const task = TASKS[currentTask];
+  let score = task.demo;
+  let raw = { demo:true };
+  if (currentTask === 'vf') {
+    if (!hasASR() || !asr.count) { score = null; raw = { status:'not_measured', reason:'asr_unavailable_or_empty' }; }
+    else { score = Math.max(0, Math.min(100, Math.round((asr.count - 10) / 20 * 100))); raw = { validCount:asr.count, demo:true }; }
+  }
+  state.scores[currentTask] = score;
+  state.tasks[currentTask] = { status: score == null ? 'not_measured' : 'done', score, raw };
+  state.index++;
+  saveDraft();
+  if (state.index >= seq().length) finishAssessment();
+  else showTask();
+}
+function saveDraft(){
+  if (!state.mode) return;
+  store.set(K.draft, {
+    mode:state.mode, index:state.index, scores:state.scores, tasks:state.tasks,
+    startedAt:state.startedAt, savedAt:Date.now()
+  });
+}
+function confirmExitTask(){
+  if (!confirm('退出后保留已完成任务，当前任务下次从说明页重开。确定退出？')) return;
+  clearInterval(timerId); stopASR(); saveDraft(); show('home');
+}
+function finishAssessment(){
+  clearInterval(timerId); stopASR();
+  const scores = {};
+  DIMS.forEach(d => { scores[d.id] = state.scores[d.id] == null ? null : state.scores[d.id]; });
+  const session = {
+    id:'s_' + Date.now(),
+    schemaVersion:1,
+    scoringVersion:'scoring-v3',
+    tier:state.mode,
+    startedAt:new Date(state.startedAt).toISOString(),
+    finishedAt:new Date().toISOString(),
+    scores,
+    tasks:state.tasks,
+    ai:{ enabled:!!settings.enabled, model:settings.model || null }
+  };
+  let arr = store.get(K.sessions, []);
+  if (!Array.isArray(arr)) arr = [];
+  arr.push(session);
+  const ok = store.set(K.sessions, arr);
+  store.del(K.draft);
+  if (!ok) toast('保存失败，本次结果不会被保留');
+  lastSession = session;
+  renderReport(session);
+  show('report');
+}
+
+/* =========================================================
+   报告
+   ========================================================= */
+function scoredDims(session){
+  return DIMS.filter(d => session.scores[d.id] != null).map(d => d.id);
+}
+function renderReport(session){
+  const done = scoredDims(session);
+  $('r-title').textContent = `${MODE_CFG[session.tier].name}档 · 八维画像`;
+  const lowest = done.slice().sort((a,b) => session.scores[a] - session.scores[b])[0];
+  $('r-summary').textContent = done.length
+    ? `本次完成 ${done.length} / 8 项；最低维度：${DIM[lowest].name}。不设总分，跨档只比较共同维度。`
+    : '本次没有可计分维度；请重测或检查设备。';
+
+  drawRadar(session.scores);
+  renderCards(session);
+  renderAdvice(session, done);
+  renderAITemplate(session);
+}
+
+function renderCards(session){
+  $('r-cards').innerHTML = DIMS.map(d => {
+    const v = session.scores[d.id];
+    const pct = v == null ? 0 : v;
+    return `<div class="dimrow">
+      <span class="n">${d.name}</span>
+      <span class="t"><b style="width:${pct}%"></b></span>
+      <span class="v">${v == null ? '未测' : v}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderAdvice(session, done){
+  const picks = done.slice().sort((a,b) => session.scores[a] - session.scores[b]).slice(0,2);
+  const items = [];
+  picks.forEach(id => {
+    (ADVICE[id] || []).slice(0,2).forEach(text => items.push({ dim:id, text }));
+  });
+  while (items.length < 2) items.push({ dim:null, text:GENERAL_ADVICE });
+  $('r-advice').innerHTML = items.slice(0,3).map(it =>
+    `<div class="advice-item">${it.dim ? `<b>${DIM[it.dim].name}</b>：` : '<b>通用</b>：'}${it.text}</div>`
+  ).join('');
+}
+
+function drawRadar(scores){
+  const svg = $('radar');
+  const cx = 170, cy = 160, R = 105;
+  const n = DIMS.length;
+  const ang = i => -Math.PI/2 + i * 2 * Math.PI / n;
+  const pt = (i, r) => [cx + Math.cos(ang(i)) * r, cy + Math.sin(ang(i)) * r];
+  let h = '';
+  [0.25,0.5,0.75,1].forEach(f => {
+    h += `<polygon points="${DIMS.map((_,i)=>pt(i,R*f).join(',')).join(' ')}" fill="none" stroke="#252b3a"/>`;
+  });
+  DIMS.forEach((_,i) => { const [x,y] = pt(i,R); h += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#252b3a"/>`; });
+  const pts = DIMS.map((d,i) => {
+    const v = scores[d.id] == null ? 0 : scores[d.id];
+    return pt(i, R * v / 100).join(',');
+  });
+  if (DIMS.some(d => scores[d.id] != null)) {
+    h += `<polygon points="${pts.join(' ')}" fill="rgba(91,140,255,.22)" stroke="#5b8cff" stroke-width="2" stroke-linejoin="round"/>`;
+    DIMS.forEach((d,i) => {
+      if (scores[d.id] == null) return;
+      const [x,y] = pt(i, R * scores[d.id] / 100);
+      h += `<circle cx="${x}" cy="${y}" r="3" fill="#8fb0ff"/>`;
+    });
+  }
+  DIMS.forEach((d,i) => {
+    const [x,y] = pt(i, R + 30);
+    const anchor = Math.abs(x - cx) < 12 ? 'middle' : (x > cx ? 'start' : 'end');
+    h += `<text x="${x}" y="${y + 4}" fill="#8a91a5" font-size="10" text-anchor="${anchor}">${d.name}</text>`;
+    if (scores[d.id] == null) h += `<text x="${x}" y="${y + 17}" fill="#5b6376" font-size="9" text-anchor="${anchor}">未测</text>`;
+  });
+  svg.innerHTML = h;
+}
+
+/* =========================================================
+   历史 / 复测
+   ========================================================= */
+function openHistory(){
+  let arr = store.get(K.sessions, []);
+  if (!Array.isArray(arr)) arr = [];
+  const box = $('h-list');
+  if (!arr.length) {
+    box.innerHTML = '<div class="card"><p class="tiny">暂无记录。完成一次测评后会出现在这里。</p></div>';
+  } else {
+    box.innerHTML = arr.slice().reverse().map(s => {
+      const tags = DIMS.map(d => {
+        const v = s.scores[d.id];
+        return `<span class="pill ${v == null ? '' : v >= 70 ? 'hi' : v >= 50 ? 'mid' : 'lo'}">${d.name} ${v == null ? '未测' : v}</span>`;
+      }).join('');
+      return `<div class="hist-item">
+        <div class="hist-head"><span>${new Date(s.finishedAt).toLocaleString('zh-CN')}</span><span>${MODE_CFG[s.tier].name}档 · ${s.scoringVersion || 'scoring-v3'}</span></div>
+        <div class="hist-scores">${tags}</div>
+      </div>`;
+    }).join('');
+    if (arr.length >= 2) {
+      const a = arr[arr.length - 2], b = arr[arr.length - 1];
+      const common = DIMS.filter(d => a.scores[d.id] != null && b.scores[d.id] != null);
+      if (common.length) {
+        box.innerHTML += `<div class="card"><h3>最近两次 · 共同维度</h3>` +
+          common.map(d => {
+            const diff = b.scores[d.id] - a.scores[d.id];
+            return `<div class="kv"><span>${d.name}</span><span>${a.scores[d.id]} → ${b.scores[d.id]}（${diff >= 0 ? '+' : ''}${diff}）</span></div>`;
+          }).join('') +
+          `<p class="tiny">只比较共同维度；变化不等于训练效果。</p></div>`;
+      }
+    }
+  }
+  show('history');
+}
+function clearAll(){
+  if (!confirm('清除全部数据：sessions、draft、settings（含 API Key）、practice，且不可恢复。确定？')) return;
+  Object.values(K).forEach(k => store.del(k));
+  settings = { enabled:false, endpoint:'', model:'', apiKey:'' };
+  state = { mode:null, index:0, scores:{}, tasks:{}, startedAt:null };
+  $('resume-box').style.display = 'none';
+  toast('已清除全部数据');
+  show('home');
+}
+
+/* =========================================================
+   设置 / BYOK
+   ========================================================= */
+function openSettings(){
+  $('set-ai').checked = !!settings.enabled;
+  $('set-endpoint').value = settings.endpoint || '';
+  $('set-model').value = settings.model || '';
+  $('set-key').value = settings.apiKey || '';
+  show('settings');
+}
+function saveSettings(enable){
+  settings = {
+    enabled: enable ? true : $('set-ai').checked,
+    endpoint: $('set-endpoint').value.trim(),
+    model: $('set-model').value.trim(),
+    apiKey: $('set-key').value.trim()
+  };
+  if (settings.enabled && (!settings.endpoint || !settings.model || !settings.apiKey)) {
+    settings.enabled = false;
+    $('set-ai').checked = false;
+    toast('开启 AI 需要 endpoint、模型名和 API Key；已保持关闭');
+    store.set(K.settings, settings);
+    return;
+  }
+  store.set(K.settings, settings);
+  toast(settings.enabled ? '已保存并开启 AI（Key 只存本机）' : '已保存；AI 关闭');
+}
+function buildFacts(session){
+  const dims = DIMS.filter(d => session.scores[d.id] != null)
+    .map(d => ({ id:d.id, score:session.scores[d.id] }));
+  const adviceIds = dims.slice().sort((a,b) => a.score - b.score).slice(0,2).map(d => 'adv_' + d.id);
+  return { task:'report', dims, completed:dims.map(d => d.id), adviceIds, constraints:{ maxChars:200, noDiagnosis:true } };
+}
+function renderAITemplate(session){
+  const done = scoredDims(session);
+  const lowest = done.slice().sort((a,b) => session.scores[a] - session.scores[b])[0];
+  const headline = lowest ? `本次完成 ${done.length} 项；${DIM[lowest].name}相对最低。` : '本次没有可计分维度。';
+  $('ai-badge').textContent = settings.enabled ? 'BYOK' : '模板';
+  $('ai-note').textContent = settings.enabled
+    ? '已开启 AI；若请求失败会自动回退模板。'
+    : '默认模板解释，不发起网络请求。可在设置里用自己的 API Key 开启。';
+  $('ai-text').textContent = headline + ' 这只代表本次任务表现，不代表总体能力，也不与人群比较。';
+}
+async function callModel(facts, question){
+  if (!settings.enabled || !settings.endpoint || !settings.model || !settings.apiKey) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  const sys = '你是 MindMeter 的报告解释助手。只解释给定 facts，不算分、不诊断、不新增建议、不编数字。输出 JSON：{"headline":"...","body":"..."}，总长不超过 200 字。';
+  const user = JSON.stringify(facts) + (question ? '\n用户追问：' + question : '');
+  try {
+    const res = await fetch(settings.endpoint, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + settings.apiKey },
+      body:JSON.stringify({
+        model:settings.model,
+        messages:[{ role:'system', content:sys }, { role:'user', content:user }],
+        temperature:0.3,
+        max_tokens:400
+      }),
+      signal:ctrl.signal
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!text) return null;
+    let obj;
+    try { obj = JSON.parse(text); } catch(e){ return null; }
+    if (!obj || typeof obj.headline !== 'string' || typeof obj.body !== 'string') return null;
+    const all = obj.headline + obj.body;
+    if (all.length > 200) return null;
+    if (/(诊断|治疗|治愈|疗效|正常|异常|提升智商|脑龄|抑郁|痴呆|ADHD)/.test(all)) return null;
+    return obj;
+  } catch(e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function askAI(){
+  if (!lastSession) { toast('请先完成一次测评'); return; }
+  if (!settings.enabled) { toast('请先在设置里开启 AI（BYOK）'); return; }
+  const q = $('ai-q').value.trim();
+  if (!q) { toast('请输入追问内容'); return; }
+  $('ai-text').textContent = '正在生成…';
+  const facts = buildFacts(lastSession);
+  const r = await callModel(facts, q);
+  if (r) {
+    $('ai-text').textContent = r.headline + ' ' + r.body;
+    $('ai-badge').textContent = 'AI 生成';
+  } else {
+    renderAITemplate(lastSession);
+    $('ai-text').textContent += ' AI 暂不可用，已回退模板。';
+  }
+}
+
+/* =========================================================
+   补充练习 / 草稿恢复
+   ========================================================= */
+const PRACTICE = [
+  { icon:'🧮', name:'心算连击', dim:'数字运算' },
+  { icon:'🔢', name:'舒尔特方格', dim:'知觉速度' },
+  { icon:'🃏', name:'翻牌配对', dim:'联想记忆' },
+  { icon:'🍎', name:'快速分类', dim:'知觉速度' }
+];
+function openPractice(){
+  $('practice-grid').innerHTML = PRACTICE.map(p => `
+    <div class="card2 card" style="margin:0">
+      <div style="font-size:24px">${p.icon}</div>
+      <h3 style="margin:6px 0 2px">${p.name}</h3>
+      <p class="tiny">${p.dim} · 不计分</p>
+      <button class="btn ghost small" onclick="toast('练习接入位：P2 待实现')">待接入</button>
+    </div>`).join('');
+  show('practice');
+}
+function checkResume(){
+  const d = store.get(K.draft, null);
+  if (!d || Date.now() - d.savedAt > 24 * 3600 * 1000) {
+    if (d) store.del(K.draft);
+    return;
+  }
+  if (!MODE_CFG[d.mode] || d.index >= MODE_CFG[d.mode].tasks.length) { store.del(K.draft); return; }
+  $('resume-box').style.display = 'block';
+  $('resume-text').textContent = `${MODE_CFG[d.mode].name}档 · 已完成 ${d.index} / ${MODE_CFG[d.mode].tasks.length} 个任务；继续会从当前任务说明页开始。`;
+  $('resume-box').onclick = null;
+  $('resume-box').dataset.draft = JSON.stringify(d);
+}
+function resumeDraft(){
+  const d = JSON.parse($('resume-box').dataset.draft || 'null');
+  if (!d) return;
+  state = { mode:d.mode, index:d.index, scores:d.scores || {}, tasks:d.tasks || {}, startedAt:d.startedAt || Date.now() };
+  $('resume-box').style.display = 'none';
+  showTask();
+}
+function discardDraft(){
+  store.del(K.draft);
+  $('resume-box').style.display = 'none';
+  toast('已放弃上次进度');
+}
+
+/* =========================================================
+   启动
+   ========================================================= */
+checkResume();
+renderModes();
+</script>
+</body>
+</html>
+

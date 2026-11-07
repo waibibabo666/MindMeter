@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MindMeter · L2 线框（P-08）· 全本地版</title>
+<style>
+  :root { --ink:#1f2328; --line:#b9c0c9; --soft:#eef1f4; --mid:#6b7280; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:28px 20px 80px; background:#e7eaee; color:var(--ink);
+         font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  header.note { max-width:1560px; margin:0 auto 22px; }
+  header.note h1 { font-size:20px; margin:0 0 6px; }
+  header.note p { margin:0; color:#4b5563; font-size:13px; }
+  header.note .kv { margin-top:8px; font-size:12px; color:#374151; }
+  .board { display:flex; flex-wrap:wrap; gap:26px; justify-content:center; max-width:1560px; margin:0 auto; }
+  .slot { width:360px; }
+  .slot > .label { font-size:12px; color:#4b5563; margin-bottom:8px; display:flex; justify-content:space-between; }
+  .slot > .label b { font-size:13px; color:#111827; }
+  .phone { width:360px; height:780px; background:#fff; border:2px solid #2f3237; border-radius:22px;
+           overflow:hidden; display:flex; flex-direction:column; }
+  .bar { height:26px; border-bottom:1px dashed var(--line); display:flex; align-items:center;
+         justify-content:space-between; padding:0 12px; font-size:10px; color:var(--mid); background:#fafbfc; }
+  .bar.chrome { height:34px; gap:6px; padding:0 8px; background:#eef1f4;
+                border-bottom:1px solid var(--line); justify-content:flex-start; }
+  .bar.chrome .dots { display:flex; gap:3px; }
+  .bar.chrome .dots i { display:block; width:6px; height:6px; border-radius:50%; background:#c9cfd6; }
+  .bar.chrome .url { flex:1; height:20px; border-radius:10px; background:#fff; border:1px solid var(--line);
+                     display:flex; align-items:center; justify-content:center; gap:2px;
+                     font-size:9px; color:#6b7280; padding:0 6px; }
+  .bar.chrome .url .path { color:#374151; }
+  .bar.chrome .reload { font-size:11px; color:#9aa1aa; }
+  .nav { padding:10px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px;
+         font-size:14px; font-weight:600; }
+  .nav .back { color:var(--mid); font-weight:400; }
+  .nav .right { margin-left:auto; font-size:12px; color:var(--mid); font-weight:400; }
+  .body { padding:12px; flex:1; display:flex; flex-direction:column; gap:10px; overflow-y:auto; scrollbar-width:thin; }
+  .muted { color:var(--mid); font-size:12px; margin:0; }
+  .tiny { color:var(--mid); font-size:11px; margin:0; }
+  h3 { margin:0; font-size:18px; } h4 { margin:0; font-size:13px; }
+  .mark { display:block; width:56px; height:56px; }
+  .mark-sm { width:20px; height:20px; flex:none; }
+  .wordmark { font-size:16px; font-weight:700; letter-spacing:1px; }
+  .wordmark span { font-weight:400; color:var(--mid); font-size:11px; letter-spacing:2px; margin-left:4px; }
+
+  /* 启动页 */
+  .splash { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px 20px; }
+  .splash .mark { width:104px; height:104px; }
+  .splash .wordmark { font-size:22px; }
+  .splash .tagline { margin:0; text-align:center; font-size:12.5px; color:#374151; }
+  .splash .hint { margin-top:26px; text-align:center; }
+  .tap { font-size:12px; color:#374151; letter-spacing:1px; animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:.45 } 50% { opacity:1 } }
+  .chev { width:10px; height:10px; border-right:2px solid #374151; border-bottom:2px solid #374151;
+          transform:rotate(45deg); margin:8px auto 0; animation:pulse 1.8s ease-in-out infinite; }
+  .splash .footnote { position:absolute; }
+
+  /* 启动页入场动画：圆环描边 → 菱形弹出 → 文字上浮；尊重减少动效设置 */
+  @media (prefers-reduced-motion: no-preference) {
+    .anim-ring { stroke-dasharray:170; stroke-dashoffset:170; animation:draw 1.05s ease-out forwards; }
+    .anim-axis { opacity:0; animation:fade .45s ease-out .32s forwards; }
+    .anim-diamond { opacity:0; transform:scale(.35) rotate(-120deg); transform-origin:32px 32px;
+                    animation:spinIn .85s cubic-bezier(.18,.85,.25,1) .5s forwards; }
+    .anim-dot { opacity:0; animation:fade .3s ease-out 1.25s forwards; }
+    .anim-word { opacity:0; transform:translateY(6px); animation:rise .5s ease-out 1.2s forwards; }
+    .anim-tag { opacity:0; animation:rise .5s ease-out 1.4s forwards; }
+    .anim-hint { opacity:0; animation:rise .5s ease-out 1.65s forwards; }
+    .anim-foot { opacity:0; animation:fade .6s ease-out 1.9s forwards; }
+  }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  @keyframes fade { to { opacity:1; } }
+  @keyframes spinIn { to { opacity:1; transform:scale(1) rotate(0deg); } }
+  @keyframes pop { to { opacity:1; transform:scale(1); } }
+  @keyframes rise { to { opacity:1; transform:translateY(0); } }
+
+  .feat { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  .feat div { border:1px solid var(--line); border-radius:8px; padding:8px 6px; text-align:center; font-size:11px; color:#374151; }
+  .feat b { display:block; font-size:13px; color:#111827; }
+  .consent { border:1px solid var(--line); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:9px; }
+  .ck { display:flex; gap:8px; align-items:flex-start; font-size:11.5px; color:#374151; }
+  .ck i { width:15px; height:15px; border:1px solid var(--line); border-radius:3px; flex:none; margin-top:2px; display:block; }
+  .btn { height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+         font-size:15px; background:#2f3237; color:#fff; }
+  .btn.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .btn.off { background:#e5e7eb; color:#9aa1aa; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:5px; }
+  .card.sel { border:2px solid #2f3237; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .tag { display:inline-block; font-size:10px; border:1px solid var(--line); border-radius:999px;
+         padding:1px 7px; color:#4b5563; white-space:nowrap; }
+  .tag.dark { background:#2f3237; color:#fff; border-color:#2f3237; }
+  .tag.na { background:#f3f4f6; color:#9aa1aa; border-style:dashed; }
+  .progress { height:6px; background:var(--soft); border-radius:3px; overflow:hidden; }
+  .progress > i { display:block; height:100%; width:50%; background:#2f3237; }
+  .stage { min-height:150px; border:1px dashed var(--line); border-radius:10px; display:flex;
+           align-items:center; justify-content:center; flex-direction:column; gap:8px;
+           background:#fbfcfd; padding:12px; }
+  .target { font-size:40px; letter-spacing:8px; font-weight:700; color:#2f3237; }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .opt { border:1px solid var(--line); border-radius:8px; height:52px; display:flex;
+         align-items:center; justify-content:center; font-size:22px; letter-spacing:4px; color:#374151; }
+  .radar { height:160px; border:1px dashed var(--line); border-radius:10px; display:flex;
+           align-items:center; justify-content:center; color:var(--mid); font-size:12px; background:#fbfcfd; }
+  .dims { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .dim { border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
+  .dim b { font-size:12px; display:block; }
+  .dim .val { font-size:15px; font-weight:700; }
+  .dim .na { font-size:11px; color:var(--mid); font-weight:400; }
+  .msg { display:flex; gap:8px; }
+  .msg .who { width:24px; height:24px; border:1px solid var(--line); border-radius:50%; flex:none;
+              display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--mid); }
+  .msg .text { border:1px solid var(--line); border-radius:10px; padding:7px 9px; font-size:12.5px; }
+  .msg.me { flex-direction:row-reverse; }
+  .msg.me .text { background:#f2f4f7; }
+  .cite { font-size:10.5px; color:var(--mid); border-top:1px dashed var(--line); margin-top:5px; padding-top:4px; }
+  .composer { display:flex; gap:8px; margin-top:auto; }
+  .composer .input { flex:1; height:40px; border:1px solid var(--line); border-radius:8px; padding:0 10px;
+                     display:flex; align-items:center; font-size:12px; color:#9aa1aa; }
+  .send { width:60px; height:40px; border-radius:8px; background:#2f3237; color:#fff;
+          display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .mem { border:1px solid var(--line); border-radius:9px; padding:8px 10px; display:flex; flex-direction:column; gap:4px; }
+  .link { font-size:11.5px; color:#374151; text-decoration:underline; }
+  .chart { height:190px; border:1px dashed var(--line); border-radius:10px; position:relative; background:#fbfcfd; padding:8px 6px 4px; }
+  .chart svg { width:100%; height:100%; display:block; overflow:visible; }
+  .chart .grid line { stroke:#eef1f4; stroke-width:1; }
+  .chart .axis { stroke:#c9cfd6; stroke-width:1; }
+  .chart .tick { font-size:9px; fill:#9aa1aa; }
+  .chart .legend { font-size:10px; fill:#4b5563; }
+  @media (prefers-reduced-motion: no-preference) {
+    .chart .series-line { stroke-dasharray:400; stroke-dashoffset:400; animation:draw 1.2s ease-out forwards; }
+    .chart .series-dot { opacity:0; animation:fade .4s ease-out forwards; }
+  }
+  .chart .series-line { stroke-width:2; fill:none; }
+  .chart .series-dot { r:3.5; }
+  .foot { margin-top:auto; border-top:1px dashed var(--line); padding-top:7px; display:flex; flex-direction:column; gap:6px; }
+  .note { border:1px solid var(--line); border-left:3px solid #2f3237; background:#fafbfc;
+          padding:7px 9px; font-size:11.5px; color:#374151; }
+  .switch { width:38px; height:22px; border-radius:11px; background:#e5e7eb; border:1px solid var(--line); flex:none; }
+  .switch i { display:block; width:16px; height:16px; border-radius:50%; background:#fff;
+              border:1px solid var(--line); margin:2px; }
+  .switch.on { background:#2f3237; border-color:#2f3237; }
+  .switch.on i { margin-left:18px; background:#fff; border-color:#fff; }
+  .field-row { display:flex; align-items:center; gap:8px; }
+  .field-row .k { width:64px; font-size:11.5px; color:#4b5563; flex:none; }
+  .field-row .input { flex:1; height:34px; font-size:12px; }
+</style>
+</head>
+<body>
+
+<header class="note">
+  <h1>MindMeter · L2 线框（P-08）· 全本地版</h1>
+  <p>网页产品（浏览器打开，不是原生 App）。12 屏 · 视口 360×780 · 地址栏显示各屏路由 · 超出部分滚动。</p>
+  <div class="kv">与 L-01 一致：8 维 / 三档 5·13·28 分钟 / 标准档 vc·ps·sv·am / 报告无总分。</div>
+</header>
+
+<div class="board">
+
+  <!-- ① 启动页 -->
+  <section class="slot">
+    <div class="label"><b>① 启动页</b><span>点任意处继续</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="splash">
+        <svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <circle class="anim-ring" cx="32" cy="32" r="27" stroke="#2f3237" stroke-width="1.6"/>
+          <line class="anim-axis" x1="32" y1="5" x2="32" y2="59" stroke="#2f3237" stroke-width="1" stroke-opacity=".3"/>
+          <line class="anim-axis" x1="5" y1="32" x2="59" y2="32" stroke="#2f3237" stroke-width="1" stroke-opacity=".3"/>
+          <polygon class="anim-diamond" points="32,14 50,32 32,50 14,32" fill="#2f3237" fill-opacity=".10" stroke="#2f3237" stroke-width="1.4"/>
+          <circle class="anim-dot" cx="32" cy="32" r="2.4" fill="#2f3237"/>
+        </svg>
+        <div class="wordmark anim-word" style="font-size:22px;">MindMeter <span>心智镜</span></div>
+        <p class="tagline anim-tag">15 分钟，8 个任务<br />一份分维度的参考，不给总分</p>
+        <div class="hint anim-hint">
+          <p class="tap">点击屏幕继续</p>
+          <div class="chev"></div>
+        </div>
+        <div class="anim-foot" style="margin-top:auto; text-align:center;">
+          <p class="tiny">无需注册 · 数据只存本机 · 不是医疗器械</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 知情同意 -->
+  <section class="slot">
+    <div class="label"><b>② 知情同意</b><span>四项勾选</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/consent</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>开始之前<span class="right">完整说明</span></div>
+      <div class="body">
+        <div>
+          <h3>请逐条确认</h3>
+          <p class="muted" style="margin-top:4px;">这四项都和你有关，确认后才能开始。</p>
+        </div>
+
+        <div class="consent">
+          <div class="ck"><i></i><span>我已年满 18 岁</span></div>
+          <div class="ck"><i></i><span>我理解本产品不是医疗器械，结果不构成诊断或治疗建议</span></div>
+          <div class="ck"><i></i><span>我理解数据只保存在本机浏览器，清缓存或换设备会丢失，可随时在设置中清除</span></div>
+          <div class="ck"><i></i><span>我理解 AI 功能需要我自备模型密钥，密钥也只保存在本机</span></div>
+        </div>
+
+        <div class="note">
+          测评全程不联网；对话功能只有在你配置密钥并主动提问时才会访问模型服务。
+        </div>
+
+        <div class="foot">
+          <div class="btn off">同意并开始</div>
+          <p class="tiny" style="text-align:center;">四项全部勾选后可点击</p>
+          <p class="tiny" style="text-align:center;"><span class="link">查看隐私与数据说明</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 档位 -->
+  <section class="slot">
+    <div class="label"><b>③ 选档位</b><span>5 / 13 / 28 分钟</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/tier</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>选择档位<span class="right">说明</span></div>
+      <div class="body">
+        <p class="muted">档位决定测几项、花多久。同一任务在任何档位参数一致，跨次可比。</p>
+
+        <div class="card sel">
+          <div class="row"><b>标准</b><span class="tag dark">推荐 · 13 分钟</span></div>
+          <div class="tiny">言语理解 · 知觉速度 · 空间视觉化 · 联想记忆</div>
+          <div class="tiny">报告显示 4 项实测 + 4 项未测。</div>
+        </div>
+
+        <div class="card">
+          <div class="row"><b>快测</b><span class="tag na">未开放</span></div>
+          <div class="tiny">知觉速度 · 言语流畅性（5 分钟）</div>
+          <div class="tiny">言语流畅性需要麦克风，当前版本暂未开放。</div>
+        </div>
+
+        <div class="card">
+          <div class="row"><b>深度</b><span class="tag na">未开放</span></div>
+          <div class="tiny">8 项全部（28 分钟）</div>
+          <div class="tiny">8 项题库还在补齐，先做标准档。</div>
+        </div>
+
+        <div class="note">
+          测评全程在本机进行，不联网；中途退出会保留已完成的部分（24 小时内有效）。
+        </div>
+
+        <div class="foot">
+          <div class="btn">开始标准档</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 任务 -->
+  <section class="slot">
+    <div class="label"><b>④ 做任务</b><span>2 / 4 · 知觉速度</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/task/ps</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">暂停</span>知觉速度<span class="right">2 / 4</span></div>
+      <div class="body">
+        <div class="progress"><i></i></div>
+        <p class="muted">45 秒内，从 4 个选项里找出与上方完全相同的一组符号。</p>
+
+        <div class="stage">
+          <div class="tiny">目标</div>
+          <div class="target">◇◆◇</div>
+        </div>
+
+        <div class="opts">
+          <div class="opt">◇◇◆</div>
+          <div class="opt">◇◆◇</div>
+          <div class="opt">◆◆◇</div>
+          <div class="opt">◆◇◇</div>
+        </div>
+
+        <div class="row">
+          <span class="tiny">已答 23 · 剩余 31 秒</span>
+          <span class="tiny">正式试次不提示对错</span>
+        </div>
+
+        <div class="foot">
+          <div class="note">前 2 题是练习，会给反馈，不计入成绩。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 报告 -->
+  <section class="slot">
+    <div class="label"><b>⑤ 报告</b><span>八维 · 无总分</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/report</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>本次报告<span class="right">导出</span></div>
+      <div class="body">
+        <p class="tiny">11-07 · 标准档 · 12 分 40 秒 · 完成 4 / 8</p>
+        <div class="radar">八维雷达图（未测留空，不补 0）</div>
+        <div class="dims">
+          <div class="dim"><b>言语理解</b><div class="val">62</div><div class="tiny">正确 11 / 15</div></div>
+          <div class="dim"><b>知觉速度</b><div class="val">71</div><div class="tiny">34 题 · 正确 30</div></div>
+          <div class="dim"><b>空间视觉化</b><div class="val">58</div><div class="tiny">正确 12 / 20</div></div>
+          <div class="dim"><b>联想记忆</b><div class="val">49</div><div class="tiny">命中 8 · 虚报 3</div></div>
+          <div class="dim"><b>言语流畅性</b><div class="na">未测</div></div>
+          <div class="dim"><b>数字运算</b><div class="na">未测</div></div>
+          <div class="dim"><b>归纳推理</b><div class="na">未测</div></div>
+          <div class="dim"><b>自然探索</b><div class="na">未测</div></div>
+        </div>
+        <div class="card">
+          <h4>可以试试</h4>
+          <p class="tiny">1. 联想记忆：把 12 对词按 3 个生活场景分组记。</p>
+          <p class="tiny">2. 空间视觉化：每天 5 分钟心理旋转。</p>
+        </div>
+        <div class="foot">
+          <div class="btn">问问 AI</div>
+          <p class="tiny">课程演示参考分，非常模、非临床；不提供总分、均分、百分位或误差范围。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑥ 对话 -->
+  <section class="slot">
+    <div class="label"><b>⑥ 对话</b><span>自备密钥 · 本机</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/chat</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>问问 AI<span class="right">设置</span></div>
+      <div class="body">
+        <div class="note">
+          使用你自己的模型密钥，仅保存在本机；回答只依据本次分数和本地知识库。
+        </div>
+
+        <div class="msg me">
+          <div class="who">我</div>
+          <div class="text">为什么联想记忆只有 49？</div>
+        </div>
+        <div class="msg">
+          <div class="who">AI</div>
+          <div class="text">
+            这次 12 对词认对 8 对、误认 3 个，误认集中在「台灯/灯泡」这类同场景词。
+            <div class="cite">引用：本次 facts · 联想记忆 · 8/12 · 虚报 3</div>
+          </div>
+        </div>
+        <div class="msg me">
+          <div class="who">我</div>
+          <div class="text">那怎么练？</div>
+        </div>
+        <div class="msg">
+          <div class="who">AI</div>
+          <div class="text">
+            先按场景分组：12 对拆成 3 个生活场景，每组 4 对，稳定后再做无分组复述。
+            <div class="cite">引用：知识库 KB-MM-017 · 联想记忆 · 场景分组法</div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="input">继续问…（本地保留最近 20 条）</div>
+          <div class="send">发送</div>
+        </div>
+        <div class="foot">
+          <p class="tiny">AI 生成 · 仅解释本次结果 · 非诊断 · 可随时关闭</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 记忆 -->
+  <section class="slot">
+    <div class="label"><b>⑦ 记忆</b><span>本机 20 条</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/memory</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>我的记忆<span class="right">清除</span></div>
+      <div class="body">
+        <p class="muted">这些信息只存在本机浏览器；删除后 AI 不会再引用。</p>
+
+        <div class="card">
+          <div class="row"><b>画像</b><span class="tag">待确认</span></div>
+          <div class="tiny">目标：备考 · 偏好：晚上做测评 · 约束：单次不超过 15 分钟</div>
+          <div class="row"><span class="link">确认保存</span><span class="link">忽略</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row"><b>摘要</b><span class="tag">自动更新</span></div>
+          <div class="tiny">标准档 2 次；联想记忆 49→52；已给 2 条记忆类建议。</div>
+        </div>
+
+        <div class="mem">
+          <div class="row"><span class="tag dark">建议记录</span><span class="tiny">11-05</span></div>
+          <div class="tiny">KB-MM-017 场景分组法：已展示，未标记完成。</div>
+          <div class="row"><span class="link">编辑</span><span class="link">删除</span></div>
+        </div>
+
+        <div class="mem">
+          <div class="row"><span class="tag">测评摘要</span><span class="tiny">11-03</span></div>
+          <div class="tiny">标准档 · 最低项联想记忆 49 · 2 条建议。</div>
+          <div class="row"><span class="link">编辑</span><span class="link">删除</span></div>
+        </div>
+
+        <div class="foot">
+          <div class="row">
+            <span class="tiny">已用 2 / 20</span>
+            <span class="link">导出本机数据</span>
+          </div>
+          <p class="tiny">清缓存或换浏览器会丢失，建议先导出。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑧ 趋势 -->
+  <section class="slot">
+    <div class="label"><b>⑧ 趋势</b><span>共同维度</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/trend</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>趋势<span class="right">维度</span></div>
+      <div class="body">
+        <p class="muted">只比较两次都测过的维度。距上次 7 天，练习效应已基本消退。</p>
+
+        <div class="chart" data-trend data-labels="10-24,10-31,11-07"
+             data-series='[{"name":"联想记忆","values":[45,49,52]},{"name":"知觉速度","values":[74,71,69]}]'></div>
+
+        <div class="dims">
+          <div class="dim"><b>联想记忆</b><div class="val">49 → 52</div><div class="tiny">+3 · 2 次样本</div></div>
+          <div class="dim"><b>知觉速度</b><div class="val">71 → 69</div><div class="tiny">−2 · 视为持平</div></div>
+        </div>
+
+        <div class="card">
+          <h4>AI 怎么看</h4>
+          <p class="tiny">
+            目前只有 2 次可比记录，差值都在波动范围内，还不足以下「趋势」结论。
+            建议再测 1 次（累计 3 次）后再看方向。
+          </p>
+          <div class="cite">引用：两次 facts · 共同维度 2 项 · 间隔 7 天</div>
+        </div>
+
+        <div class="foot">
+          <p class="tiny">未测维度不参与比较；少于 3 次不出现「趋势」措辞。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑨ 设置 -->
+  <section class="slot">
+    <div class="label"><b>⑨ 设置</b><span>密钥与本机数据</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/settings</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>设置<span class="right">完成</span></div>
+      <div class="body">
+        <h4>模型密钥</h4>
+        <div class="card">
+          <div class="row"><b>状态</b><span class="tag na">未配置</span></div>
+          <div class="tiny">对话与 AI 解读需要你自己的密钥；只保存在本机，不上传。</div>
+          <div class="field-row"><span class="k">服务地址</span><div class="input">https://…/v1</div></div>
+          <div class="field-row"><span class="k">模型</span><div class="input">例如 deepseek-chat</div></div>
+          <div class="field-row"><span class="k">密钥</span><div class="input">sk-••••••••</div></div>
+          <div class="btn ghost" style="height:38px;font-size:13px;">保存密钥</div>
+          <p class="tiny">密钥只用于你发起的对话请求；清除数据时一并删除。</p>
+        </div>
+
+        <h4>AI</h4>
+        <div class="card">
+          <div class="row">
+            <div>
+              <div style="font-size:13px;">启用 AI 解读与对话</div>
+              <div class="tiny">关闭后报告与趋势仍可用，只是改用固定文案</div>
+            </div>
+            <div class="switch"><i></i></div>
+          </div>
+        </div>
+
+        <h4>本机数据</h4>
+        <div class="card">
+          <div class="row"><span style="font-size:12.5px;">测评记录</span><span class="tiny">2 次 · 约 18 KB</span></div>
+          <div class="row"><span style="font-size:12.5px;">对话与记忆</span><span class="tiny">24 条 · 约 9 KB</span></div>
+          <div class="row"><span style="font-size:12.5px;">知识库</span><span class="tiny">内置 · 只读</span></div>
+          <div class="row" style="margin-top:2px;"><span class="link">导出为 JSON</span><span class="link">导入备份</span></div>
+        </div>
+
+        <div class="card">
+          <div class="row"><b>清除全部数据</b><span class="link">清除</span></div>
+          <div class="tiny">删除测评、对话、记忆与密钥，不可恢复。建议先导出。</div>
+        </div>
+
+        <div class="foot">
+          <p class="tiny">MindMeter v0.2 · 课程演示版 · 非医疗器械</p>
+          <p class="tiny"><span class="link">隐私与数据说明</span>　<span class="link">关于</span></p>
+        </div>
+      </div>
+    </div>
+  <!-- ⑩ 对话 · 未配置密钥 -->
+  <section class="slot">
+    <div class="label"><b>⑩ 状态：未配置密钥</b><span>对话空态</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/chat</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>问问 AI<span class="right">设置</span></div>
+      <div class="body">
+        <div class="stage" style="min-height:220px;">
+          <div style="width:44px;height:44px;border:2px dashed var(--line);border-radius:50%;"></div>
+          <div style="font-size:13px;color:#374151;">还没有配置模型密钥</div>
+          <p class="tiny" style="text-align:center;max-width:240px;">
+            填写你自己的服务地址、模型名和密钥后，就可以针对本次结果提问。密钥只存在本机。
+          </p>
+          <div class="btn" style="width:180px;height:40px;font-size:13px;">去设置</div>
+        </div>
+        <div class="note">
+          未配置时，报告页仍会显示模板解读，不影响做完测评。
+        </div>
+        <div class="composer">
+          <div class="input" style="color:#c2c7cd;">配置后才能提问</div>
+          <div class="send" style="background:#e5e7eb;color:#9aa1aa;">发送</div>
+        </div>
+        <div class="foot">
+          <p class="tiny">AI 生成 · 仅解释本次结果 · 非诊断 · 可随时关闭</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑪ 记忆 · 首次使用 -->
+  <section class="slot">
+    <div class="label"><b>⑪ 状态：还没有记忆</b><span>记忆空态</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/memory</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>我的记忆<span class="right">清除</span></div>
+      <div class="body">
+        <div class="stage" style="min-height:220px;">
+          <div style="width:44px;height:44px;border:2px dashed var(--line);border-radius:8px;"></div>
+          <div style="font-size:13px;color:#374151;">还没有可记住的内容</div>
+          <p class="tiny" style="text-align:center;max-width:240px;">
+            完成一次测评后，这里会出现一条摘要；如果你确认了画像，也会显示在这里。
+          </p>
+          <div class="btn" style="width:180px;height:40px;font-size:13px;">去做一次测评</div>
+        </div>
+        <div class="note">
+          记忆只保存在本机；不确认画像时，AI 不会引用任何偏好信息。
+        </div>
+        <div class="foot">
+          <div class="row">
+            <span class="tiny">已用 0 / 20</span>
+            <span class="link">导出本机数据</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑫ 趋势 · 只有一次记录 -->
+  <section class="slot">
+    <div class="label"><b>⑫ 状态：仅 1 次记录</b><span>趋势空态</span></div>
+    <div class="phone">
+      <div class="bar chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">mindmeter.local<span class="path">#/trend</span></span>
+        <span class="reload">⟳</span>
+      </div>
+      <div class="nav"><span class="back">‹</span>趋势<span class="right">维度</span></div>
+      <div class="body">
+        <p class="muted">至少需要两次测评才能比较变化。</p>
+
+        <div class="chart" data-trend data-labels="11-07"
+             data-series='[{"name":"本次","values":[62]}]'></div>
+
+        <div class="dims">
+          <div class="dim"><b>言语理解</b><div class="val">62</div><div class="tiny">11-07 · 仅此一次</div></div>
+          <div class="dim"><b>联想记忆</b><div class="val">49</div><div class="tiny">11-07 · 仅此一次</div></div>
+        </div>
+
+        <div class="card">
+          <h4>还看不出变化</h4>
+          <p class="tiny">现在只有 1 次记录。再测 1 次（建议间隔 7 天以上）后，这里会显示共同维度的差值。</p>
+        </div>
+
+        <div class="foot">
+          <div class="btn ghost" style="height:40px;font-size:13px;">再测一次</div>
+          <p class="tiny">未测维度不参与比较；少于 3 次不出现「趋势」措辞。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  /**
+   * 趋势图：按 data-series 动态生成 SVG（不依赖任何图表库）。
+   * 单点数据只画点，多点画折线；线条带描边动画，点按顺序淡入。
+   */
+  (function () {
+    var NS = 'http://www.w3.org/2000/svg';
+    var COLORS = ['#2f3237', '#9aa1aa', '#c9cfd6'];
+
+    function make(tag, attrs) {
+      var node = document.createElementNS(NS, tag);
+      Object.keys(attrs || {}).forEach(function (key) {
+        node.setAttribute(key, attrs[key]);
+      });
+      return node;
+    }
+
+    function renderChart(box) {
+      var labels = (box.getAttribute('data-labels') || '').split(',').filter(Boolean);
+      var series = JSON.parse(box.getAttribute('data-series') || '[]');
+      if (!series.length) return;
+
+      var W = 320;
+      var H = 175;
+      var padL = 26;
+      var padR = 10;
+      var padT = 26;
+      var padB = 22;
+      var innerW = W - padL - padR;
+      var innerH = H - padT - padB;
+      var count = labels.length || 1;
+
+      var svg = make('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+
+      var grid = make('g', { class: 'grid' });
+      [0, 25, 50, 75, 100].forEach(function (value) {
+        var y = padT + innerH - (value / 100) * innerH;
+        grid.appendChild(make('line', { x1: padL, y1: y, x2: W - padR, y2: y }));
+        var tick = make('text', { x: padL - 5, y: y + 3, class: 'tick', 'text-anchor': 'end' });
+        tick.textContent = String(value);
+        grid.appendChild(tick);
+      });
+      svg.appendChild(grid);
+
+      svg.appendChild(
+        make('line', {
+          class: 'axis',
+          x1: padL,
+          y1: padT + innerH,
+          x2: W - padR,
+          y2: padT + innerH,
+        }),
+      );
+
+      function xAt(index) {
+        if (count === 1) return padL + innerW / 2;
+        return padL + (innerW * index) / (count - 1);
+      }
+
+      function yAt(value) {
+        return padT + innerH - (Math.max(0, Math.min(100, value)) / 100) * innerH;
+      }
+
+      labels.forEach(function (label, index) {
+        var text = make('text', {
+          x: xAt(index),
+          y: H - 6,
+          class: 'tick',
+          'text-anchor': 'middle',
+        });
+        text.textContent = label;
+        svg.appendChild(text);
+      });
+
+      series.forEach(function (item, sIndex) {
+        var color = COLORS[sIndex % COLORS.length];
+        var values = item.values || [];
+        if (values.length > 1) {
+          var d = values
+            .map(function (value, index) {
+              return (index === 0 ? 'M' : 'L') + xAt(index) + ' ' + yAt(value);
+            })
+            .join(' ');
+          svg.appendChild(
+            make('path', {
+              class: 'series-line',
+              d: d,
+              stroke: color,
+              'stroke-linejoin': 'round',
+              'stroke-linecap': 'round',
+            }),
+          );
+        }
+        values.forEach(function (value, index) {
+          var x = xAt(index);
+          var y = yAt(value);
+          var ring = make('circle', {
+            class: 'series-dot',
+            cx: x,
+            cy: y,
+            fill: '#fff',
+            stroke: color,
+            'stroke-width': 2,
+          });
+          ring.style.animationDelay = 0.45 + sIndex * 0.15 + index * 0.12 + 's';
+          svg.appendChild(ring);
+          if (count === 1) {
+            var valueText = make('text', { x: x, y: y - 10, class: 'tick', 'text-anchor': 'middle' });
+            valueText.textContent = String(value);
+            svg.appendChild(valueText);
+          }
+        });
+      });
+
+      series.forEach(function (item, index) {
+        var lx = padL + 6 + index * 86;
+        svg.appendChild(
+          make('rect', {
+            x: lx,
+            y: 6,
+            width: 10,
+            height: 3,
+            fill: COLORS[index % COLORS.length],
+          }),
+        );
+        var name = make('text', { x: lx + 14, y: 11, class: 'legend' });
+        name.textContent = item.name;
+        svg.appendChild(name);
+      });
+
+      box.appendChild(svg);
+    }
+
+    document.querySelectorAll('[data-trend]').forEach(renderChart);
+  })();
+</script>
+
+</body>
+</html>

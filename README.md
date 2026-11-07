@@ -1,97 +1,161 @@
 # MindMeter（心智镜）
 
-> 玩一局，看清你的大脑 —— 测得出，也练得进。
+> 玩一局，看清你的大脑；聊一次，知道下一步。
 
-MindMeter 是一个 **4 人 / 6 周**的课程项目：用 4 个 2–4 分钟的小游戏，在 15 分钟内给出工作记忆、抑制控制、加工速度、情景记忆四个维度的认知画像和行动建议，并支持本地复测对比。
+[![CI](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml)
+[![Docs](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml)
 
-> 本项目不是医疗器械，不提供临床诊断、治疗或危机干预；结果仅用于自我了解和课程演示。
+MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用户完成快测 2 项 / 标准 4 项 / 深度 8 项，生成八维参考分；Agent 结合测评 facts、长期记忆和知识库，解释结果、给建议、回答追问、分析复测趋势。M1 采用本地计分 + 用户自备 LLM API；L2 再引入服务端。
+
+> 本项目不是医疗器械，不提供临床诊断、治疗或危机干预。**不设总分、没有常模、不做百分位、不与人群比较。**
 
 ## 团队
 
 | 成员 | 角色 | 主要职责 |
 | --- | --- | --- |
-| waibibabo666 | 项目负责人 | 进度、分工、风险、答辩 |
-| xlr268 | 产品负责人 | 需求、用户测试、报告文案 |
-| song | 技术负责人 | 前端、游戏实现、部署 |
-| 1213lz | 技术/计分 | 计分逻辑、数据处理、测试 |
+| waibibabo666 | 项目负责人 | 进度、分工、风险、答辩/发布 |
+| xlr268 | 产品负责人 | 需求、用户测试、Agent 文案、体验 |
+| song | 技术负责人 | 前端、FastAPI、部署 |
+| 1213lz | 技术/计分 | 计分、数据、RAG/Agent 测试 |
 
-## 六周计划
+## 产品结构
 
-| 周次 | 目标 | 交付物 |
+```text
+测评（8 项 / 三档）
+  → 计分（M1 本地 / L2 服务端）
+  → 八维报告（无总分）
+  → Agent（解释 / 建议 / 追问 / 趋势）
+  → 记忆（画像 / 摘要 / 建议 / 最近 20 条）
+  → 知识库（测量 / 任务 / 建议 / 边界 / 安全）
+  → 长期监测（复测、共同维度趋势）
+```
+
+## 技术架构
+
+**M1（当前执行）**
+
+- 前端：原生 HTML/CSS/JS，静态托管；
+- 存储：浏览器本地（sessions/draft/settings/memory）；
+- 计分：浏览器 `scoring-v3`；
+- Agent：本地状态机 + 用户自备 LLM API（BYOK）；
+- RAG：本地知识块 JSON + 关键词/BM25 检索；
+- 部署：静态文件，无后端。
+
+**L2（后续目标）**
+
+- 后端：FastAPI + PostgreSQL + pgvector；
+- Agent：LangGraph + Postgres checkpointer；
+- 计分：服务端 Python；
+- 模型 Key：加密存库；
+- 部署：Docker + 托管 Postgres；仍不上 K8s/Redis/Milvus。
+
+## 路线图（无固定 deadline）
+
+| 阶段 | 目标 | 验收 |
 | --- | --- | --- |
-| W1 | 需求与测量方案 | 需求/设计/管理文档、4 个游戏规则 |
-| W2 | 原型与视觉 | 页面流程、原型、技术选型 |
-| W3 | 核心游戏开发 | 4 个游戏可玩、计分模块 |
-| W4 | 报告与联调 | 雷达图、建议、历史记录 |
-| W5 | 测试与试用 | 10–15 人测试、缺陷修复 |
-| W6 | 发布与答辩 | 线上版本、演示视频、答辩材料 |
+| M0 设计 | 领域模型、API、数据模型、隐私、知识库 schema、评测集 | 定稿 |
+| M1 纵向切片 | 本地 App + 标准 4 项 + 本地计分 + Agent（用户 LLM API）+ 本地记忆/RAG/趋势 | “打开→测→聊→记住→复测→解释变化” |
+| M2 完整测评 | 快测/深度、8 项、ASR、三档、练习 | 8 项跑通 |
+| M3 产品化 | 评测、日志、告警、备份、部署、删除/导出 | 可维护 |
+
+> 先做 M1，是因为 Agent 依赖的 facts/记忆/RAG 链路比“再补 4 个任务”更决定产品成败。M1 采用**纯本地 + 用户自备 LLM API**，不做账号/服务端；L2 服务端目标是后续阶段。
 
 ## 文档
 
 | 文档 | 说明 |
 | --- | --- |
-| [问题定义与产品描述](docs/requirements/problem_definition.md) | 5W1H、使命/口号、目标用户、竞品、SWOT、产品定义 7 项 |
-| [功能需求规范](docs/requirements/functional_spec.md) | 4 个游戏规则、计分、报告、数据与验收标准 |
-| [非功能需求规范](docs/requirements/nonfunctional_spec.md) | 性能、兼容、隐私、科学性与 6 周质量底线 |
-| [算法设计](docs/algorithm/algorithm.md) | 四个游戏的指标、0–100 计分公式与版本 |
-| [软件设计](docs/software/software.md) | 前端、计分模块、本地存储与静态部署 |
-| [沟通管理计划](docs/mgmt/communication_mgmt_plan.md) | 4 人分工、每周节奏、渠道、决策与升级 |
-| [风险管理计划](docs/mgmt/risk_mgmt_plan.md) | 12 项风险、重点应对、跟踪与应急 |
-| [复盘模板](docs/retrospection/retrospection.md) | 每周/里程碑复盘记录 |
+| [问题定义与产品描述](docs/requirements/problem_definition.md) | Agent-first 定位、用户、竞品、路线图 |
+| [功能需求规范](docs/requirements/functional_spec.md) | 账号、测评、Agent、记忆、RAG、API、数据 |
+| [非功能需求规范](docs/requirements/nonfunctional_spec.md) | 性能、可靠、安全、隐私、AI 质量 |
+| [Agent 设计](docs/requirements/xlragentdesign.md) | LangGraph、记忆、RAG、校验、评测 |
+| [算法设计](docs/algorithm/algorithm.md) | 8 项公式、`scoring-v3`、服务端计分 |
+| [技术方案](docs/software/architecture.md) | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
+| [软件设计](docs/software/software.md) | 模块总览 |
+| [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
+| [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |
+| [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |
+| [风险计划](docs/mgmt/risk_mgmt_plan.md) | 范围、Key、RAG、隐私、素材 |
+| [任务拆分](docs/mgmt/task_breakdown.md) | M0/M1 可执行任务、4 人分工、DoR/DoD |
+| [M1 范围与验收](docs/mgmt/m1_scope.md) | M1 本地范围、验收、L-01～L-09（已确认 v1.1） |
+| [AI 协作任务设计](docs/mgmt/ai_collaboration.md) | 人机分工、审查清单、关键任务卡 |
+| [Issue 导入](docs/mgmt/issue_import.md) | 标签/里程碑/CSV/批量建单 |
+| [复盘模板](docs/retrospection/retrospection.md) | 阶段复盘 |
+| [变更日志](CHANGELOG.md) | 按版本记录每个已合并 PR 的用户可见变化 |
 
-课程提交版摘要：
+历史调研（只作追溯）：
 
-- [作业 1：使命、口号与产品策略](work_for_submission/1.md)
-- [作业 2：产品定位与产品定义](work_for_submission/2.md)
-- [作业 3：沟通管理与风险管理计划](work_for_submission/3.md)
+- [认知测量框架](docs/research/rengzhi.md)
+- [维度与分档调研 v2](docs/research/xlrdimensions_v2.md)
+- [四维口径调研 v0.9](docs/research/xlrweidudiaoyan.md)
+- [Agent 平台调研](docs/research/xlragentplatform.md)
+
+课程提交版（历史快照，不代表 L2 当前实现）：
+
+- [作业 1](<work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md>)
+- [作业 2](<work_for_submission/苏打F4_MindMeter_assignment[2]_rev.md>)
+- [作业 3](<work_for_submission/苏打F4_MindMeter_assignment[3]_rev.md>)
 
 ## 仓库结构
 
 ```text
 MindMeter/
 ├─ docs/
-│  ├─ README.md                 # 文档索引
-│  ├─ requirements/             # 问题定义、功能、非功能
-│  ├─ algorithm/                # 4 个游戏的计分设计
-│  ├─ software/                 # 前端、计分模块、存储与部署
-│  ├─ mgmt/                     # 沟通与风险管理
-│  └─ retrospection/            # 复盘模板
+│  ├─ requirements/        # 问题、功能、非功能、Agent
+│  ├─ research/            # 历史调研、用户故事
+│  ├─ algorithm/           # 8 项计分
+│  ├─ software/            # 技术方案、软件设计
+│  │  └─ prototype/        # L1 原型骨架（UI 参考）
+│  ├─ mgmt/                # 沟通与风险
+│  └─ retrospection/
 ├─ code/
-│  ├─ backend/                  # 本期不启用，保留未来同步/账号
-│  ├─ frontend/                 # 页面、4 个游戏、报告
-│  └─ core_engine/              # 纯函数计分模块
-├─ tests/
-│  ├─ unit/                     # 计分公式单测
-│  └─ integration/              # 完整流程测试
-├─ .github/workflows/           # 项目结构检查
-├─ work_for_submission/         # 课程提交版 1/2/3
+│  ├─ backend/            # FastAPI + Agent + RAG + scoring（L2）
+│  ├─ frontend/           # 原生前端（L2）
+│  └─ core_engine/        # L1 JS 计分历史
+├─ tests/                  # 单测/集成/E2E
+├─ work_for_submission/    # 课程提交历史快照
 └─ README.md
 ```
 
-目录说明：
-
-| 目录 | 用途 |
-| --- | --- |
-| `code/frontend` | 首页、同意页、4 个游戏、报告、历史 |
-| `code/core_engine` | 计分公式与阈值配置，不操作 DOM |
-| `code/backend` | 本期空目录，不做后端 |
-| `tests/unit` | 计分正常/边界/缺失用例 |
-| `tests/integration` | 4 个游戏到报告的完整流程 |
-| `.github/workflows` | push/PR 时检查文档和目录是否齐全 |
-
 ## 本期范围
 
-**做**：4 个游戏化测评、四维画像、雷达图、2–3 条建议、本地历史与复测、数据清除、移动端 Web。
+**M1 做**：本地 App、标准 4 项、本地计分、八维报告、Agent（用户 LLM API）、本地记忆/RAG/趋势、导出/清除。
 
-**不做**：账号登录、支付、运营后台、AI 解读、自适应测评、临床常模、社区、原生 App。
+**L2 目标**：账号、服务端计分、8 项/三档、ASR、练习、服务端记忆/RAG、托管部署。
+
+**不做**：常模、百分位、总分、诊断、7 天计划/打卡、情绪支持、B 端、付费、社区、原生 App、多语言、K8s/Redis/Milvus。
 
 ## 当前状态
 
-项目目录与文档结构已搭好，代码尚未开始。W2 确定技术栈后，在 `code/frontend` 和 `code/core_engine` 落地，并在 README 补充启动说明。
+- 文档已切到 L2（Agent-first）；M1 已按**纯本地 + 用户 LLM API** 冻结，执行清单为 [m1_scope.md](docs/mgmt/m1_scope.md) 的 L-01～L-09；
+- 后端/账号/DB/pgvector/LangGraph 属于 L2 目标，不在 M1 范围；
+- 课程提交版只作历史快照，不代表当前口径。
+
+## 开发与测试
+
+```bash
+npm ci
+npm run check          # ESLint + Prettier + 5 套测试
+npm run complexity     # 复杂度报告（warn，不阻塞）
+
+python scripts/check_docs.py
+python scripts/check_secrets.py
+python scripts/export_issues.py --check
+
+# 后端出现 code/backend/pyproject.toml（或 requirements.txt）后：
+pytest -q tests/backend -rs
+```
+
+- CI：`.github/workflows/ci.yml`（Node 24：lint/format/prototype；后端契约；secret scan）；
+- 文档/结构：`.github/workflows/structure-check.yml`；
+- 测试说明：[tests/README.md](tests/README.md)。
+
+后端测试在 `code/backend/pyproject.toml`（或 `requirements.txt`）出现前自动跳过；出现后若缺 `app/main.py` 会直接失败，不静默跳过。
 
 ## 原则
 
-- 6 周只做减法：新增一个功能，先删一个同等工作量的功能；
-- 每周五必须有可运行版本，不演示 PPT；
-- 不伪造常模和效度数据，报告明确标注“课程演示参考分、非常模、非临床”；
-- 不收集姓名、手机号等身份信息，测评数据默认只存在用户本地。
+- 先纵向切片，再铺功能；
+- Agent 出错只能错措辞，不能错分数/结论/建议；
+- 不伪造常模、百分位、效度、误差；
+- 不设总分，避免把不同结构的人压成一个数字；
+- 不收集姓名/手机号等身份信息；对话只留最近 20 条 + 摘要；
+- AI 默认有模板兜底；M1 的 Key 只存本机，不写日志/导出；L2 再加密存库。

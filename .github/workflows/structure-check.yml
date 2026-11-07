@@ -1,78 +1,34 @@
-name: Project structure
+name: Docs & structure
 
 "on":
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  structure:
-    name: Check required files and directories
+  docs:
+    name: Docs, links and structure
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check files
-        run: |
-          set -e
-          for f in \
-            README.md \
-            docs/README.md \
-            docs/requirements/problem_definition.md \
-            docs/requirements/functional_spec.md \
-            docs/requirements/nonfunctional_spec.md \
-            docs/algorithm/algorithm.md \
-            docs/software/software.md \
-            docs/mgmt/communication_mgmt_plan.md \
-            docs/mgmt/risk_mgmt_plan.md \
-            docs/retrospection/retrospection.md
-          do
-            if [ ! -f "$f" ]; then
-              echo "Missing file: $f"
-              exit 1
-            fi
-          done
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Check submission files
-        run: |
-          set -e
-          # 三份作业文件，以下两种命名任一即可：
-          #   work_for_submission/1.md
-          #   work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md
-          for i in 1 2 3; do
-            if [ -f "work_for_submission/${i}.md" ]; then
-              echo "OK: work_for_submission/${i}.md"
-            elif ls work_for_submission/*assignment*"[${i}]"*_rev.md > /dev/null 2>&1; then
-              echo "OK: 提交文件 ${i} 已找到（assignment 命名）"
-            else
-              echo "Missing file: work_for_submission/${i}.md (或 *assignment[${i}]*_rev.md)"
-              exit 1
-            fi
-          done
+      - name: Run documentation checks
+        run: python scripts/check_docs.py
 
-      - name: Check directories
-        run: |
-          set -e
-          for d in \
-            docs/requirements \
-            docs/algorithm \
-            docs/software \
-            docs/mgmt \
-            docs/retrospection \
-            code/backend \
-            code/frontend \
-            code/core_engine \
-            tests/unit \
-            tests/integration \
-            .github/workflows
-          do
-            if [ ! -d "$d" ]; then
-              echo "Missing directory: $d"
-              exit 1
-            fi
-          done
-          echo "Project structure OK"
+      - name: Check issues.csv is up to date
+        run: python scripts/export_issues.py --check
