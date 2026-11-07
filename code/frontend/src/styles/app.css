@@ -700,3 +700,23 @@ body {
 .trend-table th {
   text-align: left;
 }
+
+/* ---- L-05 对话页 ---- */
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-user {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--card-alt, #f2f4f7);
+}
+.chat-ai {
+  align-self: flex-start;
+  max-width: 92%;
+}
+.chat-user p,
+.chat-ai p {
+  margin: 4px 0;
+}

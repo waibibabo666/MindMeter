@@ -18,6 +18,7 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
+import { renderChat } from './pages/chat.js';
 import { renderErrorPage } from './pages/error.js';
 import { reportError, safeRender } from './errors.js';
 
@@ -30,6 +31,7 @@ const PAGES = {
   '/settings': renderSettings,
   '/trend': renderTrend,
   '/memory': renderMemory,
+  '/chat': renderChat,
 };
 
 const root = document.getElementById('app');
