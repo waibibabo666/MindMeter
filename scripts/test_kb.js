@@ -162,7 +162,8 @@ async function main() {
 
   test('正文不含裸分数锚点（防止与 config 漂移）', () => {
     for (const c of CHUNKS) {
-      const hit = c.text.match(/\d+\s*(个|分|%)\s*(对应|即|=)/);
+      // 用字符类替掉单字符择一，并把空白匹配收窄，避免回溯放大。
+      const hit = c.text.match(/\d *[个分%] *(?:对应|即|=)/);
       assert(!hit, `${c.id} 出现疑似分数锚点：${hit && hit[0]}`);
     }
   });

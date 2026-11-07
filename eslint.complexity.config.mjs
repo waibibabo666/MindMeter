@@ -27,11 +27,12 @@ export default [
     },
   },
   {
-    // 测试文件是扁平 case 列表；长度放宽，但仍检查圈复杂度/嵌套/参数。
+    // 测试文件是扁平 case 列表；长度/语句数放宽，但仍检查圈复杂度/嵌套/参数。
     files: ['scripts/test_*.js'],
     rules: {
       'max-lines': ['warn', 400],
       'max-lines-per-function': ['warn', 300],
+      'max-statements': ['warn', 40],
     },
   },
 ];

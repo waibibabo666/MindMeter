@@ -180,7 +180,6 @@ export const svTask = {
       options[0].focus({ preventScroll: true });
     };
 
-    void shownAt;
     draw();
     return () => cleanupKeys();
   },

@@ -77,7 +77,8 @@ function detectStorage() {
     store.setItem(probe, '1');
     store.removeItem(probe);
     return store;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     return null;
   }
 }
@@ -97,7 +98,8 @@ function rawRead(key) {
   if (!store) return memoryFallback.has(key) ? memoryFallback.get(key) : null;
   try {
     return store.getItem(key);
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     return null;
   }
 }
@@ -111,7 +113,8 @@ function rawWrite(key, value) {
   try {
     store.setItem(key, value);
     return true;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     return false;
   }
 }
@@ -122,8 +125,8 @@ function rawRemove(key) {
   if (!store) return;
   try {
     store.removeItem(key);
-  } catch (error) {
-    // ignore: 清除失败时至少内存已清
+  } catch {
+    // 清除失败时至少内存已清，不抛给调用方
   }
 }
 
@@ -137,7 +140,8 @@ function readRecord(key, fallback) {
       return clone(fallback);
     }
     return parsed;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     rawRemove(key);
     return clone(fallback);
   }
@@ -259,7 +263,8 @@ export function exportData() {
   if (appRaw) {
     try {
       app = JSON.parse(appRaw);
-    } catch (error) {
+    } catch {
+      // 读取失败按无数据处理，导出不因此中断
       app = null;
     }
   }
