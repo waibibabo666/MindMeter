@@ -76,7 +76,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-dim-vc-01
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Encyclopedia of Special Education（Wiley, 2008）pp.368–382，DOI 10.1002/9780470373699.speced0381 可解析；Gc 晶体知识表述与 CHC 理论一致　审核人：xlr268　日期：2026-11-07
 
 ### S02　The processing-speed theory of adult age differences in cognition
 
@@ -87,7 +87,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-dim-ps-01、kb-dim-ps-03
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Psychological Review 103(3):403–428（1996），DOI 10.1037/0033-295X.103.3.403；加工速度理论表述与原文主旨一致　审核人：xlr268　日期：2026-11-07
 
 ### S03　Mental Rotation of Three-Dimensional Objects
 
@@ -98,7 +98,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-dim-sv-01、kb-dim-sv-02、kb-dim-sv-03
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Science 171(3972):701–703（1971-02-19），DOI 10.1126/science.171.3972.701；摘要原文 linearly increasing function of the angular difference 直接支持 sv-02/sv-03　审核人：xlr268　日期：2026-11-07
 
 ### S04　The Nature of Recollection and Familiarity: A Review of 30 Years of Research
 
@@ -109,7 +109,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-dim-am-02
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Journal of Memory and Language 46(3):441–517（2002），DOI 10.1006/jmla.2002.2864；再认=回想+熟悉感双过程即原文主题　审核人：xlr268　日期：2026-11-07
 
 ### S05　Calculation of signal detection theory measures
 
@@ -120,7 +120,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-dim-am-03
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：BRMIC 31(1):137–149（1999），DOI 10.3758/BF03207704；本仓库 scoring/formulas.js 的 am 公式（校正 H/F → d'）即按该文实现，chunk 表述与代码一致　审核人：xlr268　日期：2026-11-07
 
 ### S06　A meta-analysis of the impact of short-term sleep deprivation on cognitive variables
 
@@ -131,7 +131,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-factor-01
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Psychological Bulletin 136(3):375–389（2010），DOI 10.1037/a0018883；对持续注意/警觉影响最大、复杂任务不一致的结论与 chunk 相符　审核人：xlr268　日期：2026-11-07
 
 ### S07　Equivalence of computerized and paper-and-pencil cognitive ability tests: A meta-analysis
 
@@ -142,7 +142,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-factor-02
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Psychological Bulletin 114(3):449–458（1993），DOI 10.1037/0033-2909.114.3.449；等值性元分析支持『机考与纸笔结果接近』表述　审核人：xlr268　日期：2026-11-07
 
 ### S08　Scoring Higher the Second Time Around: Meta-Analyses of Practice Effects in Neuropsychological Assessment
 
@@ -153,7 +153,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-factor-03、kb-plan-01
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：The Clinical Neuropsychologist 26(4):543–570（2012），DOI 10.1080/13854046.2012.680913；练习效应元分析支持 factor-03 与 plan-01（间隔短更明显）　审核人：xlr268　日期：2026-11-07
 
 ### S09　Multiple Intelligences Go to School: Educational Implications of the Theory of Multiple Intelligences
 
@@ -164,7 +164,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-limit-02
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · Crossref 核对：Educational Researcher 18(8):4–10（1989-11），DOI 10.2307/1176460；多元智能确为另一套分类，limit-02『不对应/不认领』表述准确　审核人：xlr268　日期：2026-11-07
 
 ### S10　国家卫生健康委关于应用"12356"全国统一心理援助热线电话号码的通知
 
@@ -175,7 +175,7 @@
 - [ ] 引用它的 chunk 确实被该来源支持：kb-plan-02
 - [ ] 版权：仅译述，未整段复制
 
-审核结论：　　　　　　　审核人：　　　　　　　日期：　　　　　　　
+审核结论：通过 · gov.cn 原文核对（HTTP 200）：国卫医政函〔2024〕259号，成文 2024-12-06；服务范围（心理健康教育/咨询/疏导/危机干预）与 plan-02 一致；原文为每日≥18小时，chunk 未夸大　审核人：xlr268　日期：2026-11-07
 
 ## 五、本次未采用的候选来源
 
@@ -216,3 +216,21 @@ node scripts/test_kb.js
 ```
 
 测试里的「未审内容不进入索引」会随之变化——全部改为 reviewed 后，该断言需要同步调整（它现在断言的是"当前 0 条已审"，用于证明未审内容默认被挡住）。
+
+## 七、审核结果汇总（2026-11-07，xlr268）
+
+| 项 | 结果 |
+| --- | --- |
+| 外部来源 | 10/10 通过（9 篇 Crossref 元数据逐项匹配 + 1 份 gov.cn 原文核对） |
+| product 条目 | 15/16 直接通过；1 条改写后通过 |
+| 改写记录 | `kb-task-vc-01`：删除「正式题目之前有一至两次练习，练习不计入成绩」——`tasks/vc.js` 无练习实现，引用失实；其余句子逐一对码核过（6 题四选一 ✓、不提示对错 ✓、键盘数字键 ✓、鼠标点击 ✓） |
+| 状态翻转 | 30/30 → `reviewed`（by xlr268, 2026-11-07） |
+
+**随审发现（转给实现侧，不影响本次审核结论）**：
+
+1. `docs/mgmt/m1_scope.md` 第 37 行要求标准 4 项含「1–2 次练习」，但 L-01 四个任务
+   （vc/ps/sv/am.js）均未实现练习试次。属于范围与实现的差距，建议单开 issue 跟进；
+   在实现补齐前，知识库不得宣称有练习（本次已按此改写 vc-01）。
+2. `kb-dim-vc-02` 的「三类题型」中，第六题为选词填空；chunk 自身把「在语境中确定
+   词义」定义为句子理解类，口径自洽，予以通过。
+3. 危机话术与 plan-02 保持同一口径：12356 不标注「24 小时」（原文仅承诺每日 ≥18 小时）。

@@ -19,6 +19,7 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
+import { renderChat } from './pages/chat.js';
 
 /**
  * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
@@ -57,6 +58,7 @@ const PAGES = {
   '/settings': renderSettings,
   '/trend': renderTrend,
   '/memory': renderMemory,
+  '/chat': renderChat,
 };
 
 const root = document.getElementById('app');
