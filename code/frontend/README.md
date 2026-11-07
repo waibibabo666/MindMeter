@@ -33,7 +33,7 @@ frontend/
    ├─ store.js           # L-01 app shell 状态（版本与降级）
    ├─ storage.js         # L-03 版本化本地存储（四类 key + 导出/清除）
    ├─ data.js            # 维度、档位、题库、词对、图案
-   ├─ scoring/local.js   # 本地参考分（临时，待 L-02 接管）
+   ├─ scoring/           # scoring-v3.1：config / formulas / stats / index
    ├─ charts/radar.js    # 八维雷达几何与 SVG
    ├─ trend.js           # 共同维度、变化、7 天提示
    ├─ ui.js               # 极小 DOM 工具与倒计时
@@ -126,9 +126,8 @@ node scripts/test_prototype.js     # 7 项：L1 原型未受影响
 - 分数为 0–100 整数，**不设总分、不做百分位、没有常模**；
 - 已测少于 3 个维度时不画多边形，避免误读成"塌陷"。
 
-**分数来源**：`src/scoring/local.js`（`local-provisional-v1`）按当前壳的实际题量折算，
-与 `docs/algorithm/algorithm.md` 的 scoring-v3 公式一致，但分母改成实际题数
-（例如言语理解 6 题而不是 15 题）。L-02 合入后替换 `scoreSession` 即可，页面无需改动。
+**分数来源**：`src/scoring/index.js`（`scoring-v3.1`），公式见 `docs/algorithm/algorithm.md`，
+分母按当前壳的实际题数校准（例如言语理解 6 题而不是 15 题）。详见 `src/scoring/README.md`。
 
 **趋势页**：
 

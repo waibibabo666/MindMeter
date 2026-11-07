@@ -120,8 +120,3 @@ export const LIMITS = [
   '样本少、无临床常模，受睡眠、情绪、设备与练习效应影响。',
   'MindMeter 不是医疗器械，不提供诊断、治疗或医疗建议。',
 ];
-
-export function taskName(id) {
-  const dim = DIMS.find((d) => d.id === id);
-  return dim ? dim.name : id;
-}
