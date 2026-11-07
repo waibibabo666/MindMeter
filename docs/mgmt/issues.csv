@@ -1,0 +1,2001 @@
+ID,Title,Body,Labels,Milestone,Assignees,Owner,Support,Estimate,Dependencies,Acceptance
+P-01,[P-01] 冻结 M1 范围与验收,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-01）。
+
+## 验收
+
+1 页范围+验收；4 人确认
+
+## 依赖
+
+无
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: xlr268
+- Estimate: 0.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,waibibabo666,waibibabo666,xlr268,0.5,无,1 页范围+验收；4 人确认
+P-02,[P-02] API 契约 v1（auth/assessment/report/thread/memory/trend）,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-02）。
+
+## 验收
+
+OpenAPI 路径/错误格式/401/429；契约测试
+
+## 依赖
+
+P-01
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,SONG-bot418,song,xlr268,1.5,P-01,OpenAPI 路径/错误格式/401/429；契约测试
+P-03,[P-03] DB schema + ERD + Alembic 初始迁移,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-03）。
+
+## 验收
+
+表/索引/外键；迁移可回退
+
+## 依赖
+
+P-02
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,waibibabo666,waibibabo666,song,1.5,P-02,表/索引/外键；迁移可回退
+P-04,[P-04] Auth/安全设计（argon2/JWT/refresh/BYOK 加密/限流）,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-04）。
+
+## 验收
+
+威胁清单；Key 不落日志
+
+## 依赖
+
+P-02
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: waibibabo666
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,SONG-bot418,song,waibibabo666,1,P-02,威胁清单；Key 不落日志
+P-05,[P-05] LangGraph State/节点/prompt/校验契约,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-05）。
+
+## 验收
+
+图+State+节点 IO；fake model 可跑
+
+## 依赖
+
+功能/Agent 文档
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 1213lz
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,xlr268,xlr268,1213lz,1.5,功能/Agent 文档,图+State+节点 IO；fake model 可跑
+P-06,[P-06] 知识库分类、chunk schema、来源清单,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-06）。
+
+## 验收
+
+30 条 chunk 计划；source/version/risk
+
+## 依赖
+
+Agent 设计
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: xlr268
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,1213lz,1213lz,xlr268,1,Agent 设计,30 条 chunk 计划；source/version/risk
+P-07,[P-07] 测试/评测计划 + 30 Agent/20 RAG 用例骨架,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-07）。
+
+## 验收
+
+用例文件；评分 rubric；hit@3
+
+## 依赖
+
+P-05
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: xlr268
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,1213lz,1213lz,xlr268,1.5,P-05,用例文件；评分 rubric；hit@3
+P-08,[P-08] 线框：登录/档位/任务/报告/对话/记忆/趋势,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-08）。
+
+## 验收
+
+360px 线框；文案；无总分
+
+## 依赖
+
+P-02
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,xlr268,xlr268,song,2,P-02,360px 线框；文案；无总分
+P-09,[P-09] M0 评审/门禁,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（P-09）。
+
+## 验收
+
+决策记录；任务进 Ready
+
+## 依赖
+
+P-01..08
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: 全体
+- Estimate: 0.5 人日
+
+## AI 协作
+
+- AI 可初稿：API/DB/线框/契约初稿
+- 人必须做：接口/DB/范围取舍，契约评审，确认无越权/无 Key 字段
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M0,area:planning",M0,waibibabo666,waibibabo666,全体,0.5,P-01..08,决策记录；任务进 Ready
+BE-01,[BE-01] FastAPI 脚手架：config/logging/error/health,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-01）。
+
+## 验收
+
+`/api/v1/health`；backend CI 激活
+
+## 依赖
+
+P-02
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: waibibabo666
+- Estimate: 0.5 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,SONG-bot418,song,waibibabo666,0.5,P-02,`/api/v1/health`；backend CI 激活
+BE-02,[BE-02] SQLAlchemy 模型 + Alembic,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-02）。
+
+## 验收
+
+迁移跑通；模型测试
+
+## 依赖
+
+P-03
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,waibibabo666,waibibabo666,song,1.5,P-03,迁移跑通；模型测试
+BE-03,[BE-03] Auth：register/login/refresh/logout,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-03）。
+
+## 验收
+
+401/409/429；token 轮换
+
+## 依赖
+
+BE-01/02/P-04
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: waibibabo666
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,SONG-bot418,song,waibibabo666,2,BE-01/02/P-04,401/409/429；token 轮换
+BE-04,[BE-04] BYOK 加密 + settings API,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-04）。
+
+## 验收
+
+AES-GCM；Key 不出日志/导出
+
+## 依赖
+
+BE-03
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: waibibabo666
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,SONG-bot418,song,waibibabo666,1,BE-03,AES-GCM；Key 不出日志/导出
+BE-05,[BE-05] Assessment create/submit/draft,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-05）。
+
+## 验收
+
+原始指标提交；幂等；draft 24h
+
+## 依赖
+
+BE-02/AS-01
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,1213lz,1213lz,song,2,BE-02/AS-01,原始指标提交；幂等；draft 24h
+BE-06,[BE-06] Report + trends 接口,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-06）。
+
+## 验收
+
+八维/未测/无总分；共同维度
+
+## 依赖
+
+BE-05
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,1213lz,1213lz,song,1.5,BE-05,八维/未测/无总分；共同维度
+BE-07,[BE-07] Memory：profile/summaries/advice/delete/export,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-07）。
+
+## 验收
+
+可编辑/删除；导出不含 Key
+
+## 依赖
+
+BE-02
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: 1213lz
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,SONG-bot418,song,1213lz,2,BE-02,可编辑/删除；导出不含 Key
+BE-08,[BE-08] Threads/messages,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-08）。
+
+## 验收
+
+最近 20 条；越权 404
+
+## 依赖
+
+BE-07
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,SONG-bot418,song,xlr268,1,BE-07,最近 20 条；越权 404
+BE-09,[BE-09] 限流/CORS/错误格式/审计,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-09）。
+
+## 验收
+
+429；只允许前端域；审计表
+
+## 依赖
+
+BE-01
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,waibibabo666,waibibabo666,song,1,BE-01,429；只允许前端域；审计表
+BE-10,[BE-10] 后端集成测试,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（BE-10）。
+
+## 验收
+
+happy/error；pytest 全绿
+
+## 依赖
+
+BE-03..08
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: waibibabo666
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：路由/CRUD/Pydantic/测试骨架
+- 人必须做：authz/事务/迁移/限流/错误语义；手工 API 与越权验证
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:backend",M1,1213lz,1213lz,waibibabo666,1.5,BE-03..08,happy/error；pytest 全绿
+AS-01,[AS-01] `scoring-v3` 配置 + 8 维公式,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AS-01）。
+
+## 验收
+
+8 维；无总分；版本
+
+## 依赖
+
+算法文档
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 2.5 人日
+
+## AI 协作
+
+- AI 可初稿：公式/配置/单测骨架
+- 人必须做：公式语义、手算金标准、缺失规则、无总分/常模确认
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:scoring",M1,1213lz,1213lz,song,2.5,算法文档,8 维；无总分；版本
+AS-02,[AS-02] 金标准用例 + 单测,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AS-02）。
+
+## 验收
+
+正常/边界/缺失；手算一致
+
+## 依赖
+
+AS-01
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：公式/配置/单测骨架
+- 人必须做：公式语义、手算金标准、缺失规则、无总分/常模确认
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:scoring",M1,1213lz,1213lz,song,1,AS-01,正常/边界/缺失；手算一致
+AS-03,[AS-03] 提交校验/范围/缺失处理,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AS-03）。
+
+## 验收
+
+非法拒绝；缺失 null
+
+## 依赖
+
+AS-01/BE-05
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：公式/配置/单测骨架
+- 人必须做：公式语义、手算金标准、缺失规则、无总分/常模确认
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:scoring",M1,1213lz,1213lz,song,1,AS-01/BE-05,非法拒绝；缺失 null
+AS-04,[AS-04] 8 个任务的原始指标 schema,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AS-04）。
+
+## 验收
+
+Pydantic；M1 4 项先可用
+
+## 依赖
+
+功能文档
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：公式/配置/单测骨架
+- 人必须做：公式语义、手算金标准、缺失规则、无总分/常模确认
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:scoring",M1,1213lz,1213lz,song,1,功能文档,Pydantic；M1 4 项先可用
+RG-01,[RG-01] 知识库 v1：30 条 chunk,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（RG-01）。
+
+## 验收
+
+维度/任务/建议/局限/安全；审核
+
+## 依赖
+
+P-06
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 1213lz
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：ingest/检索代码/重建脚本
+- 人必须做：语料审核/版权/版本、hit@3 与引用正确性
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:rag",M1,xlr268,xlr268,1213lz,2,P-06,维度/任务/建议/局限/安全；审核
+RG-02,[RG-02] 本地 embedding + pgvector ingest,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（RG-02）。
+
+## 验收
+
+bge-small-zh；可重建；幂等
+
+## 依赖
+
+RG-01/BE-02
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: song
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：ingest/检索代码/重建脚本
+- 人必须做：语料审核/版权/版本、hit@3 与引用正确性
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:rag",M1,1213lz,1213lz,song,2,RG-01/BE-02,bge-small-zh；可重建；幂等
+RG-03,[RG-03] 检索 + 引用 + hit@3 测试,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（RG-03）。
+
+## 验收
+
+top3；metadata；20 用例
+
+## 依赖
+
+RG-02
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: xlr268
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：ingest/检索代码/重建脚本
+- 人必须做：语料审核/版权/版本、hit@3 与引用正确性
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:rag",M1,1213lz,1213lz,xlr268,1.5,RG-02,top3；metadata；20 用例
+AG-01,[AG-01] LangGraph 骨架/State/checkpointer,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-01）。
+
+## 验收
+
+fake model 图跑通；checkpoint
+
+## 依赖
+
+P-05/BE-01
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,xlr268,xlr268,song,1.5,P-05/BE-01,fake model 图跑通；checkpoint
+AG-02,[AG-02] load_context/classify/load_facts/load_memory,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-02）。
+
+## 验收
+
+意图；无 facts 引导测评
+
+## 依赖
+
+AG-01/BE-05/07
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 1213lz
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,xlr268,xlr268,1213lz,2,AG-01/BE-05/07,意图；无 facts 引导测评
+AG-03,[AG-03] retrieve/generate + BYOK client,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-03）。
+
+## 验收
+
+超时 45s；Key 不进 state/日志
+
+## 依赖
+
+AG-01/RG-03/BE-04
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,SONG-bot418,song,xlr268,2,AG-01/RG-03/BE-04,超时 45s；Key 不进 state/日志
+AG-04,[AG-04] validate 节点,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-04）。
+
+## 验收
+
+禁词/数字/建议 ID/长度/引用；重试
+
+## 依赖
+
+AG-03
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 1213lz
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,xlr268,xlr268,1213lz,2,AG-03,禁词/数字/建议 ID/长度/引用；重试
+AG-05,[AG-05] save_summary + memory/advice,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-05）。
+
+## 验收
+
+摘要；不存全文；删除不引用
+
+## 依赖
+
+AG-04/BE-07
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,xlr268,xlr268,song,1,AG-04/BE-07,摘要；不存全文；删除不引用
+AG-06,[AG-06] 模板兜底/degraded,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-06）。
+
+## 验收
+
+报告/对话不空；无堆栈
+
+## 依赖
+
+AG-04
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 1213lz
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,xlr268,xlr268,1213lz,1,AG-04,报告/对话不空；无堆栈
+AG-07,[AG-07] 30 条 Agent 评测 + 20 条 RAG,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（AG-07）。
+
+## 验收
+
+各 ≥4/5；禁用词/幻觉 0
+
+## 依赖
+
+AG-04/05
+
+## 负责人 / 支持
+
+- Owner: 1213lz
+- Support: xlr268
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：LangGraph 节点/prompt/测试骨架
+- 人必须做：意图边界、禁用词、数字校验、red-team、删除记忆不引用
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:agent",M1,1213lz,1213lz,xlr268,2,AG-04/05,各 ≥4/5；禁用词/幻觉 0
+FE-01,[FE-01] API client + JWT refresh,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-01）。
+
+## 验收
+
+401 自动刷新；Key 不进 URL
+
+## 依赖
+
+P-02
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,SONG-bot418,song,xlr268,1,P-02,401 自动刷新；Key 不进 URL
+FE-02,[FE-02] 登录/注册/同意页,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-02）。
+
+## 验收
+
+18+；错误提示；不收集人口学
+
+## 依赖
+
+FE-01/BE-03
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,xlr268,xlr268,song,1.5,FE-01/BE-03,18+；错误提示；不收集人口学
+FE-03,[FE-03] 测评壳：档位/同意/任务/提交,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-03）。
+
+## 验收
+
+标准 4 项；只交原始指标
+
+## 依赖
+
+FE-01/BE-05
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 2.5 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,SONG-bot418,song,xlr268,2.5,FE-01/BE-05,标准 4 项；只交原始指标
+FE-04,[FE-04] 报告页：八维雷达/无总分/未测,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-04）。
+
+## 验收
+
+8 轴；无总分；移动端
+
+## 依赖
+
+FE-03/BE-06
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,SONG-bot418,song,xlr268,1.5,FE-03/BE-06,8 轴；无总分；移动端
+FE-05,[FE-05] 对话：消息/建议卡/引用/降级,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-05）。
+
+## 验收
+
+最近 20 条；citation
+
+## 依赖
+
+FE-04/BE-08/AG-06
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,xlr268,xlr268,song,2,FE-04/BE-08/AG-06,最近 20 条；citation
+FE-06,[FE-06] 记忆：画像/摘要/删除,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-06）。
+
+## 验收
+
+编辑/删除；删除后不引用
+
+## 依赖
+
+FE-01/BE-07
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,xlr268,xlr268,song,1.5,FE-01/BE-07,编辑/删除；删除后不引用
+FE-07,[FE-07] 趋势：共同维度/7 天提示,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-07）。
+
+## 验收
+
+只比共同维度；无总分
+
+## 依赖
+
+FE-04/BE-06
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,xlr268,xlr268,song,1,FE-04/BE-06,只比共同维度；无总分
+FE-08,[FE-08] 设置：BYOK/AI 开关/导出/注销,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-08）。
+
+## 验收
+
+Key 掩码；清除生效
+
+## 依赖
+
+FE-01/BE-04
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,SONG-bot418,song,xlr268,1,FE-01/BE-04,Key 掩码；清除生效
+FE-09,[FE-09] 响应式/无障碍走查,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（FE-09）。
+
+## 验收
+
+360px；键盘；对比度
+
+## 依赖
+
+FE-02..08
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: xlr268
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：页面/交互/样式初稿
+- 人必须做：UX/文案/360px/键盘/空错降级状态/手工走查
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:frontend",M1,SONG-bot418,song,xlr268,1,FE-02..08,360px；键盘；对比度
+QA-01,[QA-01] 激活 backend CI + 测试数据,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（QA-01）。
+
+## 验收
+
+pyproject/requirements 后 backend job 真跑
+
+## 依赖
+
+BE-01
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: 1213lz
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：测试脚本/用例骨架/CI 配置
+- 人必须做：真实跑测试、判断通过、截图/视频证据、flaky 判断
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:qa",M1,waibibabo666,waibibabo666,1213lz,1,BE-01,pyproject/requirements 后 backend job 真跑
+QA-02,[QA-02] E2E smoke：登录→标准→报告→对话,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（QA-02）。
+
+## 验收
+
+Playwright；关键路径
+
+## 依赖
+
+FE-03/05
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: xlr268
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：测试脚本/用例骨架/CI 配置
+- 人必须做：真实跑测试、判断通过、截图/视频证据、flaky 判断
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:qa",M1,waibibabo666,waibibabo666,xlr268,1.5,FE-03/05,Playwright；关键路径
+QA-03,[QA-03] 安全：越权/限流/Key 日志,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（QA-03）。
+
+## 验收
+
+404/429；无 Key
+
+## 依赖
+
+BE-03/04/09
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：测试脚本/用例骨架/CI 配置
+- 人必须做：真实跑测试、判断通过、截图/视频证据、flaky 判断
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:qa",M1,waibibabo666,waibibabo666,song,1,BE-03/04/09,404/429；无 Key
+QA-04,[QA-04] 5–10 人用户测试 + 报告,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（QA-04）。
+
+## 验收
+
+完成率/理解率；问题清单
+
+## 依赖
+
+G2
+
+## 负责人 / 支持
+
+- Owner: xlr268
+- Support: 全体
+- Estimate: 2 人日
+
+## AI 协作
+
+- AI 可初稿：测试脚本/用例骨架/CI 配置
+- 人必须做：真实跑测试、判断通过、截图/视频证据、flaky 判断
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:qa",M1,xlr268,xlr268,全体,2,G2,完成率/理解率；问题清单
+OPS-01,[OPS-01] Docker Compose + `.env.example`,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（OPS-01）。
+
+## 验收
+
+api+db 一键起；无密钥
+
+## 依赖
+
+BE-01/02
+
+## 负责人 / 支持
+
+- Owner: song
+- Support: waibibabo666
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：Docker/部署/备份脚本
+- 人必须做：生产密钥/域名/DB/备份恢复/回滚/发布批准
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:ops",M1,SONG-bot418,song,waibibabo666,1,BE-01/02,api+db 一键起；无密钥
+OPS-02,[OPS-02] 部署 API + Postgres + 前端,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（OPS-02）。
+
+## 验收
+
+HTTPS；health；回滚
+
+## 依赖
+
+OPS-01
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：Docker/部署/备份脚本
+- 人必须做：生产密钥/域名/DB/备份恢复/回滚/发布批准
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:ops",M1,waibibabo666,waibibabo666,song,1,OPS-01,HTTPS；health；回滚
+OPS-03,[OPS-03] 日志/备份恢复演练,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（OPS-03）。
+
+## 验收
+
+日志脱敏；恢复一次
+
+## 依赖
+
+OPS-02
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: song
+- Estimate: 1.5 人日
+
+## AI 协作
+
+- AI 可初稿：Docker/部署/备份脚本
+- 人必须做：生产密钥/域名/DB/备份恢复/回滚/发布批准
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:ops",M1,waibibabo666,waibibabo666,song,1.5,OPS-02,日志脱敏；恢复一次
+QA-05,[QA-05] 发布检查表/运行手册,"## 背景
+
+来源：`docs/mgmt/task_breakdown.md`（QA-05）。
+
+## 验收
+
+可交接
+
+## 依赖
+
+QA-01..03
+
+## 负责人 / 支持
+
+- Owner: waibibabo666
+- Support: 1213lz
+- Estimate: 1 人日
+
+## AI 协作
+
+- AI 可初稿：测试脚本/用例骨架/CI 配置
+- 人必须做：真实跑测试、判断通过、截图/视频证据、flaky 判断
+- 验收命令：
+- 手工验证：
+- 证据（命令/截图/评测）：
+
+## DoR
+
+- [ ] 关联需求/API/数据模型
+- [ ] 验收条件可判定
+- [ ] 测试点已写
+- [ ] 依赖已清或标注
+
+## DoD
+
+- [ ] 代码 + 单测/集成测试
+- [ ] CI 绿（docs/prototype/backend/security）
+- [ ] 至少 1 人 review；auth/Key/计分 2 人
+- [ ] API/README/变更记录已同步
+- [ ] 无真实用户数据、无 Key/PII 入库","M1,area:qa",M1,waibibabo666,waibibabo666,1213lz,1,QA-01..03,可交接

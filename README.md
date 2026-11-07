@@ -2,6 +2,9 @@
 
 > 玩一局，看清你的大脑；聊一次，知道下一步。
 
+[![CI](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml)
+[![Docs](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml)
+
 MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用户完成快测 2 项 / 标准 4 项 / 深度 8 项，服务端生成八维参考分；Agent 结合测评 facts、长期记忆和知识库，解释结果、给建议、回答追问、分析复测趋势。
 
 > 本项目不是医疗器械，不提供临床诊断、治疗或危机干预。**不设总分、没有常模、不做百分位、不与人群比较。**
@@ -63,6 +66,9 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |
 | [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |
 | [风险计划](docs/mgmt/risk_mgmt_plan.md) | 范围、Key、RAG、隐私、素材 |
+| [任务拆分](docs/mgmt/task_breakdown.md) | M0/M1 可执行任务、4 人分工、DoR/DoD |
+| [AI 协作任务设计](docs/mgmt/ai_collaboration.md) | 人机分工、审查清单、关键任务卡 |
+| [Issue 导入](docs/mgmt/issue_import.md) | 标签/里程碑/CSV/批量建单 |
 | [复盘模板](docs/retrospection/retrospection.md) | 阶段复盘 |
 
 历史调研（只作追溯）：
@@ -110,6 +116,24 @@ MindMeter/
 - 文档已切到 L2（Agent-first）；L1 的静态原型保留为 UI 参考；
 - 后端/Agent/RAG 代码尚未开始；下一步按 [技术方案](docs/software/architecture.md) 搭 M1 纵向切片；
 - 课程提交版只作历史快照，不代表 L2 当前口径。
+
+## 开发与测试
+
+```bash
+python scripts/check_docs.py
+python scripts/check_secrets.py
+node scripts/test_prototype.js
+python scripts/export_issues.py --check
+
+# 后端出现 code/backend/pyproject.toml（或 requirements.txt）后：
+pytest -q tests/backend -rs
+```
+
+- CI：`.github/workflows/ci.yml`（原型 smoke、后端契约、secret scan）；
+- 文档/结构：`.github/workflows/structure-check.yml`；
+- 测试说明：[tests/README.md](tests/README.md)。
+
+后端测试在 `code/backend/pyproject.toml`（或 `requirements.txt`）出现前自动跳过；出现后若缺 `app/main.py` 会直接失败，不静默跳过。
 
 ## 原则
 

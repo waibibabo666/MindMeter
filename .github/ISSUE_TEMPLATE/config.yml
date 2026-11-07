@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 任务拆分 / 分工
+    url: https://github.com/waibibabo666/MindMeter/blob/main/docs/mgmt/task_breakdown.md
+    about: 建 Issue 前先看任务表、DoR/DoD 和负责人
+  - name: 测试与 CI
+    url: https://github.com/waibibabo666/MindMeter/blob/main/tests/README.md
+    about: 本地测试命令与 CI 行为

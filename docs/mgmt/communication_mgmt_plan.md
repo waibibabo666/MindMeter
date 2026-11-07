@@ -60,6 +60,7 @@
 
 ## 六、任务与决策
 
+- 可执行任务、负责人、依赖与 DoR/DoD 见 [任务拆分](task_breakdown.md)；
 - 任务统一放 GitHub Issues：负责人、验收、阶段；
 - 涉及“加功能/换架构/延期”的决定，4 人确认；
 - 架构口径：FastAPI + Postgres/pgvector + LangGraph + 原生前端；BYOK 加密存库；服务端计分；不上 K8s/Redis/Milvus；
