@@ -18,6 +18,8 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
+import { renderErrorPage } from './pages/error.js';
+import { reportError, safeRender } from './errors.js';
 
 const PAGES = {
   '/': renderHome,
@@ -48,6 +50,16 @@ function setState(mutator) {
   });
 }
 
+/** 计分失败不能阻断交卷：分数留空，原始作答照常保存。 */
+function safeScores(results) {
+  try {
+    return scoreSession(results).scores;
+  } catch (error) {
+    reportError(error, 'scoring');
+    return null;
+  }
+}
+
 function finishTask(taskId, payload) {
   setState((draft) => {
     const results = Object.assign({}, draft.results, { [taskId]: payload });
@@ -74,7 +86,7 @@ function finishTask(taskId, payload) {
       finishedAt: new Date().toISOString(),
       dims: state.order.slice(),
       results: state.results,
-      scores: scoreSession(state.results).scores,
+      scores: safeScores(state.results),
       scoringVersion: SCORING_VERSION,
     });
   }
@@ -142,7 +154,13 @@ const router = createRouter((route) => {
   setState(() => ({ route: route.full }));
 
   const handler = PAGES[route.path] || renderHome;
-  const result = handler(root, ctx, route.param);
+  const result = safeRender(handler, {
+    root,
+    ctx,
+    param: route.param,
+    fallback: renderErrorPage,
+    onError: (error) => reportError(error, `render:${route.path}`),
+  });
   dispose = typeof result === 'function' ? result : () => {};
 
   const heading = root.querySelector('h1');
@@ -156,5 +174,16 @@ if (!window.location.hash) {
     window.history.replaceState(null, '', `#${saved}`);
   }
 }
+
+/* 全局兜底：未捕获的异常与 Promise 拒绝都不该让页面白屏。 */
+window.addEventListener('error', (event) => {
+  reportError(event.error || event.message, 'window.error');
+  toast('页面出现异常，已切到安全状态；如无法操作请刷新');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  reportError(event.reason, 'unhandledrejection');
+  toast('有一次请求没有完成，可稍后重试');
+});
 
 router.start();
