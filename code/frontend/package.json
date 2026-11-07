@@ -5,6 +5,7 @@
   "type": "module",
   "description": "MindMeter 静态 App 壳（L-01）：无构建、无后端的原生 ES Module 前端。",
   "scripts": {
-    "test": "node ../../scripts/test_app_shell.js"
+    "test": "node ../../scripts/test_app_shell.js",
+    "test:scoring": "node ../../scripts/test_scoring.js"
   }
 }
