@@ -278,6 +278,42 @@ body {
 .report-table tbody th { color: var(--text); font-weight: 600; white-space: nowrap; }
 .report-table tr.untested th, .report-table tr.untested td { color: var(--dim); }
 
+/* ---- L-04：BYOK 设置表单与状态 ---- */
+.field { margin: 12px 0; }
+.field-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+.input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.status { font-size: 12.5px; margin: 10px 0 0; min-height: 18px; color: var(--muted); }
+.status.ok { color: var(--good); }
+.status.bad { color: var(--bad); }
+.status.warn { color: var(--warn); }
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  color: var(--muted);
+  vertical-align: middle;
+}
+.pill.hi { border-color: rgba(61, 220, 132, 0.4); color: #9be9bb; }
+.pill.mid { border-color: rgba(240, 163, 58, 0.4); color: #e8c08a; }
+
+.ai-text { white-space: pre-wrap; font-size: 13.5px; line-height: 1.7; margin: 8px 0; }
+
 .toast {
   position: fixed;
   left: 50%;

@@ -1,7 +1,29 @@
 import { el, button } from '../ui.js';
-import { DIMS, LIMITS } from '../data.js';
-import { scoreSession, SCORING_VERSION } from '../scoring/local.js';
-import { buildRadar, radarMarkup } from '../charts/radar.js';
+import { explain } from '../llm/degrade.js';
+import { readSettings } from '../storage.js';
+import { DIMS, LIMITS, TASK_META } from '../data.js';
+
+const STATUS = {
+  vc: (m) => `正确 ${m.correct} / ${m.total}`,
+  ps: (m) => `完成 ${m.trials} 题 · 正确 ${m.correct} · 错误 ${m.wrong}`,
+  sv: (m) => `正确 ${m.correct} / ${m.total}`,
+  am: (m) => `命中 ${m.hits} · 虚报 ${m.falseAlarms}`,
+};
+
+const DETAIL = {
+  vc: (m) => `正确率 ${fmtPct(m.accuracy)} · 平均反应时 ${fmtMs(m.meanRtMs)}`,
+  ps: (m) => `${m.seconds} 秒内 · 平均反应时 ${fmtMs(m.meanRtMs)}`,
+  sv: (m) => `正确率 ${fmtPct(m.accuracy)}`,
+  am: (m) => `正确率 ${fmtPct(m.accuracy)} · 漏报 ${m.misses}`,
+};
+
+function fmtPct(value) {
+  return typeof value === 'number' ? `${Math.round(value * 100)}%` : '—';
+}
+
+function fmtMs(value) {
+  return typeof value === 'number' ? `${value} ms` : '—';
+}
 
 export function renderReport(root, ctx) {
   const results = ctx.state.results || {};
@@ -47,6 +69,7 @@ export function renderReport(root, ctx) {
         ]),
         el('tbody', {}, rows),
       ]),
+      renderAiCard(ctx, metricsOf(results)),
       el('div', { class: 'card' }, [
         el('h2', { class: 'card-title', text: '分数怎么来的' }),
         el('p', {
@@ -73,11 +96,37 @@ export function renderReport(root, ctx) {
   ]));
 }
 
-function describe(id, metrics) {
-  if (!metrics) return '—';
-  if (id === 'vc') return `正确 ${metrics.correct}/${metrics.total}`;
-  if (id === 'ps') return `${metrics.seconds} 秒内 ${metrics.trials} 题，正确 ${metrics.correct}`;
-  if (id === 'sv') return `正确 ${metrics.correct}/${metrics.total}`;
-  if (id === 'am') return `命中 ${metrics.hits}，虚报 ${metrics.falseAlarms}`;
-  return '—';
+function metricsOf(results) {
+  const out = {};
+  for (const [id, payload] of Object.entries(results || {})) {
+    if (payload && payload.metrics) out[id] = payload.metrics;
+  }
+  return out;
+}
+
+/** AI 解读卡片：模型可用则用模型，任何异常都落回模板（L-04）。 */
+function renderAiCard(ctx, metrics) {
+  const badge = el('span', { class: 'pill', text: '未生成' });
+  const reason = el('p', { class: 'tiny', text: '默认用模板解读；在设置里配置自己的模型服务后可切换。' });
+  const output = el('p', { class: 'ai-text', text: '' });
+
+  const run = button('生成解读', async () => {
+    run.disabled = true;
+    badge.textContent = '生成中';
+    reason.textContent = '';
+    const result = await explain({ metrics, settings: readSettings() });
+    output.textContent = result.text;
+    badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
+    badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
+    reason.textContent = result.source === 'llm' ? '由你配置的模型生成，内容仅供参考。' : result.reason;
+    run.disabled = false;
+    run.textContent = '重新生成';
+  }, { variant: 'ghost' });
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
+    reason,
+    output,
+    el('div', { class: 'row' }, [run, button('去设置', () => ctx.go('/settings'), { variant: 'ghost' })]),
+  ]);
 }

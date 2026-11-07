@@ -15,7 +15,7 @@ import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
 import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
-import { renderTrend } from './pages/trend.js';
+import { renderSettings } from './pages/settings.js';
 
 const PAGES = {
   '/': renderHome,
@@ -23,7 +23,7 @@ const PAGES = {
   '/consent': renderConsent,
   '/task': renderTask,
   '/report': renderReport,
-  '/trend': renderTrend,
+  '/settings': renderSettings,
 };
 
 const root = document.getElementById('app');
