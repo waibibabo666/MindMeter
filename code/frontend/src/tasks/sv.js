@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 空间视觉化：3×3 图案旋转四选一。
  * 只记录正确数与反应时；旋转用纯函数实现，可在 Node 侧单测。
  */
@@ -87,10 +87,23 @@ export function buildItems(seed = 20261107) {
   return SV_PATTERNS.map((base) => buildItem(base, random));
 }
 
-export function summarizeSv(answers) {
+/**
+ * @param {boolean[]} answers 每题是否答对
+ * @param {number[]} rts     每题反应时（毫秒），与 answers 同下标
+ * 额外返回 correctRts，供 scoring 计算 sv 的反应时得分（L-02）。
+ */
+export function summarizeSv(answers, rts = []) {
   const total = answers.length;
   const correct = answers.filter(Boolean).length;
-  return { total, correct, accuracy: total === 0 ? null : Number((correct / total).toFixed(3)) };
+  const correctRts = answers
+    .map((ok, i) => (ok ? rts[i] : null))
+    .filter((v) => typeof v === 'number' && Number.isFinite(v));
+  return {
+    total,
+    correct,
+    accuracy: total === 0 ? null : Number((correct / total).toFixed(3)),
+    correctRts,
+  };
 }
 
 function patternNode(grid, label) {
@@ -104,20 +117,22 @@ export const svTask = {
     const items = (ctx.draft && ctx.draft.items) || buildItems();
     const saved = ctx.draft || {};
     const answers = Array.isArray(saved.answers) ? saved.answers.slice() : [];
+    const rts = Array.isArray(saved.rts) ? saved.rts.slice() : [];
     let index = typeof saved.index === 'number' ? saved.index : answers.length;
     let shownAt = now();
     let cleanupKeys = () => {};
 
     const finish = () => {
-      ctx.finish({ taskId: 'sv', metrics: summarizeSv(answers), answers });
+      ctx.finish({ taskId: 'sv', metrics: summarizeSv(answers, rts), answers, rts });
     };
 
     const choose = (choice) => {
       const item = items[index];
       if (!item) return;
       answers[index] = choice === item.answer;
+      rts[index] = now() - shownAt;
       index += 1;
-      ctx.saveDraft({ index, answers, items });
+      ctx.saveDraft({ index, answers, items, rts });
       if (index >= items.length) {
         finish();
         return;
