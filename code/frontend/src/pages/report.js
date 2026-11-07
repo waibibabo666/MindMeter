@@ -117,11 +117,24 @@ function fullReport(ctx, results, scored, radar) {
   ];
 }
 
+/** 计分或雷达失败时退回「全部未测」的报告，而不是整页报错。 */
+function safeScore(results, ctx) {
+  try {
+    return scoreSession(results);
+  } catch (error) {
+    if (ctx && typeof ctx.log === 'function')
+      ctx.log('error', 'score failed', error && error.message);
+    const scores = {};
+    for (const dim of DIMS) scores[dim.id] = null;
+    return { version: SCORING_VERSION, scores, measured: [], missing: DIMS.map((d) => d.id) };
+  }
+}
+
 export function renderReport(root, ctx) {
   const results = ctx.state.results || {};
   const measured = Object.keys(results);
-  const scored = scoreSession(results);
-  const radar = buildRadar(DIMS, scored.scores);
+  const scored = safeScore(results, ctx);
+  const radar = buildRadar(DIMS, scored.scores || {});
   const body = measured.length === 0 ? emptyReport(ctx) : fullReport(ctx, results, scored, radar);
 
   root.appendChild(

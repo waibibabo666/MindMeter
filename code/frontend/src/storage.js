@@ -29,6 +29,16 @@ export const KEYS = Object.freeze({
 
 export const ALL_KEYS = Object.freeze(Object.values(KEYS));
 
+/**
+ * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
+ * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
+ */
+const log = (level, ...args) => {
+  const buffer = (globalThis.__MM_LOG__ ||= []);
+  buffer.push({ at: Date.now(), level, args });
+  if (buffer.length > 200) buffer.shift();
+};
+
 export function defaultSessions() {
   return { schemaVersion: SCHEMA_VERSION, sessions: [] };
 }
@@ -77,8 +87,9 @@ function detectStorage() {
     store.setItem(probe, '1');
     store.removeItem(probe);
     return store;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', 'localStorage 不可用，已降级到内存', error);
     return null;
   }
 }
@@ -98,8 +109,9 @@ function rawRead(key) {
   if (!store) return memoryFallback.has(key) ? memoryFallback.get(key) : null;
   try {
     return store.getItem(key);
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', 'localStorage 不可用，已降级到内存', error);
     return null;
   }
 }
@@ -113,8 +125,9 @@ function rawWrite(key, value) {
   try {
     store.setItem(key, value);
     return true;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', 'localStorage 不可用，已降级到内存', error);
     return false;
   }
 }
@@ -125,8 +138,9 @@ function rawRemove(key) {
   if (!store) return;
   try {
     store.removeItem(key);
-  } catch {
+  } catch (error) {
     // 清除失败时至少内存已清，不抛给调用方
+    log('warn', '清除 key 失败', key, error);
   }
 }
 
@@ -140,8 +154,9 @@ function readRecord(key, fallback) {
       return clone(fallback);
     }
     return parsed;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', 'localStorage 不可用，已降级到内存', error);
     rawRemove(key);
     return clone(fallback);
   }
@@ -263,8 +278,9 @@ export function exportData() {
   if (appRaw) {
     try {
       app = JSON.parse(appRaw);
-    } catch {
+    } catch (error) {
       // 读取失败按无数据处理，导出不因此中断
+      log('warn', '导出时读取失败，按无数据处理', error);
       app = null;
     }
   }
