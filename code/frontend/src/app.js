@@ -6,6 +6,7 @@
  */
 import { createRouter } from './router.js';
 import { readState, update, resetState } from './store.js';
+import { clearAllData, exportData } from './storage.js';
 import { STANDARD_ORDER } from './data.js';
 import { clear } from './ui.js';
 import { renderHome } from './pages/home.js';
@@ -91,8 +92,22 @@ const ctx = {
     }));
   },
   finishTask,
+  exportData: () => {
+    const data = exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mindmeter-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast('已导出本地数据（不含 LLM Key）');
+  },
   clearAll: () => {
     if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
+    clearAllData();
     resetState();
     toast('已清除本地数据');
     router.go('/');

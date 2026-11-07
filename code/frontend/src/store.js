@@ -7,7 +7,9 @@
  *   - 不存敏感信息：这里只有测评进度与原始指标。
  */
 
-export const STORAGE_KEY = 'mindmeter.app.shell.v1';
+import { KEYS } from './storage.js';
+
+export const STORAGE_KEY = KEYS.app;
 export const STATE_VERSION = 1;
 
 export function defaultState() {
