@@ -14,6 +14,9 @@
 | `software/` | [技术方案](software/architecture.md) | 当前 v4.0 | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
 | `software/` | [本地知识库设计](software/knowledge-base.md) | 草案 v1.0 | P-06：分类、chunk schema、30 条计划、来源候选 |
+| `software/` | [测试与评测计划](software/test-plan.md) | 当前 v1.0 | P-07：分层、30 条 Agent 用例、20 条检索、缺陷记录 |
+| `software/` | [Agent 评测量表](software/eval-rubric.md) | 当前 v1.0 | P-07：四维评分锚点与通过标准 |
+| `software/` | [知识库来源核验](software/kb-source-review.md) | 待核验 | L-06：30 条来源逐项勾选表 |
 | `research/` | [用户故事](research/user_stories.md) | 当前 v3.0 | 16 条 L2 故事 + Gherkin |
 | `software/prototype/` | [原型说明](software/prototype/prototype.md) | L1 参考 | UI 骨架；不代表 L2 架构 |
 | `software/prototype/` | [AI 接入位](software/prototype/agent-接入位.md) | 当前 L2 | 前端 → FastAPI 的 Agent 契约；前端不直连模型 |

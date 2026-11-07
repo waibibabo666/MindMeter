@@ -48,7 +48,7 @@ const BOUNDARY_WORDS = [
   '药物',
   '用药',
   '治疗',
-  '我是不是有病',
+  '有病',
 ];
 
 const DIMENSION_WORDS = [
@@ -74,6 +74,7 @@ const DOMAIN_WORDS = [
   '练习',
   '总分',
   '档位',
+  '未测',
 ];
 
 const EXPLAIN_WORDS = [
