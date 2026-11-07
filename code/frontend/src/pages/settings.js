@@ -1,6 +1,7 @@
 import { el, button, clear } from '../ui.js';
 import { readSettings, writeSettings } from '../storage.js';
 import { callLlm, isConfigured, maskKey } from '../llm/client.js';
+import { clearLogs, exportLogs, getLogs, log } from '../log.js';
 
 const ENDPOINT_HINT = '例如 https://api.deepseek.com/v1 或完整的 /chat/completions 地址';
 
@@ -127,8 +128,57 @@ async function testConnection(form, status, test) {
   }
 }
 
+function downloadLogs(ctx) {
+  log('info', '导出诊断日志', `count=${getLogs().length}`);
+  try {
+    const data = exportLogs();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mindmeter-logs-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    ctx.toast('已导出诊断日志（已脱敏）');
+  } catch (error) {
+    log('error', '导出诊断日志失败', error && error.message);
+    ctx.toast('导出失败：浏览器可能禁止了下载');
+  }
+}
+
+function buildLogCard(ctx, rerender) {
+  const logs = getLogs();
+  const latest = logs[logs.length - 1];
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '诊断日志' }),
+    el('p', {
+      class: 'muted',
+      text: `只存在本机内存，最多 200 条；导出前会脱敏，不包含 LLM Key。当前 ${logs.length} 条。`,
+    }),
+    latest
+      ? el('p', { class: 'tiny', text: `最近：${latest.level} · ${latest.event}` })
+      : el('p', { class: 'tiny', text: '还没有日志。' }),
+    el('div', { class: 'row' }, [
+      button('导出诊断日志', () => downloadLogs(ctx), { variant: 'ghost' }),
+      button(
+        '清除日志',
+        () => {
+          if (!window.confirm('清除本机诊断日志？')) return;
+          clearLogs();
+          log('info', '日志已清除');
+          ctx.toast('已清除诊断日志');
+          rerender();
+        },
+        { variant: 'ghost' },
+      ),
+    ]),
+  ]);
+}
+
 function buildPage(ctx, view) {
-  const { fields, actions, status, keyNote } = view;
+  const { fields, actions, status, keyNote, diagnostics } = view;
   return el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
     el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
     el('p', {
@@ -152,6 +202,7 @@ function buildPage(ctx, view) {
       ),
       actions.clearKey,
     ]),
+    diagnostics,
     button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
   ]);
 }
@@ -184,6 +235,7 @@ export function renderSettings(root, ctx) {
         actions: { test, save, clearKey: clearButton },
         status,
         keyNote,
+        diagnostics: buildLogCard(ctx, draw),
       }),
     );
   };

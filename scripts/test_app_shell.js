@@ -58,6 +58,7 @@ async function main() {
       'src/router.js',
       'src/store.js',
       'src/storage.js',
+      'src/log.js',
       'src/data.js',
       'src/ui.js',
       'src/pages/home.js',
@@ -199,10 +200,12 @@ async function main() {
 
   test('入口：计分统一、渲染有兜底、不写 console', () => {
     const app = read('src/app.js');
+    const logModule = read('src/log.js');
     assert(app.includes("from './scoring/index.js'"), 'app.js 未使用统一计分');
     assert(!app.includes('scoring/local.js'), 'app.js 仍引用临时计分模块');
     assert(app.includes('showRenderError'), 'app.js 缺少渲染兜底');
-    assert(app.includes('__MM_LOG__'), 'app.js 未接入内存日志');
+    assert(app.includes("from './log.js'"), 'app.js 未接入统一日志模块');
+    assert(logModule.includes('__MM_LOG__'), 'log.js 未使用内存缓冲');
     assert(!/console\.(log|info|warn|error|debug)\s*\(/.test(app), 'app.js 不应写 console');
   });
 

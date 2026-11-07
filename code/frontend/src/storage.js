@@ -14,6 +14,8 @@
  *   - clearAllData() 连同 L-01 的 app shell 状态一起清掉。
  */
 
+import { log } from './log.js';
+
 export const SCHEMA_VERSION = 1;
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_MESSAGES = 20;
@@ -28,16 +30,6 @@ export const KEYS = Object.freeze({
 });
 
 export const ALL_KEYS = Object.freeze(Object.values(KEYS));
-
-/**
- * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
- * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
- */
-const log = (level, ...args) => {
-  const buffer = (globalThis.__MM_LOG__ ||= []);
-  buffer.push({ at: Date.now(), level, args });
-  if (buffer.length > 200) buffer.shift();
-};
 
 export function defaultSessions() {
   return { schemaVersion: SCHEMA_VERSION, sessions: [] };
