@@ -57,6 +57,7 @@ async function main() {
       'src/app.js',
       'src/router.js',
       'src/store.js',
+      'src/storage.js',
       'src/data.js',
       'src/ui.js',
       'src/pages/home.js',
