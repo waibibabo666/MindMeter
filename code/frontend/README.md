@@ -1,40 +1,72 @@
-# Frontend（L2）
+# Frontend（L2 静态壳）
 
-原生 HTML/CSS/JS，接 FastAPI。页面：
+原生 HTML/CSS/JS（ES Module），**无构建、无依赖、无后端**。L-01 交付的是「壳」：
+路由、页面骨架、标准档 4 项任务、本地进度恢复；计分与 Agent 不在这一层。
 
-| 页面 | 作用 |
-| --- | --- |
-| 登录/注册 | 邮箱、密码、18+、隐私同意 |
-| 档位/同意 | 快测/标准/深度；ASR 提示；四项同意 |
-| 任务 | 8 个任务；练习；计时；提交原始指标 |
-| 报告 | 八维雷达、维度分、2–3 条建议、局限；**无总分** |
-| 对话 | 消息、建议卡片、引用、接受/拒绝 |
-| 记忆 | 画像、摘要、建议记录、删除 |
-| 趋势 | 共同维度、复测提示、“让 Agent 解释趋势” |
-| 设置 | BYOK、AI 开关、导出、注销 |
+## 路由
 
-## 计划目录
+hash 路由，刷新与浏览器返回都不丢状态（`localStorage` + draft）。
+
+| 路由 | 页面 | 说明 |
+| --- | --- | --- |
+| `#/` | 首页 | 开始测评、继续未完成、清除数据 |
+| `#/tier` | 档位 | 标准档可用；快测/深度标注未交付 |
+| `#/consent` | 知情同意 | 18+ 与非诊断两条勾选后才能开始 |
+| `#/task/<id>` | 任务 | `vc` / `ps` / `sv` / `am`，逐题存进度 |
+| `#/report` | 结果 | 4 项原始指标 + 4 项未测；**无总分、无百分位** |
+
+## 目录
 
 ```text
 frontend/
-├─ index.html
+├─ index.html             # 唯一页面，含跳过链接与模块入口
+├─ package.json           # 仅声明 type: module，供 Node 侧测试
 └─ src/
-   ├─ api.js          # fetch + JWT refresh
-   ├─ auth.js
-   ├─ pages/          # login, register, report, chat, memory, trend, settings
-   ├─ tasks/          # vc, vf, nc, ps, ir, sv, am, ni
-   ├─ asr/            # Web Speech API
-   └─ styles/
+   ├─ app.js             # 入口：装配路由与状态
+   ├─ router.js          # hash 路由解析与导航
+   ├─ store.js           # localStorage 读写（带版本与降级）
+   ├─ data.js            # 维度、档位、题库、词对、图案
+   ├─ ui.js               # 极小 DOM 工具与倒计时
+   ├─ random.js          # 可复现的伪随机
+   ├─ pages/             # home / tier / consent / task / report
+   ├─ tasks/             # vc / ps / sv / am
+   └─ styles/app.css     # 360px 起、44px 触控区、减少动效
 ```
+
+## 运行
+
+无需构建，起任意静态服务器即可（浏览器不允许 `file://` 加载 ES Module）：
+
+```bash
+python -m http.server 8000 --directory code/frontend
+# 打开 http://127.0.0.1:8000/
+```
+
+## 测试
+
+```bash
+node scripts/test_app_shell.js
+```
+
+覆盖：入口文件齐全、无 `fetch`/`XMLHttpRequest`（静态壳不联网）、4 项顺序、
+旋转与选项唯一性、词对再认构造、指标汇总、路由解析、状态读写与损坏数据回退、
+360px 与 44px 触控区等样式约定。
 
 ## 约定
 
-- 不做客户端计分；显示服务端结果；
-- 8 个任务只提交原始指标；
-- ASR 仅 Chrome/Edge；不支持时快测禁用；
-- 不存完整对话；只显示服务端返回的最近 20 条；
-- 不把 BYOK Key 写进前端源码；设置页只提交给后端加密存储。
+- 不做客户端计分：结果页只展示原始指标，分数由服务端 `scoring-v3` 产生（L-02 起接入）；
+- 只提交原始指标；不存完整对话；不存 BYOK Key；
+- 反应时使用 `performance.now()`（不可用时回退 `Date.now()`），毫秒取整；
+- 快测与深度档在 L-01 只占位，任务实现随 L-03～L-08 补齐。
 
-## 启动
+## 已知限制
 
-M0 定 API 后补充；静态文件可由 FastAPI 或 CDN 提供。
+- 知觉速度为 45 秒计时任务，刷新后重开计时（已完成 trial 保留）；
+- 联想记忆刷新后重新进入学习阶段（草稿只保存再认阶段进度）；
+- 图案题共 8 题固定题库，未做随机抽题与难度自适应。
+
+## 相关文档
+
+- [软件设计](../../docs/software/software.md)
+- [原型说明](../../docs/software/prototype/prototype.md)
+- [Agent 接入位](../../docs/software/prototype/agent-接入位.md)

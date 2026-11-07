@@ -1,0 +1,127 @@
+/**
+ * 静态 App 壳（L-01）入口。
+ *
+ * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report
+ * 状态全部落在 localStorage，刷新或浏览器返回都不丢进度。
+ */
+import { createRouter } from './router.js';
+import { readState, update, resetState } from './store.js';
+import { STANDARD_ORDER } from './data.js';
+import { clear } from './ui.js';
+import { renderHome } from './pages/home.js';
+import { renderTier } from './pages/tier.js';
+import { renderConsent } from './pages/consent.js';
+import { renderTask } from './pages/task.js';
+import { renderReport } from './pages/report.js';
+
+const PAGES = {
+  '/': renderHome,
+  '/tier': renderTier,
+  '/consent': renderConsent,
+  '/task': renderTask,
+  '/report': renderReport,
+};
+
+const root = document.getElementById('app');
+const toastNode = document.getElementById('toast');
+
+let dispose = () => {};
+
+function toast(message) {
+  if (!toastNode) return;
+  toastNode.textContent = message;
+  toastNode.classList.add('show');
+  window.setTimeout(() => toastNode.classList.remove('show'), 2200);
+}
+
+function setState(mutator) {
+  return update((draft) => {
+    Object.assign(draft, mutator(draft));
+  });
+}
+
+function finishTask(taskId, payload) {
+  setState((draft) => {
+    const results = Object.assign({}, draft.results, { [taskId]: payload });
+    const drafts = Object.assign({}, draft.drafts);
+    delete drafts[taskId];
+    const order = draft.order.length ? draft.order : STANDARD_ORDER;
+    const index = order.indexOf(taskId);
+    return {
+      results,
+      drafts,
+      cursor: index >= 0 ? index + 1 : draft.cursor,
+      order,
+    };
+  });
+
+  const state = readState();
+  const index = state.order.indexOf(taskId);
+  const next = state.order[index + 1];
+  router.go(next ? `/task/${next}` : '/report');
+}
+
+const ctx = {
+  get state() {
+    return readState();
+  },
+  go: (path, options) => router.go(path, options),
+  toast,
+  pickTier: (tier) => {
+    setState(() => ({ tier }));
+    router.go('/consent');
+  },
+  startAssessment: () => {
+    setState(() => ({
+      tier: 'standard',
+      consented: true,
+      consentedAge: true,
+      startedAt: Date.now(),
+      order: STANDARD_ORDER.slice(),
+      cursor: 0,
+      results: {},
+      drafts: {},
+      route: '/task/vc',
+    }));
+    router.go('/task/vc');
+  },
+  patchDraft: (taskId, draft) => {
+    setState((state) => ({
+      drafts: Object.assign({}, state.drafts, { [taskId]: draft }),
+    }));
+  },
+  finishTask,
+  clearAll: () => {
+    if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
+    resetState();
+    toast('已清除本地数据');
+    router.go('/');
+  },
+};
+
+const router = createRouter((route) => {
+  dispose();
+  dispose = () => {};
+  clear(root);
+
+  const state = readState();
+  setState(() => ({ route: route.full }));
+
+  const handler = PAGES[route.path] || renderHome;
+  const result = handler(root, ctx, route.param);
+  dispose = typeof result === 'function' ? result : () => {};
+
+  const heading = root.querySelector('h1');
+  if (heading) heading.setAttribute('tabindex', '-1');
+  root.focus({ preventScroll: true });
+  void state;
+});
+
+if (!window.location.hash) {
+  const saved = readState().route;
+  if (saved && saved !== '/') {
+    window.history.replaceState(null, '', `#${saved}`);
+  }
+}
+
+router.start();
