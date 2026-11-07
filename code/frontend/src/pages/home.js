@@ -23,6 +23,7 @@ export function renderHome(root, ctx) {
 
     el('div', { class: 'row' }, [
       button('查看报告', () => ctx.go('/report'), { variant: 'ghost' }),
+      button('趋势', () => ctx.go('/trend'), { variant: 'ghost' }),
       button('导出数据', () => ctx.exportData(), { variant: 'ghost' }),
       button('清除本地数据', () => ctx.clearAll(), { variant: 'ghost' }),
     ]),

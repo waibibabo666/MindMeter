@@ -322,3 +322,33 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---- L-08：雷达、趋势、提示 ---- */
+.radar { max-width: 380px; margin: 0 auto; }
+.radar svg { display: block; width: 100%; height: auto; }
+.radar-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.radar-spoke { stroke: var(--line); stroke-width: 1; }
+.radar-area { fill: rgba(91, 140, 255, 0.2); stroke: var(--accent); stroke-width: 2; }
+.radar-dot { fill: var(--accent); }
+.radar-label { fill: var(--muted); font-size: 10px; }
+.radar-label.muted { fill: var(--dim); }
+.radar-value { fill: var(--text); font-size: 11px; font-weight: 700; }
+.radar-label.muted .radar-value { fill: var(--dim); font-weight: 400; }
+
+.notice {
+  background: rgba(240, 163, 58, 0.1);
+  border: 1px solid rgba(240, 163, 58, 0.3);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  color: #e8c08a;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.score-cell { font-variant-numeric: tabular-nums; font-weight: 700; }
+.delta { font-variant-numeric: tabular-nums; font-weight: 700; }
+.delta.up { color: var(--good); }
+.delta.down { color: var(--bad); }
+.delta.flat { color: var(--muted); }
+.trend-table td, .trend-table th { text-align: left; }

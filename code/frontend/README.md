@@ -1,8 +1,8 @@
 # Frontend（M1 本地壳）
 
 原生 HTML/CSS/JS（ES Module），**无构建、无依赖、无后端**。L-01 交付的是「壳」：
-路由、页面骨架、标准档 4 项任务、本地进度恢复；L-03 起加入版本化本地存储
-（sessions / draft / settings / memory），L-02 再接本地计分。
+路由、页面骨架、标准档 4 项任务、本地进度恢复；L-03 加入版本化本地存储
+（sessions / draft / settings / memory）；L-08 加入八维雷达、4+4 未测与趋势对比。
 
 ## 路由
 
@@ -14,7 +14,8 @@ hash 路由，刷新与浏览器返回都不丢状态（`localStorage` + draft�
 | `#/tier` | 档位 | 标准档可用；快测/深度标注未交付 |
 | `#/consent` | 知情同意 | 18+ 与非诊断两条勾选后才能开始 |
 | `#/task/<id>` | 任务 | `vc` / `ps` / `sv` / `am`，逐题存进度 |
-| `#/report` | 结果 | 4 项原始指标 + 4 项未测；**无总分、无百分位** |
+| `#/report` | 结果 | 八维雷达 + 4 项分数 + 4 项未测；**无总分、无百分位** |
+| `#/trend` | 趋势 | 只比共同维度、变化值、7 天练习效应提示 |
 
 ## 目录
 
@@ -28,9 +29,12 @@ frontend/
    ├─ store.js           # L-01 app shell 状态（版本与降级）
    ├─ storage.js         # L-03 版本化本地存储（四类 key + 导出/清除）
    ├─ data.js            # 维度、档位、题库、词对、图案
+   ├─ scoring/local.js   # 本地参考分（临时，待 L-02 接管）
+   ├─ charts/radar.js    # 八维雷达几何与 SVG
+   ├─ trend.js           # 共同维度、变化、7 天提示
    ├─ ui.js               # 极小 DOM 工具与倒计时
    ├─ random.js          # 可复现的伪随机
-   ├─ pages/             # home / tier / consent / task / report
+   ├─ pages/             # home / tier / consent / task / report / trend
    ├─ tasks/             # vc / ps / sv / am
    └─ styles/app.css     # 360px 起、44px 触控区、减少动效
 ```
@@ -71,6 +75,27 @@ node scripts/test_storage.js
 旋转与选项唯一性、词对再认构造、指标汇总、路由解析、状态读写与损坏数据回退、
 360px 与 44px 触控区等样式约定；以及四类本地 key、draft 24h 过期、memory 20 条、
 导出不含 Key、清除全部、localStorage 不可用降级。
+
+## L-08：报告与趋势
+
+**报告页**：八维雷达 + 表格。
+
+- 已测维度画点并连线，未测维度留空并标「未测」，**不按 0 计**；
+- 分数为 0–100 整数，**不设总分、不做百分位、没有常模**；
+- 已测少于 3 个维度时不画多边形，避免误读成"塌陷"。
+
+**分数来源**：`src/scoring/local.js`（`local-provisional-v1`）按当前壳的实际题量折算，
+与 `docs/algorithm/algorithm.md` 的 scoring-v3 公式一致，但分母改成实际题数
+（例如言语理解 6 题而不是 15 题）。L-02 合入后替换 `scoreSession` 即可，页面无需改动。
+
+**趋势页**：
+
+- 取本机最近两次已完成测评（`mindmeter.sessions.v1`，完成最后一项时写入）；
+- **只比较两次都测过的维度**；只有一边测过的维度单独列出、不参与对比；
+- 间隔不足 7 天时提示练习效应，但不禁止；
+- 少于两次记录时给空态，不显示空表。
+
+**不做的**：不做人群比较、不做成长曲线拟合、不把变化解释成训练效果。
 
 ## 约定
 

@@ -6,7 +6,7 @@
  * 刷新时 hash 天然保留，配合 store 里的 draft 就能恢复进度。
  */
 
-export const ROUTES = ['/', '/tier', '/consent', '/task', '/report'];
+export const ROUTES = ['/', '/tier', '/consent', '/task', '/report', '/trend'];
 
 export function parseHash(hash) {
   const raw = String(hash || '').replace(/^#/, '');

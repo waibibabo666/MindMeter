@@ -1,12 +1,13 @@
 /**
  * 静态 App 壳（L-01）入口。
  *
- * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report
+ * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report → #/trend
  * 状态全部落在 localStorage，刷新或浏览器返回都不丢进度。
  */
 import { createRouter } from './router.js';
 import { readState, update, resetState } from './store.js';
-import { clearAllData, exportData } from './storage.js';
+import { addSession, clearAllData, exportData } from './storage.js';
+import { scoreSession, SCORING_VERSION } from './scoring/local.js';
 import { STANDARD_ORDER } from './data.js';
 import { clear } from './ui.js';
 import { renderHome } from './pages/home.js';
@@ -14,6 +15,7 @@ import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
 import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
+import { renderTrend } from './pages/trend.js';
 
 const PAGES = {
   '/': renderHome,
@@ -21,6 +23,7 @@ const PAGES = {
   '/consent': renderConsent,
   '/task': renderTask,
   '/report': renderReport,
+  '/trend': renderTrend,
 };
 
 const root = document.getElementById('app');
@@ -59,6 +62,19 @@ function finishTask(taskId, payload) {
   const state = readState();
   const index = state.order.indexOf(taskId);
   const next = state.order[index + 1];
+
+  if (!next) {
+    addSession({
+      id: `s_${Date.now().toString(36)}`,
+      mode: state.tier || 'standard',
+      finishedAt: new Date().toISOString(),
+      dims: state.order.slice(),
+      results: state.results,
+      scores: scoreSession(state.results).scores,
+      scoringVersion: SCORING_VERSION,
+    });
+  }
+
   router.go(next ? `/task/${next}` : '/report');
 }
 
