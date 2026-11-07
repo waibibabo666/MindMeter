@@ -222,7 +222,7 @@ Agent 回答"我这个分数低是什么意思"时，不能只靠模型自由发
 AI 起草（status=draft）
    → Owner 核来源、改文案（status=reviewed, by/date 填写）
    → Support 抽检 30%
-   → 合并入 chunks.json（version 自增）
+   → 合并入 chunks.js（version 自增）
 ```
 
 未 `reviewed` 的 chunk **不得进入检索索引**，脚本层面直接过滤。
@@ -261,7 +261,7 @@ AI 起草（status=draft）
 | 交付物 | 位置 | 验收 |
 | --- | --- | --- |
 | 本文档 | `docs/software/knowledge-base.md` | 评审通过 |
-| 30 条 chunk | `code/frontend/src/kb/chunks.json` | 30 条、字段齐全、全部 `reviewed` |
+| 30 条 chunk | `code/frontend/src/kb/chunks.js` | 30 条、字段齐全；全部 `reviewed` 后才进索引（当前均为 `draft`，待人工核源） |
 | 校验脚本 | `scripts/test_kb.js` | 字段/schema/禁用词/长度全过 |
 | 检索实现 | `code/frontend/src/kb/search.js` | BM25 + top3 |
 | 评测集 | `code/frontend/src/kb/queries.json` | 20 条，hit@3 ≥ 80% |
@@ -281,3 +281,4 @@ AI 起草（status=draft）
 | --- | --- | --- |
 | 2026-11-07 | v1.0 | 初稿：六类分类、chunk schema、30 条计划、来源候选、评测口径 |
 | 2026-11-07 | v1.1 | 按评审意见定稿：字数保持、30 条不扩、核验人 xlr268、S13 采用 A 方案（12356 通道 + 不做判断），`kb-plan-02` 风险降为 medium |
+| 2026-11-07 | v1.2 | L-06 落地：30 条正文 + `search.js`（BM25/bigram）+ `test_kb.js` + `queries.json`；正文用 `chunks.js` 而非 JSON（`file://` 下 `fetch` 不可用）；全部条目 `review.status=draft`，待人审 |

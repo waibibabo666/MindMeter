@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "note": "L-06 检索评测集：20 条 query，top3 命中即算通过（M1 要求 hit@3 ≥ 80%，即至少 16 条）。expect 里列多个 id 表示命中任一即可。",
+  "queries": [
+    { "q": "为什么没有总分", "expect": ["kb-score-02"] },
+    { "q": "百分位在哪里看", "expect": ["kb-score-03"] },
+    { "q": "未测是什么意思", "expect": ["kb-score-04"] },
+    { "q": "复测怎么比较两次结果", "expect": ["kb-score-05"] },
+    { "q": "睡眠会影响成绩吗", "expect": ["kb-factor-01"] },
+    { "q": "鼠标和键盘作答有区别吗", "expect": ["kb-factor-02"] },
+    { "q": "练多了分数会不会变高", "expect": ["kb-factor-03", "kb-plan-01"] },
+    { "q": "这个结果能诊断我吗", "expect": ["kb-limit-01"] },
+    { "q": "八个维度是八种智力吗", "expect": ["kb-limit-02"] },
+    { "q": "为什么不测工作记忆", "expect": ["kb-limit-03"] },
+    { "q": "数据会上传到服务器吗", "expect": ["kb-limit-04"] },
+    { "q": "空间旋转题怎么做的", "expect": ["kb-task-sv-01"] },
+    { "q": "词对记忆怎么进行", "expect": ["kb-task-am-01"] },
+    { "q": "符号匹配是多长时间", "expect": ["kb-task-ps-01"] },
+    { "q": "言语题有多少道", "expect": ["kb-task-vc-01"] },
+    { "q": "心理旋转是什么", "expect": ["kb-dim-sv-02"] },
+    { "q": "言语理解测什么", "expect": ["kb-dim-vc-01"] },
+    { "q": "知觉速度指什么", "expect": ["kb-dim-ps-01"] },
+    { "q": "虚报是什么意思", "expect": ["kb-dim-am-03", "kb-dim-am-02"] },
+    { "q": "什么时候该找专业人士", "expect": ["kb-plan-02"] }
+  ]
+}
