@@ -12,6 +12,16 @@ import { KEYS } from './storage.js';
 export const STORAGE_KEY = KEYS.app;
 export const STATE_VERSION = 1;
 
+/**
+ * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
+ * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
+ */
+const log = (level, ...args) => {
+  const buffer = (globalThis.__MM_LOG__ ||= []);
+  buffer.push({ at: Date.now(), level, args });
+  if (buffer.length > 200) buffer.shift();
+};
+
 export function defaultState() {
   return {
     version: STATE_VERSION,
@@ -38,8 +48,9 @@ function detectStorage() {
     store.setItem(probe, '1');
     store.removeItem(probe);
     return store;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', '状态持久化不可用，已降级到内存', error);
     return null;
   }
 }
@@ -67,8 +78,9 @@ export function readState() {
         ? Object.assign(defaultState(), parsed)
         : defaultState();
     return memory;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', '状态持久化不可用，已降级到内存', error);
     memory = defaultState();
     return memory;
   }
@@ -81,8 +93,9 @@ export function writeState(next) {
   try {
     store.setItem(STORAGE_KEY, JSON.stringify(next));
     return true;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
+  } catch (error) {
+    // localStorage 不可用（隐私模式/配额满）时降级，留下原因便于排查
+    log('warn', '状态持久化不可用，已降级到内存', error);
     return false;
   }
 }
