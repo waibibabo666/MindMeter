@@ -189,6 +189,64 @@ async function main() {
 
   // ---------- 运行 ----------
 
+  // ---------- 补齐的四个维度（vf / nc / ir / ni） ----------
+
+  test('金标准·言语流畅性 10/20/30 个有效词 = 0/50/100', () => {
+    eq(scoring.scoreVf({ validCount: 10 }), 0, 'vf@10');
+    eq(scoring.scoreVf({ validCount: 20 }), 50, 'vf@20');
+    eq(scoring.scoreVf({ validCount: 30 }), 100, 'vf@30');
+  });
+
+  test('金标准·数字运算 18/20 = 90', () => {
+    eq(scoring.scoreNc({ total: 20, correct: 18 }), 90, 'nc');
+  });
+
+  test('金标准·归纳推理 9/15 = 60', () => {
+    eq(scoring.scoreIr({ total: 15, correct: 9 }), 60, 'ir');
+  });
+
+  test('金标准·自然探索 15/20 = 75', () => {
+    eq(scoring.scoreNi({ total: 20, correct: 15 }), 75, 'ni');
+  });
+
+  test('边界·流畅性低于 10 词记 0，超上限记 100', () => {
+    eq(scoring.scoreVf({ validCount: 5 }), 0, 'vf 下限');
+    eq(scoring.scoreVf({ validCount: 500 }), 100, 'vf 上限');
+  });
+
+  test('边界·题量不足（截断的题本）记 null', () => {
+    // total 是本次实际下发的题量；低于设计题量的 80% 视为未完成。
+    eq(scoring.scoreNc({ total: 10, correct: 10 }), null, 'nc 只发 10/20 题');
+    eq(scoring.scoreIr({ total: 5, correct: 5 }), null, 'ir 只发 5/15 题');
+    eq(scoring.scoreNi({ total: 4, correct: 4 }), null, 'ni 只发 4/20 题');
+    eq(scoring.scoreNc({ total: 16, correct: 12 }), 75, 'nc 刚好 80% 题量应可计分');
+  });
+
+  test('缺失·新四维无指标时为 null', () => {
+    eq(scoring.scoreVf(null), null, 'vf null');
+    eq(scoring.scoreNc({}), null, 'nc 空对象');
+    eq(scoring.scoreIr({ total: 15 }), null, 'ir 缺 correct');
+    eq(scoring.scoreNi(null), null, 'ni null');
+  });
+
+  test('结构·八维齐全时 measured=8、missing=0', () => {
+    const r = scoring.scoreSession({
+      vc: { metrics: { total: 6, correct: 6 } },
+      vf: { metrics: { validCount: 20 } },
+      nc: { metrics: { total: 20, correct: 18 } },
+      ps: { metrics: { correct: 24 } },
+      ir: { metrics: { total: 15, correct: 12 } },
+      sv: { metrics: { total: 8, correct: 8, correctRts: rts(8, 1500) } },
+      am: { metrics: { hits: 8, falseAlarms: 0 }, answers: makeAnswers(8, 8) },
+      ni: { metrics: { total: 20, correct: 15 } },
+    });
+    eq(r.measured.length, 8, 'measured 数量');
+    eq(r.missing.length, 0, 'missing 数量');
+    eq(r.dimensions.nc, 90, 'nc');
+    eq(r.dimensions.ir, 80, 'ir');
+    eq(r.dimensions.ni, 75, 'ni');
+  });
+
   let passed = 0;
   for (const { name, fn } of tests) {
     try {

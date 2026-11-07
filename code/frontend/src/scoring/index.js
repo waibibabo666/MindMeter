@@ -16,10 +16,20 @@
  */
 
 import { CONFIG, DIMENSION_IDS, SCORING_VERSION } from './config.js';
-import { scoreAm, scorePs, scoreSv, scoreVc, svMedianRt } from './formulas.js';
+import {
+  scoreAm,
+  scoreIr,
+  scoreNc,
+  scoreNi,
+  scorePs,
+  scoreSv,
+  scoreVc,
+  scoreVf,
+  svMedianRt,
+} from './formulas.js';
 
 export { CONFIG, DIMENSION_IDS, SCORING_VERSION };
-export { scoreAm, scorePs, scoreSv, scoreVc, svMedianRt };
+export { scoreAm, scoreIr, scoreNc, scoreNi, scorePs, scoreSv, scoreVc, scoreVf, svMedianRt };
 
 /** 从 results 里安全取某任务的结果对象。 */
 function pick(results, id) {
@@ -39,11 +49,19 @@ export function scoreSession(results) {
   const ps = pick(results, 'ps');
   const sv = pick(results, 'sv');
   const am = pick(results, 'am');
+  const vf = pick(results, 'vf');
+  const nc = pick(results, 'nc');
+  const ir = pick(results, 'ir');
+  const ni = pick(results, 'ni');
 
   dimensions.vc = vc ? scoreVc(vc.metrics) : null;
   dimensions.ps = ps ? scorePs(ps.metrics) : null;
   dimensions.sv = sv ? scoreSv(sv.metrics) : null;
   dimensions.am = am ? scoreAm(am.metrics, am.answers) : null;
+  dimensions.vf = vf ? scoreVf(vf.metrics) : null;
+  dimensions.nc = nc ? scoreNc(nc.metrics) : null;
+  dimensions.ir = ir ? scoreIr(ir.metrics) : null;
+  dimensions.ni = ni ? scoreNi(ni.metrics) : null;
 
   const measured = DIMENSION_IDS.filter((id) => dimensions[id] !== null);
   const missing = DIMENSION_IDS.filter((id) => dimensions[id] === null);

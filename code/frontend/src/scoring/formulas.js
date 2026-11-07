@@ -104,3 +104,39 @@ export function scoreAm(metrics, answers) {
   const dPrime = zInv(H) - zInv(F);
   return int100(clamp01((dPrime + 1) / 5));
 }
+
+/** 言语流畅性 vf = round(100 × clamp01((validCount − 10) / 20)) */
+export function scoreVf(metrics) {
+  if (!metrics) return null;
+  const { validCount } = metrics;
+  if (!Number.isFinite(validCount) || validCount < 0) return null;
+  const { floor, span } = CONFIG.vf;
+  return int100(clamp01((validCount - floor) / span));
+}
+
+/** 数字运算 nc = round(100 × correct / total) */
+export function scoreNc(metrics) {
+  if (!metrics) return null;
+  const { total, correct } = metrics;
+  if (tooFew(total, CONFIG.nc.items)) return null;
+  if (!Number.isFinite(correct) || correct < 0) return null;
+  return int100(clamp01(correct / total));
+}
+
+/** 归纳推理 ir = round(100 × correct / total) */
+export function scoreIr(metrics) {
+  if (!metrics) return null;
+  const { total, correct } = metrics;
+  if (tooFew(total, CONFIG.ir.items)) return null;
+  if (!Number.isFinite(correct) || correct < 0) return null;
+  return int100(clamp01(correct / total));
+}
+
+/** 自然探索 ni = round(100 × correct / total) */
+export function scoreNi(metrics) {
+  if (!metrics) return null;
+  const { total, correct } = metrics;
+  if (tooFew(total, CONFIG.ni.items)) return null;
+  if (!Number.isFinite(correct) || correct < 0) return null;
+  return int100(clamp01(correct / total));
+}
