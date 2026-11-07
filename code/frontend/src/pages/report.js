@@ -1,4 +1,6 @@
 import { el, button } from '../ui.js';
+import { explain } from '../llm/degrade.js';
+import { readSettings } from '../storage.js';
 import { DIMS, LIMITS, TASK_META } from '../data.js';
 
 const STATUS = {
@@ -55,6 +57,7 @@ export function renderReport(root, ctx) {
         ])]),
         el('tbody', {}, rows),
       ]),
+      renderAiCard(ctx, metricsOf(results)),
       el('div', { class: 'card' }, [
         el('h2', { class: 'card-title', text: '为什么没有分数' }),
         el('p', { class: 'muted', text: '分数由服务端 scoring-v3 计算，前端不参与计分（L-02 之后接入）。本页只负责结构与原始指标展示。' }),
@@ -75,4 +78,39 @@ export function renderReport(root, ctx) {
     ]),
     el('p', { class: 'disclaimer', text: LIMITS[3] }),
   ]));
+}
+
+function metricsOf(results) {
+  const out = {};
+  for (const [id, payload] of Object.entries(results || {})) {
+    if (payload && payload.metrics) out[id] = payload.metrics;
+  }
+  return out;
+}
+
+/** AI 解读卡片：模型可用则用模型，任何异常都落回模板（L-04）。 */
+function renderAiCard(ctx, metrics) {
+  const badge = el('span', { class: 'pill', text: '未生成' });
+  const reason = el('p', { class: 'tiny', text: '默认用模板解读；在设置里配置自己的模型服务后可切换。' });
+  const output = el('p', { class: 'ai-text', text: '' });
+
+  const run = button('生成解读', async () => {
+    run.disabled = true;
+    badge.textContent = '生成中';
+    reason.textContent = '';
+    const result = await explain({ metrics, settings: readSettings() });
+    output.textContent = result.text;
+    badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
+    badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
+    reason.textContent = result.source === 'llm' ? '由你配置的模型生成，内容仅供参考。' : result.reason;
+    run.disabled = false;
+    run.textContent = '重新生成';
+  }, { variant: 'ghost' });
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
+    reason,
+    output,
+    el('div', { class: 'row' }, [run, button('去设置', () => ctx.go('/settings'), { variant: 'ghost' })]),
+  ]);
 }
