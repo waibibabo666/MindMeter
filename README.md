@@ -80,6 +80,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [AI 协作任务设计](docs/mgmt/ai_collaboration.md) | 人机分工、审查清单、关键任务卡 |
 | [Issue 导入](docs/mgmt/issue_import.md) | 标签/里程碑/CSV/批量建单 |
 | [复盘模板](docs/retrospection/retrospection.md) | 阶段复盘 |
+| [变更日志](CHANGELOG.md) | 按版本记录每个已合并 PR 的用户可见变化 |
 
 历史调研（只作追溯）：
 
