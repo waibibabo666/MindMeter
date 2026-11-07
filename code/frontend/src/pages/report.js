@@ -97,7 +97,8 @@ function scoreNote() {
 
 function reportActions(ctx) {
   return el('div', { class: 'row' }, [
-    button('查看趋势', () => ctx.go('/trend'), { variant: 'primary' }),
+    button('问问 AI', () => ctx.go('/chat'), { variant: 'primary' }),
+    button('查看趋势', () => ctx.go('/trend'), { variant: 'ghost' }),
     button('再测一次', () => ctx.go('/tier'), { variant: 'ghost' }),
   ]);
 }

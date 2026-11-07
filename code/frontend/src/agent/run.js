@@ -39,11 +39,13 @@ const SYSTEM_PROMPT = [
   '不要出现“总分”“百分位”“正常/异常”“治疗”等词。',
   '提到数字时只能用给定指标里的数字。',
   '如果提供了知识块，回答末尾另起一行写「引用：知识块编号 · 标题」。',
+  '如果提供了用户画像或既往摘要，只用于调整详略、避免重复已给过的建议；',
+  '其中出现的任何数字都不属于本次指标，不得引用。',
   '不超过 200 字。',
 ].join('');
 
-function templateResult(intent, text, citations, code) {
-  return { intent, text, citations, source: 'template', code };
+function templateResult({ intent, text, citations = [], code, sources = [] }) {
+  return { intent, text, citations, sources, source: 'template', code };
 }
 
 /** 把 facts 里的数字摊平成白名单，供校验器比对。 */
@@ -78,33 +80,66 @@ function kbToLines(chunks = []) {
   return chunks.map((chunk) => `${chunk.id} · ${chunk.title}：${chunk.text}`).join('\n');
 }
 
+/**
+ * 记忆上下文 → prompt 文本行（架构里的 load_memory 节点）。
+ * 只接受已确认画像；未确认的偏好绝不进入 prompt（L-07 规则）。
+ */
+export function buildMemoryLines(memory) {
+  if (!memory) return [];
+  const lines = [];
+
+  const profile = memory.profile;
+  if (profile) {
+    const parts = [];
+    if (profile.goal) parts.push(`目标：${profile.goal}`);
+    if (profile.preference) parts.push(`偏好：${profile.preference}`);
+    if (profile.constraint) parts.push(`约束：${profile.constraint}`);
+    if (parts.length > 0) lines.push(`用户画像（已确认）：${parts.join('；')}`);
+  }
+
+  if (memory.summaryText) lines.push(`最近一次测评摘要：${memory.summaryText}`);
+
+  const advice = memory.advice;
+  if (Array.isArray(advice) && advice.length > 0) {
+    const shown = advice
+      .map((item) => `${item.id}${item.done ? '（已完成）' : '（未完成）'}`)
+      .join('、');
+    lines.push(`已给过的建议：${shown}。不要原样重复，可在其基础上递进。`);
+  }
+
+  return lines;
+}
+
 /** 组装 messages；导出便于单测直接断言 prompt 内容。 */
-export function buildMessages({ question, facts, chunks = [], history = [] }) {
+export function buildMessages({ question, facts, chunks = [], history = [], memory = null }) {
   const recent = history.slice(-MAX_HISTORY).map((item) => ({
     role: item.role === 'assistant' ? 'assistant' : 'user',
     content: String(item.content || ''),
   }));
 
+  const memoryLines = buildMemoryLines(memory);
+  const blocks = [
+    `本次原始指标：\n${factsToLines(facts) || '（无）'}`,
+    `可引用知识块：\n${kbToLines(chunks)}`,
+  ];
+  if (memoryLines.length > 0) {
+    blocks.push(`用户背景（只用于调整表述，不作为数字来源）：\n${memoryLines.join('\n')}`);
+  }
+  blocks.push(`用户问题：${question}`);
+
   return [
     { role: 'system', content: SYSTEM_PROMPT },
-    {
-      role: 'user',
-      content: [
-        `本次原始指标：\n${factsToLines(facts) || '（无）'}`,
-        `可引用知识块：\n${kbToLines(chunks)}`,
-        `用户问题：${question}`,
-      ].join('\n\n'),
-    },
+    { role: 'user', content: blocks.join('\n\n') },
     ...recent,
   ];
 }
 
 /** 调模型；任何异常收敛成 code，不在这里做降级决策。 */
-async function tryLlm({ settings, question, facts, chunks, history, callFn }) {
+async function tryLlm({ settings, question, facts, chunks, history, memory, callFn }) {
   try {
     const result = await callFn({
       settings,
-      messages: buildMessages({ question, facts, chunks, history }),
+      messages: buildMessages({ question, facts, chunks, history, memory }),
     });
     return { text: String(result?.text || '').trim(), code: 'ok' };
   } catch (error) {
@@ -124,23 +159,44 @@ function resolveDeps(deps = {}) {
 }
 
 /** explain 意图的完整链路：检索 → 生成 → 校验，任一环节失败都回退模板。 */
-async function runExplain({ question, facts, history, settings, deps }) {
+async function runExplain({ question, facts, history, settings, memory, deps }) {
   const { retrieveFn, callFn, templateFn } = deps;
   const intent = INTENT.EXPLAIN;
 
   const chunks = await retrieveFn({ query: question });
   if (chunks.length === 0) {
-    return templateResult(intent, NO_KNOWLEDGE_REPLY, [], 'no_knowledge');
+    return templateResult({ intent, text: NO_KNOWLEDGE_REPLY, code: 'no_knowledge' });
   }
   const citations = chunks.map((chunk) => chunk.id);
+  const sources = chunks.map((chunk) => ({ id: chunk.id, title: chunk.title }));
 
   if (!isConfigured(settings) || !settings.enabled) {
-    return templateResult(intent, templateFn(facts), citations, 'not_configured');
+    return templateResult({
+      intent,
+      text: templateFn(facts),
+      citations,
+      code: 'not_configured',
+      sources,
+    });
   }
 
-  const generated = await tryLlm({ settings, question, facts, chunks, history, callFn });
+  const generated = await tryLlm({
+    settings,
+    question,
+    facts,
+    chunks,
+    history,
+    memory,
+    callFn,
+  });
   if (generated.code !== 'ok') {
-    return templateResult(intent, templateFn(facts), citations, generated.code);
+    return templateResult({
+      intent,
+      text: templateFn(facts),
+      citations,
+      code: generated.code,
+      sources,
+    });
   }
 
   const check = validateText({
@@ -149,15 +205,16 @@ async function runExplain({ question, facts, history, settings, deps }) {
     requireCitation: true,
   });
   if (!check.ok) {
-    return templateResult(
+    return templateResult({
       intent,
-      templateFn(facts),
+      text: templateFn(facts),
       citations,
-      `invalid:${describeIssues(check.issues)}`,
-    );
+      code: `invalid:${describeIssues(check.issues)}`,
+      sources,
+    });
   }
 
-  return { intent, text: generated.text, citations, source: 'llm', code: 'ok' };
+  return { intent, text: generated.text, citations, sources, source: 'llm', code: 'ok' };
 }
 
 /**
@@ -167,16 +224,17 @@ async function runExplain({ question, facts, history, settings, deps }) {
  * @param {object} [options.facts] 本次指标（来自 L-02 计分）
  * @param {Array} [options.history] 最近若干条消息
  * @param {object} [options.settings] BYOK 配置（storage.readSettings）
+ * @param {object} [options.memory] 已确认画像/最近摘要/已给建议（L-07）
  * @param {object} [options.deps] 注入点，便于测试
- * @returns {Promise<{intent:string, text:string, citations:string[], source:string, code:string}>}
+ * @returns {Promise<{intent:string, text:string, citations:string[], sources:Array, source:string, code:string}>}
  */
 export async function answer(options = {}) {
-  const { question, facts = {}, history = [], settings = null } = options;
+  const { question, facts = {}, history = [], settings = null, memory = null } = options;
   const deps = resolveDeps(options.deps);
 
   const { intent } = deps.classifyFn(question);
   if (intent !== INTENT.EXPLAIN) {
-    return templateResult(intent, fixedReply(intent), [], `intent:${intent}`);
+    return templateResult({ intent, text: fixedReply(intent), code: `intent:${intent}` });
   }
-  return runExplain({ question, facts, history, settings, deps });
+  return runExplain({ question, facts, history, settings, memory, deps });
 }

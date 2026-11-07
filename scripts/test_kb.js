@@ -171,10 +171,28 @@ async function main() {
   // ---------- 索引策略 ----------
 
   test('未审内容不进入索引', () => {
-    eq(INDEXABLE.length, 0, '当前应有 0 条已审条目');
-    const { index, reviewedCount } = kb.createIndex(CHUNKS);
-    eq(reviewedCount, 0, 'createIndex 的已审数');
-    eq(index.docs.length, 0, '索引文档数');
+    // 门槛行为用夹具验证，不依赖生产数据的审核进度。
+    const fixture = [
+      {
+        id: 'kb-plan-ft-01',
+        title: '夹具草稿',
+        text: '未经审核的内容不应该进入索引，也不应该被检索到。',
+        tags: ['夹具'],
+        review: { status: 'draft', by: '', date: '' },
+      },
+      {
+        id: 'kb-plan-ft-02',
+        title: '夹具已审',
+        text: '经过审核的内容应该进入索引，并且可以被正常检索到。',
+        tags: ['夹具'],
+        review: { status: 'reviewed', by: 'test', date: '2026-11-07' },
+      },
+    ];
+    const { index, reviewedCount } = kb.createIndex(fixture);
+    eq(reviewedCount, 1, 'draft 不应计入已审数');
+    eq(index.docs.length, 1, '只有已审条目进索引');
+    // 2026-11-07：30 条来源核验完成（xlr268），全部 reviewed。
+    eq(INDEXABLE.length, 30, '当前 30 条应全部已审');
   });
 
   test('审后条目可被检索到', () => {

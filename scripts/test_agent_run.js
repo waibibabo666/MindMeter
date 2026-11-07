@@ -144,6 +144,109 @@ async function main() {
     assert(result.code === 'timeout', `code should be timeout, got ${result.code}`);
   });
 
+  test('llm 结果带 sources（供建议记录使用）', async () => {
+    const result = await answer({
+      question: '联想记忆怎么练',
+      facts,
+      settings,
+      deps: {
+        template,
+        retrieve,
+        call: async () => ({ text: '按场景分组练习。\n引用：kb-plan-am-01 · 场景分组' }),
+      },
+    });
+    assert(result.source === 'llm', 'expected llm path');
+    assert(
+      result.sources.length === 1 && result.sources[0].id === 'kb-plan-am-01',
+      'sources should carry id+title',
+    );
+    assert(result.sources[0].title === '联想记忆 · 场景分组', 'title should pass through');
+  });
+
+  test('记忆上下文进入 prompt；未确认画像不进入', async () => {
+    let captured = null;
+    const deps = {
+      template,
+      retrieve,
+      call: async (options) => {
+        captured = options.messages;
+        return { text: '按场景分组练习。\n引用：kb-plan-am-01 · 场景分组' };
+      },
+    };
+
+    await answer({
+      question: '联想记忆怎么练',
+      facts,
+      settings,
+      memory: {
+        profile: { goal: '备考', preference: '晚上', constraint: '15 分钟内' },
+        summaryText: '标准 · 最低项联想记忆 49',
+        advice: [{ id: 'kb-plan-am-02', done: false }],
+      },
+      deps,
+    });
+    const prompt = captured.map((m) => m.content).join('\n');
+    assert(prompt.includes('用户背景'), 'memory block should enter prompt');
+    assert(prompt.includes('用户画像（已确认）'), 'confirmed profile should enter prompt');
+    assert(prompt.includes('备考'), 'goal should enter prompt');
+    assert(prompt.includes('kb-plan-am-02'), 'shown advice should enter prompt');
+    assert(prompt.includes('不作为数字来源'), 'memory numbers must be firewalled');
+
+    await answer({
+      question: '联想记忆怎么练',
+      facts,
+      settings,
+      memory: { profile: null, summaryText: null, advice: [] },
+      deps,
+    });
+    const prompt2 = captured.map((m) => m.content).join('\n');
+    assert(!prompt2.includes('用户背景'), 'empty memory should add no block');
+  });
+
+  test('真实检索适配器：审核后 30 条进索引，评测 query 可命中', async () => {
+    const adapter = await import(pathToFileURL(path.join(SRC, 'retrieve.js')).href);
+    assert(adapter.reviewedCount() === 30, `expected 30 reviewed, got ${adapter.reviewedCount()}`);
+    const hits = await adapter.retrieve({ query: '为什么没有总分' });
+    assert(hits.length > 0, 'should retrieve something');
+    assert(
+      hits.slice(0, 3).some((hit) => hit.id === 'kb-score-02'),
+      'kb-score-02 should be in top3 (queries.json #1)',
+    );
+  });
+
+  test('真实检索适配器：未审条目仍被门槛挡住', async () => {
+    const adapter = await import(pathToFileURL(path.join(SRC, 'retrieve.js')).href);
+    const draftChunk = {
+      id: 'kb-plan-zz-01',
+      category: 'plan',
+      dims: [],
+      title: '未审条目',
+      text: '这条还没有经过人工核验，不应该出现在任何检索结果里。',
+      tags: ['未审'],
+      review: { status: 'draft', by: '', date: '' },
+    };
+    const hits = await adapter.retrieve({ query: '未审条目', chunks: [draftChunk] });
+    assert(hits.length === 0, 'draft chunks must not be retrievable');
+  });
+
+  test('真实检索适配器：reviewed 条目可检索且形状正确', async () => {
+    const adapter = await import(pathToFileURL(path.join(SRC, 'retrieve.js')).href);
+    const reviewedChunk = {
+      id: 'kb-plan-am-99',
+      category: 'plan',
+      dims: ['am'],
+      title: '联想记忆 · 测试条目',
+      text: '把词对按生活场景分组记忆，先组内复述再整体复述，间隔一天再来一遍。',
+      tags: ['联想记忆', '分组'],
+      review: { status: 'reviewed', by: 'tester', date: '2026-11-07' },
+    };
+    const hits = await adapter.retrieve({ query: '联想记忆怎么分组', chunks: [reviewedChunk] });
+    assert(hits.length === 1, `expected 1 hit, got ${hits.length}`);
+    const hit = hits[0];
+    assert(hit.id === 'kb-plan-am-99' && hit.title && hit.text, 'shape: id/title/text');
+    assert(typeof hit.score === 'number' && hit.score > 0, 'BM25 score expected');
+  });
+
   let passed = 0;
   // 有意串行：用例共享注入的假实现，并发会互相干扰，输出顺序也不好读。
   for (const { name, fn } of tests) {

@@ -18,6 +18,7 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
+import { renderChat } from './pages/chat.js';
 
 /**
  * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
@@ -66,6 +67,7 @@ const PAGES = {
   '/settings': renderSettings,
   '/trend': renderTrend,
   '/memory': renderMemory,
+  '/chat': renderChat,
 };
 
 const root = document.getElementById('app');
