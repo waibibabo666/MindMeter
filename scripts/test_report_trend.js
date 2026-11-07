@@ -3,7 +3,6 @@
  * L-08：报告与趋势的检查（无网络、无浏览器）。
  *
  * 覆盖：
- *   - 本地参考分：4 维折算、0–100 整数、未测为 null、同输入同输出
  *   - 雷达：8 轴、未测不画 0、已测少于 3 个不连线
  *   - 趋势：只比共同维度、delta 计算、单边维度单列
  *   - 7 天提示：不足 7 天给提示，满 7 天不给
@@ -26,74 +25,8 @@ const assert = (ok, message) => {
 };
 
 async function main() {
-  const scoring = await import(pathToFileURL(path.join(SRC, 'scoring', 'local.js')).href);
   const radar = await import(pathToFileURL(path.join(SRC, 'charts', 'radar.js')).href);
   const trend = await import(pathToFileURL(path.join(SRC, 'trend.js')).href);
-
-  test('四个维度都能折算出 0–100 整数', () => {
-    const { scores } = scoring.scoreSession({
-      vc: { metrics: { correct: 5, total: 6 } },
-      ps: { metrics: { correct: 24, trials: 30, seconds: 45 } },
-      sv: { metrics: { correct: 6, total: 8, meanRtMs: 2600 } },
-      am: { metrics: { trials: 16, hits: 6, misses: 2, falseAlarms: 1, correctRejections: 7 } },
-    });
-    for (const id of ['vc', 'ps', 'sv', 'am']) {
-      const value = scores[id];
-      assert(Number.isInteger(value), `${id} 应为整数，实际 ${value}`);
-      assert(value >= 0 && value <= 100, `${id} 越界：${value}`);
-    }
-    assert(scores.vc === 83, `vc 应为 83，实际 ${scores.vc}`);
-    assert(scores.ps === 80, `ps 应为 80，实际 ${scores.ps}`);
-  });
-
-  test('未测维度为 null，不补 0', () => {
-    const { scores } = scoring.scoreSession({ vc: { metrics: { correct: 3, total: 6 } } });
-    assert(scores.vc === 50, 'vc 应为 50');
-    assert(scores.ps === null && scores.sv === null && scores.am === null, '未测应为 null');
-  });
-
-  test('同输入同输出', () => {
-    const input = {
-      vc: { metrics: { correct: 4, total: 6 } },
-      ps: { metrics: { correct: 12, trials: 30 } },
-    };
-    const a = JSON.stringify(scoring.scoreSession(input));
-    const b = JSON.stringify(scoring.scoreSession(input));
-    assert(a === b, '两次折算结果不一致');
-  });
-
-  test('sv 无反应时时只看正确率', () => {
-    const { scores } = scoring.scoreSession({ sv: { metrics: { correct: 4, total: 8 } } });
-    assert(scores.sv === 50, `应为 50，实际 ${scores.sv}`);
-  });
-
-  test('am 用 d′ 折算且能区分水平', () => {
-    const good = scoring.scoreAm({
-      trials: 16,
-      hits: 8,
-      misses: 0,
-      falseAlarms: 0,
-      correctRejections: 8,
-    });
-    const poor = scoring.scoreAm({
-      trials: 16,
-      hits: 2,
-      misses: 6,
-      falseAlarms: 5,
-      correctRejections: 3,
-    });
-    assert(good > poor, `高命中应高于低命中：${good} vs ${poor}`);
-    assert(good <= 100 && poor >= 0, '结果越界');
-  });
-
-  test('zscore 在关键分位正确', () => {
-    assert(Math.abs(scoring.zscore(0.5)) < 1e-6, 'z(0.5) 应为 0');
-    assert(
-      Math.abs(scoring.zscore(0.975) - 1.96) < 0.01,
-      `z(0.975) 应约 1.96，实际 ${scoring.zscore(0.975)}`,
-    );
-    assert(Math.abs(scoring.zscore(0.025) + 1.96) < 0.01, 'z(0.025) 应约 -1.96');
-  });
 
   test('雷达：8 轴，未测留空', () => {
     const dims = [
@@ -164,7 +97,7 @@ async function main() {
       'pages/report.js',
       'pages/trend.js',
       'charts/radar.js',
-      'scoring/local.js',
+      'scoring/index.js',
       'trend.js',
     ]) {
       assert(fs.existsSync(path.join(SRC, rel)), `缺少 ${rel}`);

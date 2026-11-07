@@ -37,7 +37,7 @@ export function templateExplanation(metrics) {
     ...lines,
     '',
     '这些只是本次测得的原始数据，不是分数，也不与人群比较。',
-    '分数由本机按 local-provisional-v1 临时折算；正式分数以 scoring-v3 统一口径为准。',
+    '分数由本机按 scoring-v3.1 折算；正式分数以服务端 scoring-v3 为准。',
   ].join('\n');
 }
 

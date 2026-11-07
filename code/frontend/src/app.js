@@ -7,7 +7,7 @@
 import { createRouter } from './router.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
-import { scoreSession, SCORING_VERSION } from './scoring/local.js';
+import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { STANDARD_ORDER } from './data.js';
 import { clear } from './ui.js';
 import { renderHome } from './pages/home.js';
