@@ -108,9 +108,10 @@ export async function callLlm(options = {}) {
       throw new LlmError('bad_response', '响应不是合法 JSON');
     }
 
-    const content = data && data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : null;
+    const content =
+      data && data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : null;
     if (typeof content !== 'string' || !content.trim()) {
       throw new LlmError('bad_response', '响应缺少 choices[0].message.content');
     }
@@ -132,5 +133,7 @@ export function maskKey(key) {
 export function redact(text, key) {
   const value = String(key || '');
   if (!value || value.length < 8) return String(text || '');
-  return String(text || '').split(value).join('[redacted]');
+  return String(text || '')
+    .split(value)
+    .join('[redacted]');
 }

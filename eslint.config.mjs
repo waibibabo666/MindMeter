@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import globals from 'globals';
 
 export default [
   {
@@ -25,6 +26,18 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
       },
+    },
+    rules: {
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
+    },
+  },
+  {
+    files: ['code/frontend/src/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: 'module',
+      globals: { ...globals.browser },
     },
     rules: {
       'no-empty': ['error', { allowEmptyCatch: true }],

@@ -133,7 +133,7 @@ MindMeter/
 
 ```bash
 npm ci
-npm run check          # ESLint + Prettier + prototype smoke
+npm run check          # ESLint + Prettier + 5 套测试
 
 python scripts/check_docs.py
 python scripts/check_secrets.py

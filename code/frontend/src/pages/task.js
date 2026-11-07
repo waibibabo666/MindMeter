@@ -30,9 +30,17 @@ export function renderTask(root, ctx, taskId) {
       el('span', { class: 'kicker', text: `第 ${position} / ${order.length} 项` }),
       el('span', { class: 'muted', text: meta.name }),
     ]),
-    el('div', { class: 'bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(order.length), 'aria-valuenow': String(position - 1) }, [
-      el('i', { style: `width:${Math.round(((position - 1) / order.length) * 100)}%` }),
-    ]),
+    el(
+      'div',
+      {
+        class: 'bar',
+        role: 'progressbar',
+        'aria-valuemin': '0',
+        'aria-valuemax': String(order.length),
+        'aria-valuenow': String(position - 1),
+      },
+      [el('i', { style: `width:${Math.round(((position - 1) / order.length) * 100)}%` })],
+    ),
     host,
     el('p', { class: 'tiny', text: '本页只采集原始指标；计时与进度已存本机，刷新可继续。' }),
   ]);

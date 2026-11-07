@@ -90,9 +90,13 @@ export function renderSettings(root, ctx) {
         };
         writeSettings(payload);
         ctx.toast('已保存到本机');
-        status.textContent = isConfigured(payload) ? '已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
+        status.textContent = isConfigured(payload)
+          ? '已配置：可以使用 AI 解读'
+          : '已保存，但还缺少必填项';
         status.className = `status ${isConfigured(payload) ? 'ok' : 'warn'}`;
-        keyNote.textContent = payload.apiKey ? `已保存：${maskKey(payload.apiKey)}` : '尚未保存 Key';
+        keyNote.textContent = payload.apiKey
+          ? `已保存：${maskKey(payload.apiKey)}`
+          : '尚未保存 Key';
       },
       { variant: 'primary' },
     );
@@ -100,7 +104,12 @@ export function renderSettings(root, ctx) {
     const clearKey = button(
       '清除 Key',
       () => {
-        writeSettings({ enabled: false, endpoint: form.endpoint.trim(), model: form.model.trim(), apiKey: '' });
+        writeSettings({
+          enabled: false,
+          endpoint: form.endpoint.trim(),
+          model: form.model.trim(),
+          apiKey: '',
+        });
         form.apiKey = '';
         form.enabled = false;
         ctx.toast('已清除本机 Key');
@@ -133,7 +142,10 @@ export function renderSettings(root, ctx) {
     root.appendChild(
       el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
         el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
-        el('p', { class: 'lead', text: '用自己的模型服务（BYOK）。不配置也可以正常测评，解读会走模板。' }),
+        el('p', {
+          class: 'lead',
+          text: '用自己的模型服务（BYOK）。不配置也可以正常测评，解读会走模板。',
+        }),
 
         el('div', { class: 'card' }, [
           el('label', { class: 'check' }, [enabled, el('span', { text: '启用 AI 解读' })]),
@@ -156,7 +168,11 @@ export function renderSettings(root, ctx) {
 
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title', text: '风险与限制' }),
-          el('ul', { class: 'plain-list' }, RISKS.map((text) => el('li', { text }))),
+          el(
+            'ul',
+            { class: 'plain-list' },
+            RISKS.map((text) => el('li', { text })),
+          ),
           clearKey,
         ]),
 

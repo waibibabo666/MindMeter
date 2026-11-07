@@ -22,27 +22,42 @@ function percent(numerator, denominator) {
 /** 标准正态分位数，Acklam 近似；用于联想记忆的 d'。 */
 export function zscore(p) {
   const value = Math.min(1 - 1e-9, Math.max(1e-9, p));
-  const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2, -3.066479806614716e1, 2.506628277459239];
-  const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1];
-  const c = [-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2,
+    -3.066479806614716e1, 2.506628277459239,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1,
+    -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734,
+    4.374664141464968, 2.938163982698783,
+  ];
   const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416];
   const low = 0.02425;
   const high = 1 - low;
 
   if (value < low) {
     const q = Math.sqrt(-2 * Math.log(value));
-    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
   }
   if (value > high) {
     const q = Math.sqrt(-2 * Math.log(1 - value));
-    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    return (
+      -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
   }
   const q = value - 0.5;
   const r = q * q;
-  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
-    (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  return (
+    ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) /
+    (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+  );
 }
 
 export function scoreVc(metrics) {
@@ -68,12 +83,12 @@ export function scoreSv(metrics) {
 
 export function scoreAm(metrics) {
   if (!metrics || !metrics.trials) return null;
-  const foils = typeof metrics.foils === 'number'
-    ? metrics.foils
-    : Math.max(0, metrics.trials - (metrics.targets || metrics.hits + metrics.misses));
-  const targets = typeof metrics.targets === 'number'
-    ? metrics.targets
-    : metrics.hits + metrics.misses;
+  const foils =
+    typeof metrics.foils === 'number'
+      ? metrics.foils
+      : Math.max(0, metrics.trials - (metrics.targets || metrics.hits + metrics.misses));
+  const targets =
+    typeof metrics.targets === 'number' ? metrics.targets : metrics.hits + metrics.misses;
   if (!targets || !foils) return null;
   const hitRate = (metrics.hits + 0.5) / (targets + 1);
   const faRate = (metrics.falseAlarms + 0.5) / (foils + 1);
