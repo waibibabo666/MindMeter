@@ -13,7 +13,7 @@
 | `tests/backend/` | FastAPI 健康检查 + OpenAPI 核心路径契约 | L2 目标；后端未搭建时 skip |
 | `tests/unit/` | M1 本地计分/校验；L2 服务端公式 | M1 起补充 |
 | `tests/integration/` | 本地：打开→4 项→报告→对话→趋势；L2：注册→… | M1 起补充 |
-| `tests/e2e/` | 浏览器关键路径（Playwright） | M1 L-09 起 |
+| `tests/e2e/` | 浏览器关键路径（Playwright） | 可运行；`npm run test:e2e` |
 | `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | M1 起补充 |
 
 ## 本地命令
@@ -21,6 +21,7 @@
 ```bash
 npm ci
 npm run check          # ESLint + Prettier + 5 套测试
+npm run test:e2e       # Playwright Chromium 浏览器 E2E
 
 python scripts/check_docs.py
 python scripts/check_secrets.py

@@ -43,4 +43,9 @@ data/local/
 logs/
 tmp/
 
+# ---- Playwright ----
+test-results/
+playwright-report/
+blob-report/
+
 work_for_permission/
