@@ -1,0 +1,16 @@
+{
+  "name": "mindmeter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MindMeter 心智镜 — 认知测评课程项目",
+  "scripts": {
+    "lint": "eslint \"code/**/*.js\" --no-error-on-unmatched-pattern",
+    "lint:fix": "eslint \"code/**/*.js\" --fix --no-error-on-unmatched-pattern",
+    "dup": "jscpd code --min-tokens 50 --reporters console"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "jscpd": "^4.0.5"
+  }
+}
