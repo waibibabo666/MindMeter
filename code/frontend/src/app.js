@@ -5,6 +5,7 @@
  * 状态全部落在 localStorage，刷新或浏览器返回都不丢进度。
  */
 import { createRouter } from './router.js';
+import { createShell } from './shell.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
@@ -209,6 +210,8 @@ const router = createRouter((route) => {
   clear(root);
 
   setState(() => ({ route: route.full }));
+  shell.updateShell(route);
+  shell.renderRail();
 
   const handler = PAGES[route.path] || renderHome;
   let result = () => {};
@@ -223,6 +226,8 @@ const router = createRouter((route) => {
   if (heading) heading.setAttribute('tabindex', '-1');
   root.focus({ preventScroll: true });
 });
+
+const shell = createShell({ ctx, router });
 
 if (!window.location.hash) {
   const saved = readState().route;
