@@ -33,6 +33,8 @@ export default [
     rules: {
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
+      // 自定义 test(name, fn) + assert() 运行器，SonarJS 只认 expect/assert 关键字，会误报。
+      'sonarjs/assertions-in-tests': 'off',
     },
   },
   {
