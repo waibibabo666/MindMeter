@@ -62,6 +62,46 @@ export function summarizePs(trials) {
   };
 }
 
+function targetBlock(trial) {
+  return el('div', { class: 'ps-target', 'aria-label': `目标：${trial.target}` }, [
+    el('span', { class: 'ps-target-label', text: '目标' }),
+    el('span', { class: 'ps-target-value', text: trial.target }),
+  ]);
+}
+
+function optionButtons(trial, choose) {
+  return trial.options.map((text, i) =>
+    button(text, () => choose(i), {
+      variant: 'option symbol',
+      ariaLabel: `选项 ${i + 1}：${text}`,
+    }),
+  );
+}
+
+function renderBoard(board, trial, choose) {
+  clear(board);
+  board.appendChild(targetBlock(trial));
+  board.appendChild(
+    el(
+      'div',
+      { class: 'options options-grid', role: 'group', 'aria-label': '选项' },
+      optionButtons(trial, choose),
+    ),
+  );
+}
+
+function bindKeys(choose) {
+  const onKey = (event) => {
+    const n = Number(event.key);
+    if (n >= 1 && n <= 4) {
+      event.preventDefault();
+      choose(n - 1);
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  return () => document.removeEventListener('keydown', onKey);
+}
+
 export const psTask = {
   id: 'ps',
   mount(root, ctx) {
@@ -100,35 +140,9 @@ export const psTask = {
       const trial = trials[index];
       shownAt = now();
       progress.textContent = `已完成 ${done.length} 题`;
-
-      const options = trial.options.map((text, i) =>
-        button(text, () => choose(i), {
-          variant: 'option symbol',
-          ariaLabel: `选项 ${i + 1}：${text}`,
-        }),
-      );
-
-      clear(board);
-      board.appendChild(
-        el('div', { class: 'ps-target', 'aria-label': `目标：${trial.target}` }, [
-          el('span', { class: 'ps-target-label', text: '目标' }),
-          el('span', { class: 'ps-target-value', text: trial.target }),
-        ]),
-      );
-      board.appendChild(
-        el('div', { class: 'options options-grid', role: 'group', 'aria-label': '选项' }, options),
-      );
-
+      renderBoard(board, trial, choose);
       cleanupKeys();
-      const onKey = (event) => {
-        const n = Number(event.key);
-        if (n >= 1 && n <= 4) {
-          event.preventDefault();
-          choose(n - 1);
-        }
-      };
-      document.addEventListener('keydown', onKey);
-      cleanupKeys = () => document.removeEventListener('keydown', onKey);
+      cleanupKeys = bindKeys(choose);
     };
 
     clear(root);
