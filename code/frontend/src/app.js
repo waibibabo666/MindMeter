@@ -139,7 +139,6 @@ const router = createRouter((route) => {
   dispose = () => {};
   clear(root);
 
-  const state = readState();
   setState(() => ({ route: route.full }));
 
   const handler = PAGES[route.path] || renderHome;
@@ -149,7 +148,6 @@ const router = createRouter((route) => {
   const heading = root.querySelector('h1');
   if (heading) heading.setAttribute('tabindex', '-1');
   root.focus({ preventScroll: true });
-  void state;
 });
 
 if (!window.location.hash) {

@@ -107,6 +107,8 @@ export function renderTrend(root, ctx) {
   const trend = buildTrend(prev, next, DIM_NAME);
   const rows = trendRows(trend);
   const hint = repeatHint(trend.days);
+  const daysText = typeof trend.days === 'number' ? ` · 间隔 ${trend.days} 天` : '';
+  const rangeText = `${fmtDate(prev.finishedAt)} → ${fmtDate(next.finishedAt)}${daysText}`;
 
   root.appendChild(
     el('section', { class: 'page', 'aria-labelledby': 'trend-title' }, [
@@ -114,7 +116,7 @@ export function renderTrend(root, ctx) {
       el('h1', { id: 'trend-title', class: 'page-title', text: '趋势' }),
       el('p', {
         class: 'lead',
-        text: `${fmtDate(prev.finishedAt)} → ${fmtDate(next.finishedAt)}${typeof trend.days === 'number' ? ` · 间隔 ${trend.days} 天` : ''}`,
+        text: rangeText,
       }),
       hint ? el('div', { class: 'notice', role: 'status' }, [hint]) : null,
       trendTable(trend, rows),
