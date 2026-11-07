@@ -34,10 +34,22 @@ jobs:
           python-version: "3.11"
       - name: Install dev deps
         run: pip install -r requirements-dev.txt
+      - name: Install backend deps (if any)
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "暂无 requirements.txt，跳过后端依赖"
+          fi
       - name: Run tests
         run: |
-          if [ -n "$(find tests -name 'test_*.py' -print -quit 2>/dev/null)" ]; then
-            pytest -q
-          else
-            echo "tests/ 下暂无 Python 用例，跳过"
+          # 后端尚未落地时，用例会被 skip，pytest 返回 5（没有收集到用例），不算失败
+          set +e
+          pytest -q
+          code=$?
+          set -e
+          if [ "$code" -eq 5 ]; then
+            echo "暂无可执行用例（后端模块未落地），按跳过处理"
+            exit 0
           fi
+          exit "$code"
