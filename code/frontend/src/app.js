@@ -9,7 +9,7 @@ import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { STANDARD_ORDER } from './data.js';
-import { clear } from './ui.js';
+import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
 import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
@@ -18,8 +18,6 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
-import { renderErrorPage } from './pages/error.js';
-import { reportError, safeRender } from './errors.js';
 
 /**
  * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
@@ -30,6 +28,34 @@ const log = (level, ...args) => {
   buffer.push({ at: Date.now(), level, args });
   if (buffer.length > 200) buffer.shift();
 };
+
+/**
+ * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
+ * 只给一句人话和两个出口，不暴露堆栈。
+ */
+function showRenderError(error) {
+  log('error', 'render failed', error && error.message);
+  clear(root);
+  root.appendChild(
+    el('section', { class: 'page' }, [
+      el('h1', { class: 'page-title', text: '页面没能正常显示' }),
+      el('p', {
+        class: 'lead',
+        text: '可能是本地数据异常。可以先返回首页重试；如果反复出现，请在设置里清除本地数据。',
+      }),
+      el('div', { class: 'row' }, [
+        button(
+          '返回首页',
+          () => {
+            globalThis.location.hash = '#/';
+          },
+          { variant: 'primary' },
+        ),
+        button('重试', () => globalThis.location.reload()),
+      ]),
+    ]),
+  );
+}
 
 const PAGES = {
   '/': renderHome,
@@ -65,7 +91,7 @@ function safeScores(results) {
   try {
     return scoreSession(results).scores;
   } catch (error) {
-    reportError(error, 'scoring');
+    log('error', 'scoring failed', error && error.message);
     return null;
   }
 }
@@ -174,13 +200,12 @@ const router = createRouter((route) => {
   setState(() => ({ route: route.full }));
 
   const handler = PAGES[route.path] || renderHome;
-  const result = safeRender(handler, {
-    root,
-    ctx,
-    param: route.param,
-    fallback: renderErrorPage,
-    onError: (error) => reportError(error, `render:${route.path}`),
-  });
+  let result = () => {};
+  try {
+    result = handler(root, ctx, route.param);
+  } catch (error) {
+    showRenderError(error);
+  }
   dispose = typeof result === 'function' ? result : () => {};
 
   const heading = root.querySelector('h1');
@@ -197,12 +222,12 @@ if (!window.location.hash) {
 
 /* 全局兜底：未捕获的异常与 Promise 拒绝都不该让页面白屏。 */
 window.addEventListener('error', (event) => {
-  reportError(event.error || event.message, 'window.error');
+  log('error', 'window.error', event.message || '');
   toast('页面出现异常，已切到安全状态；如无法操作请刷新');
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  reportError(event.reason, 'unhandledrejection');
+  log('error', 'unhandledrejection', event.reason && event.reason.message);
   toast('有一次请求没有完成，可稍后重试');
 });
 

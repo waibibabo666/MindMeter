@@ -197,6 +197,15 @@ async function main() {
     assert(summary.accuracy === 0.5, 'accuracy wrong');
   });
 
+  test('入口：计分统一、渲染有兜底、不写 console', () => {
+    const app = read('src/app.js');
+    assert(app.includes("from './scoring/index.js'"), 'app.js 未使用统一计分');
+    assert(!app.includes('scoring/local.js'), 'app.js 仍引用临时计分模块');
+    assert(app.includes('showRenderError'), 'app.js 缺少渲染兜底');
+    assert(app.includes('__MM_LOG__'), 'app.js 未接入内存日志');
+    assert(!/console\.(log|info|warn|error|debug)\s*\(/.test(app), 'app.js 不应写 console');
+  });
+
   test('路由解析与未知路径回退', () => {
     assert(router.parseHash('#/').path === '/', 'root parse failed');
     assert(router.parseHash('#/task/vc').param === 'vc', 'param parse failed');
