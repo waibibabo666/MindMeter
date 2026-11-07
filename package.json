@@ -18,10 +18,11 @@
     "test:kb": "node scripts/test_kb.js",
     "test:eval": "node scripts/test_eval.js",
     "test:errors": "node scripts/test_errors.js",
+    "test:e2e": "playwright test",
     "lint": "eslint scripts code/frontend/src",
     "lint:frontend": "eslint code/frontend/src",
-    "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"*.{json,mjs}\"",
-    "format:check": "prettier --check \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"*.{json,mjs}\"",
+    "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"tests/e2e/**/*.js\" \"*.{json,mjs}\"",
+    "format:check": "prettier --check \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"tests/e2e/**/*.js\" \"*.{json,mjs}\"",
     "complexity": "eslint --config eslint.complexity.config.mjs scripts code/frontend/src",
     "check": "npm run lint && npm run format:check && npm test"
   },
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "eslint": "^10.14.0",
     "eslint-plugin-sonarjs": "^4.2.2",
     "globals": "^17.14.0",

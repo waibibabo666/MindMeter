@@ -57,6 +57,8 @@ REQUIRED_FILES = [
     "package-lock.json",
     "eslint.config.mjs",
     "eslint.complexity.config.mjs",
+    "playwright.config.mjs",
+    "tests/e2e/app.spec.js",
     ".prettierrc.json",
     ".prettierignore",
     ".github/ISSUE_TEMPLATE/task.md",
