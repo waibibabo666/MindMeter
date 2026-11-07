@@ -5,8 +5,8 @@
  * 已整体替换，MOCK_KB 删除。对外签名保持不变，run.js 无需感知。
  *
  * 门槛（P-06 §7 / search.js）：只有 review.status === 'reviewed' 的 chunk
- * 会进入索引。30 条目前全部 draft，等待人工核验（docs/software/kb-source-review.md，
- * 审核人 xlr268）。核验完成前，检索恒为空，Agent 按契约回答"不知道"。
+ * 会进入索引。30 条已于 2026-11-07 全部核验通过（reviewed, by xlr268，
+ * 证据见 docs/software/kb-source-review.md）；未审条目会被自动挡在索引外。
  */
 
 import { CHUNKS } from '../kb/chunks.js';
