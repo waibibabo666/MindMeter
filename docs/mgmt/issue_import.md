@@ -1,5 +1,7 @@
 # GitHub Issues 导入说明
 
+> **2026-11-07 重要变更**：M1 已改为**纯本地 + 用户 LLM API**，本 CSV 是 **L2 目标 backlog**，不是 M1 执行清单。原 P-02～P-05 的远端 Issue #26～#29 已关闭；**不要用本 CSV 整表重建**。M1 任务已建为 **L-01～L-09（#37～#45）**，见 [m1_scope.md](m1_scope.md)。
+
 ## 1. 生成/更新 CSV
 
 任务表是唯一来源：[task_breakdown.md](task_breakdown.md)。

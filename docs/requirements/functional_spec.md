@@ -14,6 +14,8 @@
 | 关联文档 | [非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md)、[技术方案](../software/architecture.md)、[Agent 设计](xlragentdesign.md) |
 
 > 本版把 AI 从“可选解读”升级为**核心 Agent**，并引入账号、服务端计分、记忆、RAG 与长期趋势。L1 的“无账号/无后端/BYOK 直连”不再是目标架构。
+>
+> **2026-11-07 M1 范围变更**：M1 先做**纯本地 + 用户自备 LLM API**，不做账号/服务端/数据库；本文的账号、服务端计分、pgvector 等是 L2 目标。M1 范围见 [M1 范围与验收](../mgmt/m1_scope.md)。
 
 ## 二、目的与范围
 

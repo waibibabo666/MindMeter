@@ -5,7 +5,7 @@
 [![CI](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/ci.yml)
 [![Docs](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml/badge.svg)](https://github.com/waibibabo666/MindMeter/actions/workflows/structure-check.yml)
 
-MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用户完成快测 2 项 / 标准 4 项 / 深度 8 项，服务端生成八维参考分；Agent 结合测评 facts、长期记忆和知识库，解释结果、给建议、回答追问、分析复测趋势。
+MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用户完成快测 2 项 / 标准 4 项 / 深度 8 项，生成八维参考分；Agent 结合测评 facts、长期记忆和知识库，解释结果、给建议、回答追问、分析复测趋势。M1 采用本地计分 + 用户自备 LLM API；L2 再引入服务端。
 
 > 本项目不是医疗器械，不提供临床诊断、治疗或危机干预。**不设总分、没有常模、不做百分位、不与人群比较。**
 
@@ -22,7 +22,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ```text
 测评（8 项 / 三档）
-  → 服务端计分
+  → 计分（M1 本地 / L2 服务端）
   → 八维报告（无总分）
   → Agent（解释 / 建议 / 追问 / 趋势）
   → 记忆（画像 / 摘要 / 建议 / 最近 20 条）
@@ -32,24 +32,33 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ## 技术架构
 
-- 前端：原生 HTML/CSS/JS；
+**M1（当前执行）**
+
+- 前端：原生 HTML/CSS/JS，静态托管；
+- 存储：浏览器本地（sessions/draft/settings/memory）；
+- 计分：浏览器 `scoring-v3`；
+- Agent：本地状态机 + 用户自备 LLM API（BYOK）；
+- RAG：本地知识块 JSON + 关键词/BM25 检索；
+- 部署：静态文件，无后端。
+
+**L2（后续目标）**
+
 - 后端：FastAPI + PostgreSQL + pgvector；
 - Agent：LangGraph + Postgres checkpointer；
-- 计分：服务端 Python（`scoring-v3`）；
-- 模型：用户 BYOK，Key 加密存库；
-- RAG：本地 `bge-small-zh` embedding + pgvector；
-- 部署：Docker + 托管 Postgres；不上 K8s/Redis/Milvus。
+- 计分：服务端 Python；
+- 模型 Key：加密存库；
+- 部署：Docker + 托管 Postgres；仍不上 K8s/Redis/Milvus。
 
 ## 路线图（无固定 deadline）
 
 | 阶段 | 目标 | 验收 |
 | --- | --- | --- |
 | M0 设计 | 领域模型、API、数据模型、隐私、知识库 schema、评测集 | 定稿 |
-| M1 纵向切片 | 账号 + 标准 4 项 + 服务端计分 + 对话 + 记忆 + RAG + 趋势 | “测→聊→记住→复测→解释变化” |
+| M1 纵向切片 | 本地 App + 标准 4 项 + 本地计分 + Agent（用户 LLM API）+ 本地记忆/RAG/趋势 | “打开→测→聊→记住→复测→解释变化” |
 | M2 完整测评 | 快测/深度、8 项、ASR、三档、练习 | 8 项跑通 |
 | M3 产品化 | 评测、日志、告警、备份、部署、删除/导出 | 可维护 |
 
-> 先做 M1，是因为 Agent 依赖的 facts/记忆/RAG 链路比“再补 4 个任务”更决定产品成败。
+> 先做 M1，是因为 Agent 依赖的 facts/记忆/RAG 链路比“再补 4 个任务”更决定产品成败。M1 采用**纯本地 + 用户自备 LLM API**，不做账号/服务端；L2 服务端目标是后续阶段。
 
 ## 文档
 
@@ -67,6 +76,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |
 | [风险计划](docs/mgmt/risk_mgmt_plan.md) | 范围、Key、RAG、隐私、素材 |
 | [任务拆分](docs/mgmt/task_breakdown.md) | M0/M1 可执行任务、4 人分工、DoR/DoD |
+| [M1 范围与验收](docs/mgmt/m1_scope.md) | M1 本地范围、验收、L-01～L-09（已确认 v1.1） |
 | [AI 协作任务设计](docs/mgmt/ai_collaboration.md) | 人机分工、审查清单、关键任务卡 |
 | [Issue 导入](docs/mgmt/issue_import.md) | 标签/里程碑/CSV/批量建单 |
 | [复盘模板](docs/retrospection/retrospection.md) | 阶段复盘 |
@@ -107,29 +117,33 @@ MindMeter/
 
 ## 本期范围
 
-**做**：账号、服务端计分、8 项测评/三档、八维报告、Agent 对话/建议/追问/趋势、记忆、RAG、导出/删除、4 款练习（P2）。
+**M1 做**：本地 App、标准 4 项、本地计分、八维报告、Agent（用户 LLM API）、本地记忆/RAG/趋势、导出/清除。
+
+**L2 目标**：账号、服务端计分、8 项/三档、ASR、练习、服务端记忆/RAG、托管部署。
 
 **不做**：常模、百分位、总分、诊断、7 天计划/打卡、情绪支持、B 端、付费、社区、原生 App、多语言、K8s/Redis/Milvus。
 
 ## 当前状态
 
-- 文档已切到 L2（Agent-first）；L1 的静态原型保留为 UI 参考；
-- 后端/Agent/RAG 代码尚未开始；下一步按 [技术方案](docs/software/architecture.md) 搭 M1 纵向切片；
-- 课程提交版只作历史快照，不代表 L2 当前口径。
+- 文档已切到 L2（Agent-first）；M1 已按**纯本地 + 用户 LLM API** 冻结，执行清单为 [m1_scope.md](docs/mgmt/m1_scope.md) 的 L-01～L-09；
+- 后端/账号/DB/pgvector/LangGraph 属于 L2 目标，不在 M1 范围；
+- 课程提交版只作历史快照，不代表当前口径。
 
 ## 开发与测试
 
 ```bash
+npm ci
+npm run check          # ESLint + Prettier + prototype smoke
+
 python scripts/check_docs.py
 python scripts/check_secrets.py
-node scripts/test_prototype.js
 python scripts/export_issues.py --check
 
 # 后端出现 code/backend/pyproject.toml（或 requirements.txt）后：
 pytest -q tests/backend -rs
 ```
 
-- CI：`.github/workflows/ci.yml`（原型 smoke、后端契约、secret scan）；
+- CI：`.github/workflows/ci.yml`（Node 24：lint/format/prototype；后端契约；secret scan）；
 - 文档/结构：`.github/workflows/structure-check.yml`；
 - 测试说明：[tests/README.md](tests/README.md)。
 
@@ -142,4 +156,4 @@ pytest -q tests/backend -rs
 - 不伪造常模、百分位、效度、误差；
 - 不设总分，避免把不同结构的人压成一个数字；
 - 不收集姓名/手机号等身份信息；对话只留最近 20 条 + 摘要；
-- AI 默认有模板兜底；Key 加密存库、不写日志。
+- AI 默认有模板兜底；M1 的 Key 只存本机，不写日志/导出；L2 再加密存库。

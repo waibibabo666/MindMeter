@@ -15,6 +15,8 @@
 | 关联 | [算法设计](../algorithm/algorithm.md)、[Agent 设计](../requirements/xlragentdesign.md)、[问题定义](../requirements/problem_definition.md) |
 
 > 本版从 L1（纯静态 + BYOK 直连）升级为 L2：**FastAPI + PostgreSQL/pgvector + LangGraph + 原生前端**。L1 的原型保留为 UI 参考，不再代表最终架构。
+>
+> **2026-11-07 M1 范围变更**：M1 采用**纯本地 + 用户自备 LLM API**，不启用本文的账号/FastAPI/Postgres/pgvector/服务端 LangGraph；这些是 L2 目标。M1 执行清单见 [M1 范围与验收](../mgmt/m1_scope.md) 的 L-01～L-09。
 
 ## 二、摘要
 

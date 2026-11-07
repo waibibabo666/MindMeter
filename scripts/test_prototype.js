@@ -49,7 +49,9 @@ function createElement(id) {
     checked: false,
     disabled: false,
     onclick: null,
-    querySelector() { return { textContent: '' }; },
+    querySelector() {
+      return { textContent: '' };
+    },
   };
 }
 
@@ -60,7 +62,9 @@ function createApp({ asr = false } = {}) {
       if (!elements.has(id)) elements.set(id, createElement(id));
       return elements.get(id);
     },
-    querySelectorAll() { return []; },
+    querySelectorAll() {
+      return [];
+    },
   };
 
   class FakeSpeechRecognition {
@@ -76,10 +80,18 @@ function createApp({ asr = false } = {}) {
 
   const storage = {
     data: new Map(),
-    getItem(key) { return this.data.has(key) ? this.data.get(key) : null; },
-    setItem(key, value) { this.data.set(key, String(value)); },
-    removeItem(key) { this.data.delete(key); },
-    clear() { this.data.clear(); },
+    getItem(key) {
+      return this.data.has(key) ? this.data.get(key) : null;
+    },
+    setItem(key, value) {
+      this.data.set(key, String(value));
+    },
+    removeItem(key) {
+      this.data.delete(key);
+    },
+    clear() {
+      this.data.clear();
+    },
   };
 
   const factory = new Function(
@@ -87,11 +99,12 @@ function createApp({ asr = false } = {}) {
     'window',
     'localStorage',
     'confirm',
-    script + `
+    script +
+      `
 return {
   renderModes, pickMode, startAssessment, completeDemoTask, openHistory,
   clearAll, buildFacts, getState: () => state
-};`
+};`,
   );
 
   const api = factory(document, window, storage, () => true);
@@ -131,9 +144,14 @@ test('dom ids and inline handlers exist', () => {
   const handlers = [...html.matchAll(/onclick="([A-Za-z_$][A-Za-z0-9_$]*)/g)]
     .map((m) => m[1])
     .filter((name) => name !== '$');
-  const defs = new Set([...script.matchAll(/function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)].map((m) => m[1]));
+  const defs = new Set(
+    [...script.matchAll(/function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)].map((m) => m[1]),
+  );
   const missingHandlers = [...new Set(handlers.filter((name) => !defs.has(name)))];
-  assert(missingHandlers.length === 0, `inline handlers not defined: ${missingHandlers.join(', ')}`);
+  assert(
+    missingHandlers.length === 0,
+    `inline handlers not defined: ${missingHandlers.join(', ')}`,
+  );
 });
 
 test('standard tier: 4 tasks -> report without total', () => {

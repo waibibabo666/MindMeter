@@ -14,6 +14,8 @@
 | 关联文档 | [技术方案](../software/architecture.md)、[Agent 设计](xlragentdesign.md) |
 
 > L2 引入账号、后端、数据库、Agent 与 RAG，NFR 从“静态站点底线”升级为“小型产品底线”。仍然不追求企业级多区域/等保/K8s。
+>
+> **2026-11-07 M1 范围变更**：M1 为纯本地 + 用户 LLM API，不启用服务端/DB/账号 NFR；以下服务端指标是 L2 目标。M1 验收见 [M1 范围与验收](../mgmt/m1_scope.md)。
 
 ## 二、目的与范围
 

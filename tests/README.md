@@ -1,24 +1,28 @@
-# Tests（L2）
+# Tests（M1 本地 + L2 目标）
 
 ## 分层
 
 | 目录/类型 | 范围 | 现状 |
 | --- | --- | --- |
+| `npm run lint` / `npm run format:check` | ESLint + Prettier（scripts） | 可运行 |
 | `scripts/check_docs.py` | 必需文件/目录、冲突标记、相对链接、重复文件、提交文件 | 可运行 |
 | `scripts/check_secrets.py` | 疑似 Key/token/私钥/带密码 DB URL | 可运行 |
 | `scripts/test_prototype.js` | L1 原型 JS 语法、DOM id、三档流程、无 ASR 分支、清除数据 | 可运行 |
-| `tests/backend/` | FastAPI 健康检查 + OpenAPI 核心路径契约 | 后端未搭建时自动 skip |
-| `tests/unit/` | 8 个计分公式、校验、RAG 检索 | M1 起补充 |
-| `tests/integration/` | 注册→测评→计分→报告→对话→记忆→趋势 | M1 起补充 |
-| `tests/e2e/` | 浏览器关键路径（Playwright） | M2 起 |
+| `tests/backend/` | FastAPI 健康检查 + OpenAPI 核心路径契约 | L2 目标；后端未搭建时 skip |
+| `tests/unit/` | M1 本地计分/校验；L2 服务端公式 | M1 起补充 |
+| `tests/integration/` | 本地：打开→4 项→报告→对话→趋势；L2：注册→… | M1 起补充 |
+| `tests/e2e/` | 浏览器关键路径（Playwright） | M1 L-09 起 |
 | `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | M1 起补充 |
 
 ## 本地命令
 
 ```bash
+npm ci
+npm run check          # ESLint + Prettier + prototype smoke
+
 python scripts/check_docs.py
 python scripts/check_secrets.py
-node scripts/test_prototype.js
+python scripts/export_issues.py --check
 
 # 后端已有 code/backend/pyproject.toml（或 requirements.txt）时：
 pytest -q tests/backend -rs
@@ -27,14 +31,14 @@ pytest -q tests/backend -rs
 python -m pip install pytest httpx fastapi
 ```
 
-Windows PowerShell 同样适用；Node 20+、Python 3.12+。
+Windows PowerShell 同样适用；Node 24+、Python 3.13+。
 
 ## CI
 
 | Workflow | 内容 |
 | --- | --- |
 | `.github/workflows/structure-check.yml` | 文档/链接/冲突/重复/提交文件/issues.csv 同步 |
-| `.github/workflows/ci.yml` | 原型 smoke、后端契约（有 pyproject 才跑）、secret scan |
+| `.github/workflows/ci.yml` | Node 24 lint/format/prototype、后端契约（有 pyproject 才跑）、secret scan |
 
 后端 job 在 `code/backend/pyproject.toml` 出现前会跳过，并输出 notice；出现后如果缺 `app/main.py` 会直接失败，不会静默跳过。
 

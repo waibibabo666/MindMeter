@@ -18,7 +18,8 @@
 | `software/prototype/` | [AI 接入位](software/prototype/agent-接入位.md) | 当前 L2 | 前端 → FastAPI 的 Agent 契约；前端不直连模型 |
 | `mgmt/` | [沟通管理计划](mgmt/communication_mgmt_plan.md) | 当前 v2.0 | 分工、阶段节奏、升级 |
 | `mgmt/` | [风险管理计划](mgmt/risk_mgmt_plan.md) | 当前 v2.0 | 范围、Key、RAG、隐私、素材 |
-| `mgmt/` | [任务拆分](mgmt/task_breakdown.md) | 当前 v1.0 | M0/M1 任务、4 人分工、DoR/DoD |
+| `mgmt/` | [任务拆分](mgmt/task_breakdown.md) | 当前 v1.1 | L2 backlog + M1 本地执行（L-01～L-09） |
+| `mgmt/` | [M1 范围与验收](mgmt/m1_scope.md) | 已确认 v1.1 | M1 本地范围、验收、L-01～L-09 |
 | `mgmt/` | [AI 协作任务设计](mgmt/ai_collaboration.md) | 当前 v1.0 | 人机分工、审查清单、关键任务卡 |
 | `mgmt/` | [Issue 导入](mgmt/issue_import.md) | 当前 v1.0 | 标签/里程碑/CSV/批量建单 |
 | `retrospection/` | [复盘模板](retrospection/retrospection.md) | 模板 | 阶段复盘 |
