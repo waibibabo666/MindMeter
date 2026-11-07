@@ -2,7 +2,7 @@ import { el, button } from '../ui.js';
 import { explain } from '../llm/degrade.js';
 import { readSettings } from '../storage.js';
 import { DIMS, LIMITS } from '../data.js';
-import { scoreSession, SCORING_VERSION } from '../scoring/local.js';
+import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { buildRadar, radarMarkup } from '../charts/radar.js';
 
 const STATUS = {
