@@ -166,6 +166,28 @@ async function main() {
     assert(!app.includes('scoreSession(state.results).scores'), '仍有一处裸调用');
   });
 
+  test('静态：关键模块使用内存日志，不写 console', () => {
+    const files = ['app.js', 'storage.js', 'store.js', 'llm/client.js', 'agent/run.js'];
+    for (const rel of files) {
+      const text = readSrc(rel);
+      assert(text.includes('globalThis.__MM_LOG__'), `${rel} 未接入内存日志`);
+      assert(!/console\.(log|info|warn|error|debug)\s*\(/.test(text), `${rel} 仍有 console 输出`);
+    }
+  });
+
+  test('静态：关键失败点写入了日志', () => {
+    const sites = [
+      ['storage.js', "log('warn'", '存储降级'],
+      ['store.js', "log('warn'", '状态持久化降级'],
+      ['llm/client.js', "log('warn'", '模型调用失败'],
+      ['agent/run.js', "log('warn'", '模型生成失败'],
+      ['app.js', "log('info'", '关键流程'],
+    ];
+    for (const [rel, needle, label] of sites) {
+      assert(readSrc(rel).includes(needle), `${rel} 缺少${label}日志`);
+    }
+  });
+
   // ---------- 运行 ----------
 
   let passed = 0;

@@ -8,6 +8,16 @@
  *   - 超时用 AbortController，避免请求悬挂。
  */
 
+/**
+ * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
+ * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
+ */
+const log = (level, ...args) => {
+  const buffer = (globalThis.__MM_LOG__ ||= []);
+  buffer.push({ at: Date.now(), level, args });
+  if (buffer.length > 200) buffer.shift();
+};
+
 export const DEFAULT_TIMEOUT_MS = 20000;
 
 export class LlmError extends Error {
@@ -81,6 +91,7 @@ async function fetchWithTimeout(doFetch, request, controller, timeoutMs) {
   try {
     return await doFetch(url, init);
   } catch (error) {
+    log('warn', '模型调用失败', error && error.name, error && error.message);
     if (error && error.name === 'AbortError') {
       throw new LlmError('timeout', `请求超过 ${timeoutMs}ms 未返回`);
     }
@@ -104,7 +115,8 @@ function assertResponse(response) {
 async function readJson(response) {
   try {
     return await response.json();
-  } catch {
+  } catch (error) {
+    log('warn', '模型响应不是合法 JSON', error && error.message);
     throw new LlmError('bad_response', '响应不是合法 JSON');
   }
 }

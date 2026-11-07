@@ -21,6 +21,16 @@ import { renderMemory } from './pages/memory.js';
 import { renderErrorPage } from './pages/error.js';
 import { reportError, safeRender } from './errors.js';
 
+/**
+ * 内存日志：项目禁止前端写 console（防止 Key 意外落日志），改为环形缓冲。
+ * 排查时在控制台执行 `__MM_LOG__` 查看最近 200 条；不产生任何自动输出。
+ */
+const log = (level, ...args) => {
+  const buffer = (globalThis.__MM_LOG__ ||= []);
+  buffer.push({ at: Date.now(), level, args });
+  if (buffer.length > 200) buffer.shift();
+};
+
 const PAGES = {
   '/': renderHome,
   '/tier': renderTier,
@@ -79,6 +89,8 @@ function finishTask(taskId, payload) {
   const index = state.order.indexOf(taskId);
   const next = state.order[index + 1];
 
+  log('info', '完成一项', taskId, next ? `下一项 ${next}` : '全部完成，结算中');
+
   if (!next) {
     addSession({
       id: `s_${Date.now().toString(36)}`,
@@ -105,6 +117,7 @@ const ctx = {
     router.go('/consent');
   },
   startAssessment: () => {
+    log('info', '开始测评', 'standard', STANDARD_ORDER.join('→'));
     setState(() => ({
       tier: 'standard',
       consented: true,
@@ -126,6 +139,11 @@ const ctx = {
   finishTask,
   exportData: () => {
     const data = exportData();
+    log(
+      'info',
+      '导出本地数据',
+      `sessions=${Array.isArray(data.sessions) ? data.sessions.length : 0}`,
+    );
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -139,6 +157,7 @@ const ctx = {
   },
   clearAll: () => {
     if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
+    log('info', '清除本地数据');
     clearAllData();
     resetState();
     toast('已清除本地数据');
@@ -147,6 +166,7 @@ const ctx = {
 };
 
 const router = createRouter((route) => {
+  log('info', '路由', route.full);
   dispose();
   dispose = () => {};
   clear(root);
