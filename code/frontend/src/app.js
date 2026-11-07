@@ -138,6 +138,7 @@ const ctx = {
   },
   go: (path, options) => router.go(path, options),
   toast,
+  log,
   pickTier: (tier) => {
     setState(() => ({ tier }));
     router.go('/consent');
@@ -164,30 +165,47 @@ const ctx = {
   },
   finishTask,
   exportData: () => {
-    const data = exportData();
-    log(
-      'info',
-      '导出本地数据',
-      `sessions=${Array.isArray(data.sessions) ? data.sessions.length : 0}`,
-    );
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `mindmeter-export-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    toast('已导出本地数据（不含 LLM Key）');
+    try {
+      const data = exportData();
+      log(
+        'info',
+        '导出本地数据',
+        `sessions=${Array.isArray(data.sessions) ? data.sessions.length : 0}`,
+      );
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `mindmeter-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast('已导出本地数据（不含 LLM Key）');
+    } catch (error) {
+      log('error', 'export failed', error && error.message);
+      toast('导出失败：浏览器可能禁止了下载，检查权限后重试');
+    }
   },
   clearAll: () => {
     if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
     log('info', '清除本地数据');
-    clearAllData();
-    resetState();
-    toast('已清除本地数据');
-    router.go('/');
+    try {
+      clearAllData();
+      resetState();
+      toast('已清除本地数据');
+      router.go('/');
+    } catch (error) {
+      log('error', 'clear failed', error && error.message);
+      toast('清除失败：请刷新页面后重试');
+    }
+  },
+  clearDraft: (taskId) => {
+    setState((state) => {
+      const drafts = Object.assign({}, state.drafts);
+      delete drafts[taskId];
+      return { drafts };
+    });
   },
 };
 

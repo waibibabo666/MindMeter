@@ -206,6 +206,22 @@ async function main() {
     assert(!/console\.(log|info|warn|error|debug)\s*\(/.test(app), 'app.js 不应写 console');
   });
 
+  test('异常处理：关键路径有本地兜底', () => {
+    const task = read('src/pages/task.js');
+    assert(task.includes('clearDraft'), 'task.js 缺少「草稿损坏重开」兜底');
+
+    const report = read('src/pages/report.js');
+    assert(report.includes('safeScore'), 'report.js 缺少计分失败兜底');
+
+    const trend = read('src/pages/trend.js');
+    assert(trend.includes('catch'), 'trend.js 缺少读取失败兜底');
+
+    const app = read('src/app.js');
+    assert(app.includes('导出失败'), 'app.js 导出失败未提示用户');
+    assert(app.includes('清除失败'), 'app.js 清除失败未提示用户');
+    assert(app.includes('safeScores'), 'app.js 计分失败未兜底');
+  });
+
   test('路由解析与未知路径回退', () => {
     assert(router.parseHash('#/').path === '/', 'root parse failed');
     assert(router.parseHash('#/task/vc').param === 'vc', 'param parse failed');
