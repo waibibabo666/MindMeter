@@ -12,9 +12,8 @@ export function summarizeVc(answers) {
     total,
     correct,
     accuracy: total === 0 ? null : Number((correct / total).toFixed(3)),
-    meanRtMs: total === 0
-      ? null
-      : Math.round(answers.reduce((sum, a) => sum + (a.rtMs || 0), 0) / total),
+    meanRtMs:
+      total === 0 ? null : Math.round(answers.reduce((sum, a) => sum + (a.rtMs || 0), 0) / total),
   };
 }
 
@@ -56,19 +55,21 @@ export const vcTask = {
       const item = VC_ITEMS[index];
       shownAt = now();
 
-      const options = item.options.map((text, i) => button(
-        `${i + 1}. ${text}`,
-        () => choose(i),
-        { variant: 'option' },
-      ));
+      const options = item.options.map((text, i) =>
+        button(`${i + 1}. ${text}`, () => choose(i), { variant: 'option' }),
+      );
 
       clear(root);
-      root.appendChild(el('div', { class: 'task-head' }, [
-        el('span', { class: 'kicker', text: `第 ${index + 1} / ${VC_ITEMS.length} 题` }),
-        el('span', { class: 'muted', text: '按键 1–4 也可作答' }),
-      ]));
+      root.appendChild(
+        el('div', { class: 'task-head' }, [
+          el('span', { class: 'kicker', text: `第 ${index + 1} / ${VC_ITEMS.length} 题` }),
+          el('span', { class: 'muted', text: '按键 1–4 也可作答' }),
+        ]),
+      );
       root.appendChild(el('h2', { class: 'task-question', text: item.q }));
-      root.appendChild(el('div', { class: 'options', role: 'group', 'aria-label': '选项' }, options));
+      root.appendChild(
+        el('div', { class: 'options', role: 'group', 'aria-label': '选项' }, options),
+      );
 
       cleanupKeys();
       const onKey = (event) => {

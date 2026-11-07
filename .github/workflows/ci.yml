@@ -31,10 +31,10 @@ jobs:
       - name: Install dev dependencies
         run: npm ci
 
-      - name: Lint
+      - name: Lint scripts + frontend
         run: npm run lint
 
-      - name: Format check
+      - name: Format check scripts + frontend
         run: npm run format:check
 
       - name: Run prototype checks

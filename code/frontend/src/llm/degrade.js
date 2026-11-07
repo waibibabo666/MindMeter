@@ -37,12 +37,14 @@ export function templateExplanation(metrics) {
     ...lines,
     '',
     '这些只是本次测得的原始数据，不是分数，也不与人群比较。',
-    '分数将由服务端 scoring-v3 计算；在此之前，请把上面几行当作"这次做了什么"的记录。',
+    '分数由本机按 local-provisional-v1 临时折算；正式分数以 scoring-v3 统一口径为准。',
   ].join('\n');
 }
 
 export function buildMessages(metrics) {
-  const facts = Object.entries(metrics || {}).map(([id, m]) => `${id}: ${JSON.stringify(m)}`).join('\n');
+  const facts = Object.entries(metrics || {})
+    .map(([id, m]) => `${id}: ${JSON.stringify(m)}`)
+    .join('\n');
   return [
     {
       role: 'system',

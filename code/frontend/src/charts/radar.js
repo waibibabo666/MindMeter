@@ -46,9 +46,10 @@ export function buildRadar(dims, scores) {
   });
 
   const measuredAxes = axes.filter((axis) => axis.measured);
-  const polygon = measuredAxes.length >= 3
-    ? measuredAxes.map((axis) => `${axis.point.x},${axis.point.y}`).join(' ')
-    : '';
+  const polygon =
+    measuredAxes.length >= 3
+      ? measuredAxes.map((axis) => `${axis.point.x},${axis.point.y}`).join(' ')
+      : '';
 
   return {
     size: RADAR_SIZE,
@@ -63,7 +64,7 @@ export function buildRadar(dims, scores) {
 
 /** 生成雷达图 SVG 字符串；只含数字与固定文案，不拼接用户输入。 */
 export function radarMarkup(radar) {
-  const { size, center, radius, axes, polygon } = radar;
+  const { size, center, axes, polygon } = radar;
   const rings = [0.25, 0.5, 0.75, 1]
     .map((ratio) => {
       const points = axes
@@ -77,7 +78,10 @@ export function radarMarkup(radar) {
     .join('');
 
   const spokes = axes
-    .map((axis) => `<line x1="${center.x}" y1="${center.y}" x2="${axis.outer.x}" y2="${axis.outer.y}" class="radar-spoke" />`)
+    .map(
+      (axis) =>
+        `<line x1="${center.x}" y1="${center.y}" x2="${axis.outer.x}" y2="${axis.outer.y}" class="radar-spoke" />`,
+    )
     .join('');
 
   const dots = axes

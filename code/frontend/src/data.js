@@ -16,9 +16,30 @@ export const DIMS = [
 ];
 
 export const TIERS = [
-  { id: 'quick', name: '快测', minutes: 5, tasks: ['ps', 'vf'], available: false, note: 'L-01 未交付' },
-  { id: 'standard', name: '标准', minutes: 13, tasks: ['vc', 'ps', 'sv', 'am'], available: true, note: '' },
-  { id: 'deep', name: '深度', minutes: 28, tasks: ['vc', 'nc', 'ir', 'ps', 'sv', 'am', 'ni', 'vf'], available: false, note: 'L-01 未交付' },
+  {
+    id: 'quick',
+    name: '快测',
+    minutes: 5,
+    tasks: ['ps', 'vf'],
+    available: false,
+    note: 'L-01 未交付',
+  },
+  {
+    id: 'standard',
+    name: '标准',
+    minutes: 13,
+    tasks: ['vc', 'ps', 'sv', 'am'],
+    available: true,
+    note: '',
+  },
+  {
+    id: 'deep',
+    name: '深度',
+    minutes: 28,
+    tasks: ['vc', 'nc', 'ir', 'ps', 'sv', 'am', 'ni', 'vf'],
+    available: false,
+    note: 'L-01 未交付',
+  },
 ];
 
 /** L-01 只交付标准档的 4 项；顺序即测评顺序。 */
@@ -26,8 +47,18 @@ export const STANDARD_ORDER = ['vc', 'ps', 'sv', 'am'];
 
 export const TASK_META = {
   vc: { id: 'vc', name: '言语理解', minutes: 2, desc: '6 道四选一：近义词、反义词、句子理解。' },
-  ps: { id: 'ps', name: '知觉速度', minutes: 1, desc: '45 秒内从四个选项中选出与目标完全相同的符号组。' },
-  sv: { id: 'sv', name: '空间视觉化', minutes: 2, desc: '8 道三乘三图案旋转题，选出旋转后的正确图案。' },
+  ps: {
+    id: 'ps',
+    name: '知觉速度',
+    minutes: 1,
+    desc: '45 秒内从四个选项中选出与目标完全相同的符号组。',
+  },
+  sv: {
+    id: 'sv',
+    name: '空间视觉化',
+    minutes: 2,
+    desc: '8 道三乘三图案旋转题，选出旋转后的正确图案。',
+  },
   am: { id: 'am', name: '联想记忆', minutes: 3, desc: '先记 12 组词对，再做 16 题配对再认。' },
 };
 
@@ -35,17 +66,34 @@ export const TASK_META = {
 export const VC_ITEMS = [
   { q: '「谨慎」最接近的意思是：', options: ['慎重', '迟疑', '胆小', '缓慢'], answer: 0 },
   { q: '「冗长」的反义词是：', options: ['繁琐', '简练', '重复', '沉闷'], answer: 1 },
-  { q: '「尽管他已尽力，结果仍不理想。」这句话的意思是：', options: ['他没有尽力', '努力了但没达到预期', '结果很好', '他放弃了'], answer: 1 },
+  {
+    q: '「尽管他已尽力，结果仍不理想。」这句话的意思是：',
+    options: ['他没有尽力', '努力了但没达到预期', '结果很好', '他放弃了'],
+    answer: 1,
+  },
   { q: '「显著」最接近的意思是：', options: ['明显', '特殊', '偶然', '轻微'], answer: 0 },
   { q: '「稀疏」的反义词是：', options: ['分散', '密集', '空旷', '薄弱'], answer: 1 },
-  { q: '「这项新规____了此前的漏洞。」最合适的词是：', options: ['弥补', '掩埋', '替换', '忽略'], answer: 0 },
+  {
+    q: '「这项新规____了此前的漏洞。」最合适的词是：',
+    options: ['弥补', '掩埋', '替换', '忽略'],
+    answer: 0,
+  },
 ];
 
 /** 联想记忆词对：学习阶段使用。 */
 export const AM_PAIRS = [
-  ['河流', '铅笔'], ['月亮', '书包'], ['铁钉', '苹果'], ['窗户', '青蛙'],
-  ['纸张', '雨水'], ['镜子', '竹子'], ['骆驼', '毛巾'], ['钟表', '沙漠'],
-  ['石头', '帽子'], ['灯笼', '面包'], ['针线', '山谷'], ['勺子', '闪电'],
+  ['河流', '铅笔'],
+  ['月亮', '书包'],
+  ['铁钉', '苹果'],
+  ['窗户', '青蛙'],
+  ['纸张', '雨水'],
+  ['镜子', '竹子'],
+  ['骆驼', '毛巾'],
+  ['钟表', '沙漠'],
+  ['石头', '帽子'],
+  ['灯笼', '面包'],
+  ['针线', '山谷'],
+  ['勺子', '闪电'],
 ];
 
 /** 空间视觉化基础图案：3×3，1 表示实心块。

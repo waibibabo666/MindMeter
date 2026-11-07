@@ -40,12 +40,16 @@ export function mount(parent, node) {
 
 /** 统一按钮：移动端最小 44×44 触控区由 CSS 保证。 */
 export function button(label, onClick, options = {}) {
-  return el('button', {
-    class: `btn ${options.variant || ''}`.trim(),
-    type: 'button',
-    onclick: onClick,
-    'aria-label': options.ariaLabel || null,
-  }, label);
+  return el(
+    'button',
+    {
+      class: `btn ${options.variant || ''}`.trim(),
+      type: 'button',
+      onclick: onClick,
+      'aria-label': options.ariaLabel || null,
+    },
+    label,
+  );
 }
 
 /** 秒级倒计时；返回值用于清理。 */

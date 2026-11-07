@@ -19,7 +19,7 @@ function rotateOnce(grid) {
 }
 
 export function rotate(grid, degrees) {
-  const quarter = (((Math.round(degrees / 90) % 4) + 4) % 4);
+  const quarter = ((Math.round(degrees / 90) % 4) + 4) % 4;
   let out = grid.slice();
   for (let i = 0; i < quarter; i += 1) out = rotateOnce(out);
   return out;
@@ -43,13 +43,16 @@ export function buildItem(base, random) {
   const distractors = [];
 
   // 先试所有旋转与镜像；对称图案会退化，因此还需要兜底变体。
-  const candidates = shuffle([
-    rotate(base, 0),
-    rotate(base, 180),
-    rotate(base, 270),
-    mirror(base),
-    mirror(rotate(base, 180)),
-  ], random);
+  const candidates = shuffle(
+    [
+      rotate(base, 0),
+      rotate(base, 180),
+      rotate(base, 270),
+      mirror(base),
+      mirror(rotate(base, 180)),
+    ],
+    random,
+  );
 
   for (const candidate of candidates) {
     if (distractors.length === 3) break;
@@ -126,24 +129,28 @@ export const svTask = {
       const item = items[index];
       shownAt = now();
 
-      const options = item.options.map((grid, i) => button(
-        '',
-        () => choose(i),
-        { variant: 'option grid-option', ariaLabel: `选项 ${i + 1}` },
-      ));
+      const options = item.options.map((grid, i) =>
+        button('', () => choose(i), { variant: 'option grid-option', ariaLabel: `选项 ${i + 1}` }),
+      );
       options.forEach((node, i) => {
         node.appendChild(patternNode(item.options[i], `选项 ${i + 1}`));
         node.appendChild(el('span', { class: 'opt-index', text: String(i + 1) }));
       });
 
       clear(root);
-      root.appendChild(el('div', { class: 'task-head' }, [
-        el('span', { class: 'kicker', text: `第 ${index + 1} / ${items.length} 题` }),
-        el('span', { class: 'muted', text: '按键 1–4 也可作答' }),
-      ]));
-      root.appendChild(el('h2', { class: 'task-question', text: '把上面的图案顺时针旋转 90°，是下面哪一个？' }));
+      root.appendChild(
+        el('div', { class: 'task-head' }, [
+          el('span', { class: 'kicker', text: `第 ${index + 1} / ${items.length} 题` }),
+          el('span', { class: 'muted', text: '按键 1–4 也可作答' }),
+        ]),
+      );
+      root.appendChild(
+        el('h2', { class: 'task-question', text: '把上面的图案顺时针旋转 90°，是下面哪一个？' }),
+      );
       root.appendChild(el('div', { class: 'sv-base' }, [patternNode(item.base, '原始图案')]));
-      root.appendChild(el('div', { class: 'options options-grid', role: 'group', 'aria-label': '选项' }, options));
+      root.appendChild(
+        el('div', { class: 'options options-grid', role: 'group', 'aria-label': '选项' }, options),
+      );
 
       cleanupKeys();
       const onKey = (event) => {

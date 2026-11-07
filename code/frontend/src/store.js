@@ -61,9 +61,10 @@ export function readState() {
   try {
     const raw = store.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    memory = parsed && parsed.version === STATE_VERSION
-      ? Object.assign(defaultState(), parsed)
-      : defaultState();
+    memory =
+      parsed && parsed.version === STATE_VERSION
+        ? Object.assign(defaultState(), parsed)
+        : defaultState();
     return memory;
   } catch (error) {
     memory = defaultState();
