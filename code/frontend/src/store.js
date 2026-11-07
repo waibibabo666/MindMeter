@@ -38,7 +38,8 @@ function detectStorage() {
     store.setItem(probe, '1');
     store.removeItem(probe);
     return store;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     return null;
   }
 }
@@ -66,7 +67,8 @@ export function readState() {
         ? Object.assign(defaultState(), parsed)
         : defaultState();
     return memory;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     memory = defaultState();
     return memory;
   }
@@ -79,7 +81,8 @@ export function writeState(next) {
   try {
     store.setItem(STORAGE_KEY, JSON.stringify(next));
     return true;
-  } catch (error) {
+  } catch {
+    // localStorage 不可用（隐私模式/配额满）时静默降级
     return false;
   }
 }

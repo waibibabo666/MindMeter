@@ -1,11 +1,14 @@
 import js from '@eslint/js';
 import globals from 'globals';
+import sonarjs from 'eslint-plugin-sonarjs';
 
 export default [
   {
     ignores: ['node_modules/**', 'docs/**', 'coverage/**'],
   },
   js.configs.recommended,
+  // SonarQube for IDE 内置的 SonarJS 规则：本地 lint 与编辑器里看到的保持一致。
+  sonarjs.configs.recommended,
   {
     files: ['scripts/**/*.js'],
     languageOptions: {

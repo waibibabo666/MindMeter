@@ -28,7 +28,8 @@ export function isConfigured(settings) {
 export function normalizeEndpoint(endpoint) {
   const value = String(endpoint || '').trim();
   if (!value) return '';
-  const trimmed = value.replace(/\/+$/, '');
+  let trimmed = value;
+  while (trimmed.endsWith('/')) trimmed = trimmed.slice(0, -1);
   if (/\/chat\/completions$/i.test(trimmed)) return trimmed;
   return `${trimmed}/chat/completions`;
 }
@@ -103,7 +104,7 @@ function assertResponse(response) {
 async function readJson(response) {
   try {
     return await response.json();
-  } catch (error) {
+  } catch {
     throw new LlmError('bad_response', '响应不是合法 JSON');
   }
 }

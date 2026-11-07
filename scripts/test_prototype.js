@@ -94,6 +94,8 @@ function createApp({ asr = false } = {}) {
     },
   };
 
+  // 这里的作用就是运行仓库内的原型脚本，不存在外部输入。
+  // eslint-disable-next-line sonarjs/code-eval
   const factory = new Function(
     'document',
     'window',
@@ -107,6 +109,7 @@ return {
 };`,
   );
 
+  // eslint-disable-next-line sonarjs/code-eval -- factory 由上面的原型脚本构造，仅用于测试
   const api = factory(document, window, storage, () => true);
   return { api, document, elements, storage };
 }
@@ -129,6 +132,8 @@ function test(name, fn) {
 }
 
 test('script compiles', () => {
+  // 编译检查本身就是目的，实例不需要再使用。
+  // eslint-disable-next-line sonarjs/constructor-for-side-effects, sonarjs/code-eval
   new vm.Script(script, { filename: HTML_PATH });
 });
 
