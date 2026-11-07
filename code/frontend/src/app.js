@@ -17,6 +17,7 @@ import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
+import { renderMemory } from './pages/memory.js';
 
 const PAGES = {
   '/': renderHome,
@@ -26,6 +27,7 @@ const PAGES = {
   '/report': renderReport,
   '/settings': renderSettings,
   '/trend': renderTrend,
+  '/memory': renderMemory,
 };
 
 const root = document.getElementById('app');

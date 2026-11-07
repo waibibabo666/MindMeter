@@ -42,7 +42,7 @@ function reportRows(scored, results) {
       el('td', { class: 'score-cell', text: has ? String(score) : '未测' }),
       el('td', {
         class: 'muted',
-        text: has ? describe(dim.id, payload && payload.metrics) : '本档未包含',
+        text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
       }),
     ]);
   });
@@ -144,7 +144,7 @@ export function renderReport(root, ctx) {
 function metricsOf(results) {
   const out = {};
   for (const [id, payload] of Object.entries(results || {})) {
-    if (payload && payload.metrics) out[id] = payload.metrics;
+    if (payload?.metrics) out[id] = payload.metrics;
   }
   return out;
 }
