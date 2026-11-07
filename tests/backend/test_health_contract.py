@@ -2,15 +2,16 @@
 
 Skipped until `code/backend/app/main.py` exists.
 """
+# pylint: disable=missing-function-docstring
 from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("app.main", reason="backend not scaffolded yet")
+app_module = pytest.importorskip("app.main", reason="backend not scaffolded yet")
+app = app_module.app
 
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.main import app  # noqa: E402
+testclient_module = pytest.importorskip("fastapi.testclient", reason="fastapi not installed")
+TestClient = testclient_module.TestClient
 
 
 def test_health_endpoint():

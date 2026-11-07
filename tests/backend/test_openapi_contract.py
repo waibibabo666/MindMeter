@@ -3,15 +3,15 @@
 Skipped until `code/backend/app/main.py` exists. Path parameter names are
 normalized so `{assessment_id}` and `{id}` both match `{}`.
 """
+# pylint: disable=missing-function-docstring
 from __future__ import annotations
 
 import re
 
 import pytest
 
-pytest.importorskip("app.main", reason="backend not scaffolded yet")
-
-from app.main import app  # noqa: E402
+app_module = pytest.importorskip("app.main", reason="backend not scaffolded yet")
+app = app_module.app
 
 PARAM_RE = re.compile(r"\{[^}]+\}")
 

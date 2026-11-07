@@ -214,4 +214,3 @@ iqr = P75 − P25
 **统计方法**
 
 - Stanislaw, H., & Todorov, N. (1999). Calculation of signal detection theory measures. *Behavior Research Methods, Instruments, & Computers*, 31(1), 137–149.
-
