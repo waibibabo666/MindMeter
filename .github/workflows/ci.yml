@@ -37,6 +37,9 @@ jobs:
       - name: Format check scripts + frontend
         run: npm run format:check
 
+      - name: Complexity report (non-blocking)
+        run: npm run complexity
+
       - name: Run prototype checks
         run: npm test
 

@@ -5,6 +5,7 @@
 | 目录/类型 | 范围 | 现状 |
 | --- | --- | --- |
 | `npm run lint` / `npm run format:check` | ESLint + Prettier（scripts + frontend） | 可运行 |
+| `npm run complexity` | 圈复杂度/函数长度/嵌套/参数报告 | 可运行（warn） |
 | `scripts/check_docs.py` | 必需文件/目录、冲突标记、相对链接、重复文件、提交文件 | 可运行 |
 | `scripts/check_secrets.py` | 疑似 Key/token/私钥/带密码 DB URL | 可运行 |
 | `scripts/test_prototype.js` | L1 原型 JS 语法、DOM id、三档流程、无 ASR 分支、清除数据 | 可运行 |
