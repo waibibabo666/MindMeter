@@ -4,7 +4,9 @@
   "private": true,
   "description": "MindMeter M1: local-first assessment + user-provided LLM API",
   "scripts": {
-    "test": "node scripts/test_prototype.js",
+    "test": "npm run test:prototype && npm run test:app-shell",
+    "test:prototype": "node scripts/test_prototype.js",
+    "test:app-shell": "node scripts/test_app_shell.js",
     "lint": "eslint scripts",
     "format": "prettier --write \"scripts/**/*.js\" \"*.{json,mjs}\"",
     "format:check": "prettier --check \"scripts/**/*.js\" \"*.{json,mjs}\"",

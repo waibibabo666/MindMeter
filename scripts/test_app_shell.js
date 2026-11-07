@@ -78,7 +78,12 @@ async function main() {
     const html = read('index.html');
     assert(/<meta name="viewport"/.test(html), 'viewport meta missing');
     assert(/id="app"/.test(html), '#app mount point missing');
-    assert(/type="module"[^>]*src="\.\/src\/app\.js"|src="\.\/src\/app\.js"[^>]*type="module"/.test(html), 'module entry missing');
+    assert(
+      /type="module"[^>]*src="\.\/src\/app\.js"|src="\.\/src\/app\.js"[^>]*type="module"/.test(
+        html,
+      ),
+      'module entry missing',
+    );
     assert(/skip-link/.test(html), 'skip link missing');
   });
 
@@ -92,10 +97,16 @@ async function main() {
   });
 
   test('标准档 4 项且顺序固定', () => {
-    assert(JSON.stringify(data.STANDARD_ORDER) === JSON.stringify(['vc', 'ps', 'sv', 'am']), 'unexpected standard order');
+    assert(
+      JSON.stringify(data.STANDARD_ORDER) === JSON.stringify(['vc', 'ps', 'sv', 'am']),
+      'unexpected standard order',
+    );
     const standard = data.TIERS.find((t) => t.id === 'standard');
     assert(standard && standard.available === true, 'standard tier must be available');
-    assert(JSON.stringify(standard.tasks) === JSON.stringify(data.STANDARD_ORDER), 'tier tasks must match order');
+    assert(
+      JSON.stringify(standard.tasks) === JSON.stringify(data.STANDARD_ORDER),
+      'tier tasks must match order',
+    );
     for (const id of ['quick', 'deep']) {
       const tier = data.TIERS.find((t) => t.id === id);
       assert(tier && tier.available === false, `${id} must stay unavailable in L-01`);
@@ -120,7 +131,10 @@ async function main() {
   test('旋转：四次 90° 回到原图，180° 两次等价', () => {
     const base = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     assert(JSON.stringify(sv.rotate(base, 360)) === JSON.stringify(base), '360 should be identity');
-    assert(JSON.stringify(sv.rotate(sv.rotate(base, 180), 180)) === JSON.stringify(base), '180x2 should be identity');
+    assert(
+      JSON.stringify(sv.rotate(sv.rotate(base, 180), 180)) === JSON.stringify(base),
+      '180x2 should be identity',
+    );
     const once = sv.rotate(base, 90);
     assert(JSON.stringify(sv.rotate(base, 0)) !== JSON.stringify(once) || true, 'sanity');
   });
@@ -165,7 +179,10 @@ async function main() {
 
     const origin = new Set(data.AM_PAIRS.map(([l, r]) => `${l}|${r}`));
     for (const trial of trials.filter((t) => !t.isOld)) {
-      assert(!origin.has(`${trial.left}|${trial.right}`), `foil equals an original pair: ${trial.left}-${trial.right}`);
+      assert(
+        !origin.has(`${trial.left}|${trial.right}`),
+        `foil equals an original pair: ${trial.left}-${trial.right}`,
+      );
     }
 
     const summary = am.summarizeAm([
@@ -192,9 +209,15 @@ async function main() {
   test('状态读写与损坏数据回退', () => {
     const fake = {
       data: new Map(),
-      getItem(k) { return this.data.has(k) ? this.data.get(k) : null; },
-      setItem(k, v) { this.data.set(k, String(v)); },
-      removeItem(k) { this.data.delete(k); },
+      getItem(k) {
+        return this.data.has(k) ? this.data.get(k) : null;
+      },
+      setItem(k, v) {
+        this.data.set(k, String(v));
+      },
+      removeItem(k) {
+        this.data.delete(k);
+      },
     };
     store.__setStorageForTests(fake);
     const fresh = store.readState();
