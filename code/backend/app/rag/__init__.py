@@ -10,6 +10,7 @@ import hashlib
 import math
 import os
 import re
+import threading
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,9 +25,42 @@ BM25_K1 = 1.2
 BM25_B = 0.75
 EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 NOISE = set("的了是 吗呢啊我你会 有在和与就都".replace(" ", ""))
+# 问句里的通用成分，几乎每条 chunk 都含，留着它们会让任何问题都"检索命中"。
+QUESTION_STOP = {
+    "为什",
+    "什么",
+    "怎么",
+    "么样",
+    "如何",
+    "是不",
+    "不是",
+    "我的",
+    "我们",
+    "你们",
+    "可以",
+    "能否",
+    "是否",
+    "哪些",
+    "这个",
+    "那个",
+    "时候",
+    "现在",
+    "一直",
+    "总是",
+    "感觉",
+    "觉得",
+    "知道",
+    "告诉",
+    "一下",
+    "帮我",
+}
+# 命中率过低就不要硬凑引用：低于门槛按"知识库没有依据"处理。
+RELATIVE_FLOOR = 0.32
+VECTOR_MIN_SCORE = 0.35
 
 _model = None
 _model_failed = False
+_model_holder: dict[str, object] = {}
 
 
 def _prepare_embedding_env() -> None:
@@ -43,18 +77,30 @@ def _prepare_embedding_env() -> None:
             os.environ[name] = cleaned
 
 
+def _load_model() -> None:
+    from fastembed import TextEmbedding
+
+    _model_holder["model"] = TextEmbedding(model_name=EMBEDDING_MODEL)
+
+
 def _get_model():
+    """Load the embedding model with a hard deadline.
+
+    以前是同步加载：模型文件缺失时会联网下载，首个问答要等 40 s 甚至更久。
+    现在超时就直接回退 BM25，后台线程失败也不影响回答。
+    """
     global _model, _model_failed
     if _model is not None or _model_failed:
         return _model
     _prepare_embedding_env()
-    try:
-        from fastembed import TextEmbedding
-
-        _model = TextEmbedding(model_name=EMBEDDING_MODEL)
-    except Exception:
+    timeout = float(getattr(settings, "rag_load_timeout_s", 6.0) or 6.0)
+    worker = threading.Thread(target=_load_model, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive() or "model" not in _model_holder:
         _model_failed = True
-        _model = None
+        return None
+    _model = _model_holder["model"]
     return _model
 
 
@@ -89,7 +135,15 @@ def _bm25(rows: list[KBChunk], query: str, limit: int) -> list[dict]:
     if not docs:
         return []
     avgdl = total_len / len(docs)
-    terms = list(dict.fromkeys(tokenize(query)))
+    total = len(docs)
+    raw_terms = list(dict.fromkeys(tokenize(query)))
+    # 去掉"为什么/怎么/我的"这类通用成分和到处都出现的词，否则任何问题都能
+    # 蹭到几条引用，"知识库没有依据"这个分支永远走不到。
+    terms = [
+        term
+        for term in raw_terms
+        if term not in QUESTION_STOP and df.get(term, 0) <= 0.5 * total
+    ]
     if not terms:
         return []
 
@@ -163,6 +217,21 @@ def _rrf(*rankings: list[dict], limit: int) -> list[dict]:
     return out
 
 
+def _relevant(items: list[dict]) -> list[dict]:
+    """Keep only hits that clear the absolute and relative relevance floor."""
+    if not items:
+        return []
+    best = float(items[0].get("score") or 0)
+    floor = max(float(settings.rag_min_score or 0), best * RELATIVE_FLOOR)
+    if best < floor:
+        return []
+    return [item for item in items if float(item.get("score") or 0) >= floor]
+
+
+def _relevant_semantic(items: list[dict]) -> list[dict]:
+    return [item for item in items if float(item.get("score") or 0) >= VECTOR_MIN_SCORE]
+
+
 def retrieve(db: Session, query: str, limit: int = 3) -> list[dict]:
     query = str(query or "").strip()
     if not query:
@@ -174,11 +243,11 @@ def retrieve(db: Session, query: str, limit: int = 3) -> list[dict]:
             .order_by(KBChunk.id)
         ).all()
     )
-    lexical = _bm25(rows, query, max(limit, 20))
+    lexical = _relevant(_bm25(rows, query, max(limit, 20)))
     mode = (settings.rag_mode or "auto").lower()
     if mode == "keyword":
         return lexical[:limit]
-    semantic = _vector_search(db, query, max(limit, 20))
+    semantic = _relevant_semantic(_vector_search(db, query, max(limit, 20)))
     if not semantic:
         return lexical[:limit]
     return _rrf(semantic, lexical, limit=limit)

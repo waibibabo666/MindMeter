@@ -10,7 +10,6 @@ import re
 from contextvars import ContextVar
 from typing import Any, TypedDict
 
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,6 +24,7 @@ INTENT = {
     "CLARIFY": "clarify",
     "UNRELATED": "unrelated",
     "BOUNDARY": "boundary",
+    "ADVICE": "advice",
     "CRISIS": "crisis",
 }
 
@@ -44,6 +44,28 @@ BOUNDARY_WORDS = [
     "用药",
     "治疗",
     "有病",
+]
+# 金融 / 法律类同样属于"不能给建议"的范围，此前只拦了医疗，导致这类问题
+# 会直接落到普通解释流程，返回一段无关的指标复述。
+ADVICE_WORDS = [
+    "投资",
+    "理财",
+    "基金",
+    "股票",
+    "炒股",
+    "期货",
+    "彩票",
+    "贷款",
+    "借钱",
+    "买房",
+    "保险",
+    "起诉",
+    "律师",
+    "法律",
+    "合同",
+    "官司",
+    "判刑",
+    "维权",
 ]
 DIMENSION_WORDS = [
     "言语理解",
@@ -105,6 +127,7 @@ FIXED_REPLY = {
     INTENT["CLARIFY"]: "你指的是哪一项？可以说出维度名，比如「联想记忆」，我再解释。",
     INTENT["UNRELATED"]: "我只解释本次测评的结果。你可以问某个维度为什么低、或者下一步怎么练。",
     INTENT["BOUNDARY"]: "我不能判断疾病、也不能给用药或治疗建议。如果你担心自己的状态，请咨询医生或学校心理中心。",
+    INTENT["ADVICE"]: "我不能提供投资、法律或医疗方面的建议。这类问题请咨询持牌的专业人士，比如医生、律师或理财顾问。",
     INTENT["CRISIS"]: "听到你这么说我很在意。请先联系身边的人，或拨打全国统一心理援助热线 12356。如果你现在有危险，请立即拨打 120。",
 }
 
@@ -188,6 +211,9 @@ def classify(question: str) -> dict:
     matched = hits(text, BOUNDARY_WORDS)
     if matched:
         return {"intent": INTENT["BOUNDARY"], "matched": matched, "reason": "medical-word"}
+    matched = hits(text, ADVICE_WORDS)
+    if matched:
+        return {"intent": INTENT["ADVICE"], "matched": matched, "reason": "advice-word"}
     if unrelated and not domain:
         return {"intent": INTENT["UNRELATED"], "matched": unrelated, "reason": "off-topic"}
     if not domain and not explain:
@@ -416,7 +442,9 @@ def _build_graph():
     builder.add_edge("generate", "validate")
     builder.add_conditional_edges("validate", _after_validate, {"end": END, "fixed": "fixed"})
     builder.add_edge("fixed", END)
-    return builder.compile(checkpointer=MemorySaver())
+    # 不用 MemorySaver：图是单次问答，checkpointer 会按 thread_id 复用上一次的
+    # state，导致第 2 条消息起 text 被上一条回答覆盖（兜底话术失效）。
+    return builder.compile()
 
 
 _GRAPH = _build_graph()
@@ -431,7 +459,7 @@ def answer(db: Session, question: str, facts: dict, history: list, memory: dict 
     }
     token = _DB.set(db)
     try:
-        result = _GRAPH.invoke(state, {"configurable": {"thread_id": "local"}})
+        result = _GRAPH.invoke(state)
     finally:
         _DB.reset(token)
     return {

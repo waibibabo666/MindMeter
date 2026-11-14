@@ -372,6 +372,10 @@ body.focus #app {
   line-height: 1.75;
   margin-top: 14px;
 }
+.chat-status {
+  min-height: 18px;
+  margin-top: 6px;
+}
 .center {
   text-align: center;
 }

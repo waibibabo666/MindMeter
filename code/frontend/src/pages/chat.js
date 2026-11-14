@@ -98,19 +98,29 @@ export function renderChat(root, ctx, options = {}) {
     autoGrow();
     send.disabled = true;
     send.textContent = '…';
+    // 等待期间给一行可见状态：只有按钮变"…"时，用户不知道是在算还是卡住了。
+    const status = el('p', {
+      class: 'tiny chat-status',
+      role: 'status',
+      text: '正在整理本次指标…',
+    });
+    input.parentElement.after(status);
 
+    let failed = false;
     try {
       const result = await api.post('/chat', { question });
       cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
       // eslint-disable-next-line sonarjs/no-ignored-exceptions
     } catch (error) {
-      // The page stays usable; the toast is the only recovery action here.
-      ctx.toast('本地服务不可用，消息没有发送');
+      failed = true;
+      // 失败时把问题放回输入框，用户可以直接重发，不用重新打字。
+      ctx.toast('本地服务不可用，消息没有发送，可以直接重发');
     } finally {
       send.disabled = false;
       send.textContent = '发送';
       root.replaceChildren();
-      renderChat(root, ctx, { restored: true });
+      // 重新渲染会重建 textarea，草稿要一起带回去。
+      renderChat(root, ctx, { restored: true, draft: failed ? question : '' });
     }
   }
 
@@ -143,6 +153,12 @@ export function renderChat(root, ctx, options = {}) {
       }),
     ]),
   );
+
+  // 发送失败后把原问题放回输入框（重新渲染会重建 textarea）。
+  if (opts.draft) {
+    input.value = opts.draft;
+    autoGrow();
+  }
 
   // 发完消息后回到输入框、并把最新一条滚进视野；首次进入有记录时也滚到底部。
   if (restored || messages.length > 0) {

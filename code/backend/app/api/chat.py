@@ -15,6 +15,7 @@ from ..models import (
     MemoryProfile,
     MemorySummary,
 )
+from ..privacy import redact_pii
 from ..serializers import assessment_to_session, memory_payload
 from ..timeutil import parse_dt
 
@@ -113,7 +114,7 @@ def messages(db: Session = Depends(get_db)):
 @router.post("/chat/messages")
 def append_message(payload: dict = Body(...), db: Session = Depends(get_db)):
     role = "assistant" if payload.get("role") == "assistant" else "user"
-    content = str(payload.get("content") or "")
+    content = redact_pii(payload.get("content"))
     if not content:
         raise HTTPException(400, "empty_message")
     row = _append(
@@ -130,7 +131,9 @@ def append_message(payload: dict = Body(...), db: Session = Depends(get_db)):
 
 @router.post("/chat")
 def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
-    question = str(payload.get("question") or "").strip()
+    # 手机号 / 身份证号在入库、回显、导出前统一脱敏，避免随截图或导出文件外泄。
+    raw_question = str(payload.get("question") or "").strip()
+    question = redact_pii(raw_question)
     if not question:
         raise HTTPException(400, "empty_question")
     facts, assessment_id = _facts(db)

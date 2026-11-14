@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     pg_password: str = ""
     llm_timeout_s: float = 45.0
     rag_mode: str = "auto"  # auto | vector | keyword
+    # 加载本地 embedding 模型最多等多久；超时直接回退 BM25，避免首个问答卡住。
+    rag_load_timeout_s: float = 6.0
+    # 检索结果的相关性门槛：低于该分数视为"知识库没有依据"。
+    rag_min_score: float = 3.0
 
     @property
     def is_configured(self) -> bool:
