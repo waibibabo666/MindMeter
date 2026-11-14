@@ -18,6 +18,7 @@ import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
 import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
+import { renderIntake } from './pages/intake.js';
 import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
@@ -59,6 +60,7 @@ const PAGES = {
   '/': renderHome,
   '/tier': renderTier,
   '/consent': renderConsent,
+  '/intake': renderIntake,
   '/task': renderTask,
   '/report': renderReport,
   '/settings': renderSettings,
@@ -155,7 +157,7 @@ const ctx = {
   log,
   pickTier: (tier) => {
     setState(() => ({ tier }));
-    router.go('/consent');
+    router.go('/intake');
   },
   startAssessment: () => {
     const current = readState();

@@ -10,6 +10,7 @@ export const ROUTES = [
   '/',
   '/tier',
   '/consent',
+  '/intake',
   '/task',
   '/report',
   '/settings',

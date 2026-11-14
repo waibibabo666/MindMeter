@@ -4,6 +4,7 @@ import { readSessions, readSettings } from '../storage.js';
 import { DIMS, LIMITS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { ciHalfWidth, specFor, timedCi } from '../scoring/levels.js';
+import { ageBand, ageNote, readProfile, stateWarning } from '../profile.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
 
 const STATUS = {
@@ -128,12 +129,33 @@ function reportActions(ctx) {
   ]);
 }
 
+/** 状态与年龄提示：只解释结果，不改分数。 */
+function contextCard() {
+  const profile = readProfile();
+  const warn = stateWarning(profile);
+  const note = ageNote(profile.age);
+  if (!warn && !note && !profile.age) return null;
+
+  const bits = [];
+  if (profile.age) bits.push(`${profile.age} 岁（${ageBand(profile.age)}）`);
+  if (profile.sleep) bits.push('睡眠已记录');
+
+  return el('div', { class: `card${warn ? ' card-warn' : ''}` }, [
+    el('h2', { class: 'card-title', text: '解读提示' }),
+    bits.length ? el('p', { class: 'tiny', text: bits.join(' · ') }) : null,
+    warn ? el('p', { class: 'muted', text: warn }) : null,
+    note ? el('p', { class: 'muted', text: note }) : null,
+    el('p', { class: 'tiny', text: '这些信息只用于解释结果，不参与计分。' }),
+  ]);
+}
+
 function fullReport(ctx, results, scored, radar, assessmentId, level) {
   return [
     el('p', {
       class: 'lead',
       text: `8 个维度中测了 ${radar.measuredCount} 个，其余 ${radar.total - radar.measuredCount} 个显示「未测」。不设总分，也不做百分位。`,
     }),
+    contextCard(),
     radarCard(radar),
     scoreTable(reportRows(scored, results, level)),
     renderAiCard(ctx, assessmentId),
