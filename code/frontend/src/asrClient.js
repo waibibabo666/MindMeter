@@ -4,7 +4,7 @@
  * MediaRecorder 输出的是 webm/opus，而 Vosk 需要 16kHz 单声道 PCM。
  * 这里用 AudioContext 解码后再降采样、编码成 WAV，全程不出本机。
  */
-import { api } from '../api.js';
+import { api } from './api.js';
 
 const TARGET_RATE = 16000;
 
