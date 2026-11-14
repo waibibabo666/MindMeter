@@ -18,15 +18,22 @@ function shuffle(list, random) {
   return out;
 }
 
-/** 干扰项与答案互不相同且非负。 */
+/**
+ * 干扰项与答案互不相同、非负，且个位数与答案一致。
+ * 这样只看「末位数字」无法锁定答案，必须把整道题算出来。
+ */
 export function buildOptions(answer, random = Math.random) {
   const set = new Set([answer]);
-  let guard = 0;
-  while (set.size < 4 && guard < 200) {
-    guard += 1;
-    const delta = (Math.floor(random() * 9) + 1) * (random() < 0.5 ? -1 : 1);
-    const value = answer + delta;
+  const steps = shuffle([10, 20, 30, -10, -20, -30], random);
+  for (const step of steps) {
+    if (set.size >= 4) break;
+    const value = answer + step;
     if (value >= 0 && value !== answer) set.add(value);
+  }
+  // 答案较小时负向的 10 倍数会变成负数，改用更大的正向倍数补足 4 个。
+  for (let k = 4; set.size < 4 && k <= 200; k += 1) {
+    const value = answer + k * 10;
+    if (value >= 0) set.add(value);
   }
   return shuffle([...set], random);
 }

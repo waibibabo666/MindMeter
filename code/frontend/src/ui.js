@@ -1,4 +1,5 @@
 /** 极小 DOM 工具，避免 innerHTML 拼接。 */
+import { MIRROR_SMALL } from './icons.js';
 
 function applyAttr(node, key, value) {
   if (key === 'class') node.className = value;
@@ -61,14 +62,15 @@ export function button(label, onClick, options = {}) {
 }
 
 /**
- * 空状态：一句标题 + 一句解释 + 可选主行动 + 可选提示。
- * 统一各页「还没有…」的写法，避免只剩一行灰字。
+ * 空状态：品牌小图 + 一句标题 + 一句解释 + 可选主行动 + 可选提示。
+ * art 传 false 时不画插画——同一页出现多个空状态时避免插画重复。
  */
-export function emptyState({ title, text, actionLabel, onAction, hint }) {
-  const node = el('div', { class: 'empty-state' }, [
-    el('p', { class: 'empty-state-title', text: title }),
-    el('p', { class: 'muted', text }),
-  ]);
+export function emptyState({ title, text, actionLabel, onAction, hint, art = true }) {
+  const children = [];
+  if (art) children.push(el('div', { class: 'empty-art', html: MIRROR_SMALL }));
+  children.push(el('p', { class: 'empty-state-title', text: title }));
+  children.push(el('p', { class: 'muted', text }));
+  const node = el('div', { class: 'empty-state' }, children);
   if (actionLabel && onAction) {
     node.appendChild(button(actionLabel, onAction, { variant: 'primary' }));
   }

@@ -1,4 +1,4 @@
-﻿/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
+/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
    布局：顶栏 56px ＋ 左侧栏 232px ＋ 主区 1fr（≤960）＋ 右上下文栏 340px；
    测评页切专注模式（760px 居中）；360px 为移动端回归底线（单栏）。
    配色：绿色系（品牌 #15803D），提醒用琥珀，不用红色做评判。 */
@@ -19,9 +19,21 @@
   --warn: #b45309;
   --warn-soft: #fffbeb;
   --warn-line: #fcd34d;
+  --ai: #4f46e5;
+  --ai-deep: #4338ca;
+  --ai-soft: #eef2ff;
+  --ai-line: #c7d2fe;
   --good: #15803d;
   --bad: #b42318;
   --radius: 12px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-2: 0 3px 12px rgba(16, 24, 40, 0.08);
+  --shadow-3: 0 6px 18px rgba(16, 24, 40, 0.06);
+  --radius-pill: 999px;
   --tap: 44px;
 }
 
@@ -38,13 +50,42 @@ body {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(1100px 620px at 50% -12%, rgba(34, 197, 94, 0.08), transparent 62%), var(--bg);
+    radial-gradient(1100px 620px at 50% -12%, rgba(34, 197, 94, 0.08), transparent 62%),
+    radial-gradient(rgba(21, 128, 61, 0.05) 1px, transparent 1.4px), var(--bg);
+  background-size:
+    auto,
+    22px 22px,
+    auto;
   color: var(--text);
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 15px;
   line-height: 1.6;
   -webkit-text-size-adjust: 100%;
+}
+
+::selection {
+  background: rgba(34, 197, 94, 0.28);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c6d2c6 transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c6d2c6;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9fb39f;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .skip-link {
@@ -97,7 +138,7 @@ body {
 }
 .brand-sub {
   margin-left: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 2px;
   color: var(--muted);
@@ -107,7 +148,7 @@ body {
   color: var(--accent-deep);
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 3px 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -143,7 +184,7 @@ body {
 .toplink-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .wb {
@@ -173,21 +214,24 @@ body {
   gap: 10px;
   min-height: 40px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   color: #374151;
   text-decoration: none;
   border-left: 3px solid transparent;
 }
-.navitem i {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: #c9cfd6;
+.navitem svg {
+  width: 17px;
+  height: 17px;
   flex: none;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
 }
 .navitem:hover {
   background: var(--card-2);
+}
+.navitem:hover svg {
+  opacity: 0.9;
 }
 .navitem.on {
   background: var(--accent-soft);
@@ -195,14 +239,14 @@ body {
   font-weight: 600;
   border-left-color: var(--accent);
 }
-.navitem.on i {
-  background: var(--accent);
+.navitem.on svg {
+  opacity: 1;
 }
 .sidefoot {
   margin: auto 0 0;
   border-top: 1px dashed var(--line);
   padding-top: 10px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--dim);
   line-height: 1.7;
 }
@@ -277,25 +321,32 @@ body.focus #app {
 }
 
 .hero {
-  font-size: clamp(24px, 3.4vw, 32px);
+  font-size: clamp(26px, 3.6vw, 36px);
   line-height: 1.24;
   letter-spacing: -0.5px;
   margin: 14px 0 8px;
 }
 .hero em {
   font-style: normal;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--accent-deep);
+  background: linear-gradient(
+    180deg,
+    transparent 58%,
+    rgba(34, 197, 94, 0.35) 58%,
+    rgba(34, 197, 94, 0.35) 92%,
+    transparent 92%
+  );
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: 24px;
+  letter-spacing: -0.01em;
   margin: 16px 0 6px;
 }
 .kicker {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   color: var(--accent);
   text-transform: uppercase;
@@ -312,12 +363,12 @@ body.focus #app {
 }
 .tiny {
   color: var(--dim);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.7;
 }
 .disclaimer {
   color: var(--dim);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.75;
   margin-top: 14px;
 }
@@ -331,15 +382,40 @@ body.focus #app {
   border-radius: var(--radius);
   padding: 16px;
   margin: 12px 0;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: var(--shadow-1);
 }
 .card-title {
   font-size: 16px;
   margin: 0 0 6px;
 }
 .main-entry {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--accent-soft) 0%, var(--card) 62%);
   border-color: var(--accent-line);
+}
+
+/* 首页 hero 右侧的「心智镜」装饰图：镜面菱形 + 倒影 + 缓慢旋转的虚线环 */
+.hero-art {
+  position: absolute;
+  right: -34px;
+  top: -26px;
+  width: 250px;
+  height: 250px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.hero-art svg {
+  width: 100%;
+  height: 100%;
+}
+.art-ring {
+  animation: mark-spin 36s linear infinite;
+}
+@media (max-width: 899px) {
+  .hero-art {
+    display: none;
+  }
 }
 
 .btn {
@@ -351,7 +427,7 @@ body.focus #app {
   min-height: var(--tap);
   padding: 12px 16px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   color: var(--text);
   font-family: inherit;
@@ -456,7 +532,7 @@ body.focus #app {
 .consent {
   background: var(--warn-soft);
   border: 1px solid var(--warn-line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
   margin: 10px 0;
   color: var(--warn);
@@ -499,7 +575,7 @@ body.focus #app {
 .bar {
   height: 6px;
   background: var(--card-2);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   margin: 0 0 12px;
 }
@@ -561,7 +637,7 @@ body.focus #app {
   position: absolute;
   right: 8px;
   bottom: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dim);
 }
 
@@ -573,7 +649,7 @@ body.focus #app {
 }
 .cell {
   background: transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 .cell.on {
   background: var(--accent);
@@ -686,18 +762,20 @@ body.focus #app {
   padding: 10px 12px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--text);
   font-family: inherit;
   font-size: 14px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
-.input:focus {
+/* 聚焦只要一层淡光晕，不要「边框 + outline」叠出来的粗框 */
+.input:focus,
+.input:focus-visible {
   outline: none;
   border-color: var(--accent);
-}
-.input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
 }
 
 .status {
@@ -718,18 +796,18 @@ body.focus #app {
 
 .pill {
   display: inline-block;
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 2px 9px;
   color: var(--muted);
   vertical-align: middle;
   background: var(--card);
 }
 .pill.hi {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent-deep);
+  border-color: var(--ai-line);
+  background: var(--ai-soft);
+  color: var(--ai-deep);
 }
 .pill.mid {
   border-color: var(--warn-line);
@@ -753,7 +831,7 @@ body.focus #app {
   padding: 10px 14px;
   background: #1f2328;
   border: 1px solid #1f2328;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: #fff;
   font-size: 12.5px;
   opacity: 0;
@@ -827,7 +905,7 @@ body.focus #app {
 .notice {
   background: var(--warn-soft);
   border: 1px solid var(--warn-line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 10px 12px;
   margin: 10px 0;
   color: var(--warn);
@@ -873,6 +951,7 @@ body.focus #app {
 .chat-ai {
   align-self: flex-start;
   max-width: 92%;
+  border-left: 3px solid var(--ai-line);
 }
 .chat-user p,
 .chat-ai p {
@@ -887,18 +966,21 @@ body.focus #app {
   margin: 8px 0 2px;
 }
 .score-chip {
+  flex: 1 1 110px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 10px;
-  background: var(--card-2);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #fff, var(--card-2));
   font-size: 12px;
   color: var(--muted);
 }
 .score-chip b {
   display: block;
-  font-size: 17px;
+  font-size: 28px;
+  line-height: 1.2;
   color: var(--accent-deep);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /* ---- 动效：让页面更生动（全部尊重 prefers-reduced-motion） ---- */
@@ -909,7 +991,7 @@ body.focus #app {
 }
 .card:hover {
   border-color: var(--accent-line);
-  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-3);
 }
 
 .btn {
@@ -921,7 +1003,7 @@ body.focus #app {
 }
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(16, 24, 40, 0.08);
+  box-shadow: var(--shadow-2);
 }
 .btn:active {
   transform: translateY(0) scale(0.985);
@@ -945,7 +1027,7 @@ body.focus #app {
     box-shadow 0.18s ease;
 }
 .tier-card:hover {
-  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-3);
 }
 
 .score-chip {
@@ -1019,11 +1101,11 @@ body.focus #app {
 .brand-mark {
   animation: mark-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
-/* 菱形标记缓慢自转：外圈保持不动，只转里面的菱形 */
-.brand-mark polygon {
+/* 镜面标记：菱形本体不动，外圈虚线环缓慢自转 */
+.brand-mark .mark-ring {
   transform-box: fill-box;
   transform-origin: center;
-  animation: mark-spin 18s linear infinite;
+  animation: mark-spin 26s linear infinite;
 }
 @keyframes mark-spin {
   to {
@@ -1241,7 +1323,7 @@ body.focus #app {
 }
 .game-card:hover {
   border-color: var(--accent-line);
-  box-shadow: 0 2px 10px rgba(21, 128, 61, 0.08);
+  box-shadow: var(--shadow-2);
 }
 .game-card:focus-visible {
   outline: 2px solid var(--accent);
@@ -1266,9 +1348,9 @@ body.focus #app {
   font-size: 14px;
 }
 .game-badge {
-  font-size: 11px;
+  font-size: 12px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--card-2);
   color: var(--muted);
   white-space: nowrap;
@@ -1325,7 +1407,7 @@ body.focus #app {
   font-size: 20px;
   font-weight: 700;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   color: var(--text);
   cursor: pointer;
@@ -1346,7 +1428,7 @@ body.focus #app {
   aspect-ratio: 1 / 1;
   font-size: 26px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card-2);
   color: var(--muted);
   cursor: pointer;
@@ -1366,7 +1448,7 @@ body.focus #app {
   font-size: 20px;
   letter-spacing: 6px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   color: var(--text);
   width: 180px;
@@ -1436,7 +1518,7 @@ body.focus #app {
   width: 22px;
   height: 22px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--card);
 }
 .quiz-cell.on {
@@ -1447,7 +1529,7 @@ body.focus #app {
   display: inline-flex;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   cursor: pointer;
 }
@@ -1469,7 +1551,7 @@ body.focus #app {
   aspect-ratio: 1 / 1;
   font-size: 26px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card-2);
   color: var(--text);
   cursor: pointer;
@@ -1487,9 +1569,22 @@ body.focus #app {
   gap: 18px;
   flex-wrap: wrap;
 }
+.spot-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.spot-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  opacity: 0.72;
+}
 .game-grid.spot {
   grid-template-columns: repeat(5, 1fr);
-  max-width: 260px;
+  width: 260px;
+  max-width: 100%;
   gap: 6px;
 }
 .spot-cell {
@@ -1497,9 +1592,10 @@ body.focus #app {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   font-size: 24px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--card);
 }
 button.spot-cell {
@@ -1522,7 +1618,7 @@ button.spot-cell {
 .pair-chip {
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--card-2);
   font-size: 13px;
 }
@@ -1541,7 +1637,7 @@ button.spot-cell {
   min-height: var(--tap);
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   color: var(--text);
   cursor: pointer;
@@ -1568,7 +1664,7 @@ button.spot-cell {
 .shop-chip {
   padding: 8px 14px;
   border: 1px solid var(--accent-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-soft);
   font-size: 15px;
 }
@@ -1582,7 +1678,7 @@ button.spot-cell {
   min-height: var(--tap);
   padding: 8px 10px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card);
   color: var(--text);
   cursor: pointer;
@@ -1606,7 +1702,7 @@ button.spot-cell {
 .speech-chip {
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--card-2);
   font-size: 14px;
   color: var(--muted);
@@ -2209,7 +2305,7 @@ button.spot-cell {
 .trend-legend-item i {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   display: inline-block;
 }
 @keyframes trend-draw {
@@ -2226,7 +2322,7 @@ button.spot-cell {
   width: 30px;
   height: 28px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
 }
 .icon-btn:hover {
@@ -2304,4 +2400,166 @@ button.spot-cell {
   width: auto;
   min-width: 128px;
   padding: 8px 18px;
+}
+
+/* ---- 视觉身份升级：大数字 / 分数条 / AI 语义色 / 空状态插画 / 右栏图标行 / 游戏维度色 ---- */
+
+/* 报告分数：大数字 + 迷你分数条 */
+.score-cell {
+  font-size: 13px;
+}
+.score-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.gauge {
+  width: 76px;
+  height: 4px;
+  margin-top: 5px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+.gauge i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  transform-origin: left;
+  animation: gauge-in 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes gauge-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* AI 语义色：靛蓝 = 模型生成（绿色 = 本机数据） */
+.ai-card {
+  border-left: 3px solid var(--ai-line);
+}
+.ai-card .card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-icon {
+  display: inline-flex;
+  color: var(--ai);
+}
+.ai-icon svg {
+  display: block;
+}
+
+/* 空状态插画 */
+.empty-art {
+  line-height: 0;
+  opacity: 0.9;
+}
+
+/* 右栏快捷操作：图标行式按钮 */
+.rail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+.rail-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #374151;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.rail-btn svg {
+  flex: none;
+  color: var(--dim);
+  transition: color 0.15s ease;
+}
+.rail-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.rail-btn:hover svg {
+  color: var(--accent);
+}
+.rail-btn.danger:hover {
+  background: #fef2f2;
+  color: var(--bad);
+}
+.rail-btn.danger:hover svg {
+  color: var(--bad);
+}
+.rail-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* 游戏中心：八个维度八种色相，卡片顶边 + 标题圆点 + 徽章同色 */
+.game-dim[data-dim='vc'] {
+  --dimc: #16a34a;
+}
+.game-dim[data-dim='vf'] {
+  --dimc: #0d9488;
+}
+.game-dim[data-dim='nc'] {
+  --dimc: #d97706;
+}
+.game-dim[data-dim='ps'] {
+  --dimc: #2563eb;
+}
+.game-dim[data-dim='ir'] {
+  --dimc: #7c3aed;
+}
+.game-dim[data-dim='sv'] {
+  --dimc: #0891b2;
+}
+.game-dim[data-dim='am'] {
+  --dimc: #e11d48;
+}
+.game-dim[data-dim='ni'] {
+  --dimc: #65a30d;
+}
+.game-dim-title::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-xs);
+  background: var(--dimc, var(--accent));
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+.game-card {
+  border-top: 3px solid var(--dimc, var(--line));
+}
+.game-badge.ok {
+  color: var(--dimc, var(--accent-deep));
+  border-color: var(--dimc, var(--accent-line));
+}
+
+/* 危险操作：统一的语义色变体（V1） */
+.btn.danger {
+  background: var(--card);
+  border-color: #fecaca;
+  color: var(--bad);
+}
+.btn.danger:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
 }

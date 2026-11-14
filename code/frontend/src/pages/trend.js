@@ -2,7 +2,7 @@ import { el, button } from '../ui.js';
 import { DIMS, LIMITS } from '../data.js';
 import { readSessions } from '../storage.js';
 import { buildTrend, repeatHint, REPEAT_MIN_DAYS } from '../trend.js';
-import { buildTrendSeries, trendChartMarkup, TREND_COLORS } from '../charts/trend.js';
+import { buildTrendSeries, trendChartMarkup, seriesColor } from '../charts/trend.js';
 
 const DIM_NAME = Object.fromEntries(DIMS.map((d) => [d.id, d.name]));
 
@@ -98,7 +98,7 @@ function trendChartCard(sessions) {
     { class: 'trend-legend' },
     view.dims.map((id, index) =>
       el('span', { class: 'trend-legend-item' }, [
-        el('i', { style: `background:${TREND_COLORS[index % TREND_COLORS.length]}` }),
+        el('i', { style: `background:${seriesColor(id, index)}` }),
         DIM_NAME[id] || id,
       ]),
     ),
