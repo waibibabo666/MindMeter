@@ -102,6 +102,7 @@ function summaryCard(view, ctx, rerender) {
       emptyState({
         title: '还没有摘要',
         text: '每次测评可以生成一条摘要，只记录最低项和建议数量，不写能力评价。',
+        art: false,
       }),
     );
     const sessions = readSessions().sessions || [];
@@ -149,6 +150,7 @@ function adviceCard(view, ctx, rerender) {
         text: 'AI 引用练习类知识块并给出建议后，会在这里留下一条记录，方便你打勾完成。',
         actionLabel: '去对话',
         onAction: () => ctx.go('/chat'),
+        art: false,
       }),
     );
     return card;
@@ -197,14 +199,14 @@ export function renderMemory(root, ctx) {
     ]),
     el('div', { class: 'row' }, [
       button(
-        '清除全部',
+        '清除全部记忆',
         () => {
           if (!window.confirm('清除本机全部记忆？删除后 AI 不会再引用。')) return;
           clearAllMemory();
           ctx.toast('已清除本机记忆');
           rerender();
         },
-        { variant: 'ghost' },
+        { variant: 'danger' },
       ),
       button('返回', () => ctx.go('/report'), { variant: 'ghost' }),
     ]),
