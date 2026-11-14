@@ -41,9 +41,15 @@ export function renderTier(root, ctx) {
   root.appendChild(
     el('section', { class: 'page', 'aria-labelledby': 'tier-title' }, [
       el('h1', { id: 'tier-title', class: 'page-title', text: '选择深度' }),
-      el('p', { class: 'lead', text: '三档的维度不同，所以不设总分；跨档只比较共同维度。' }),
+      el('p', {
+        class: 'lead',
+        text: '三档都测同样的 8 个维度，区别只在题量与限时；不设总分，只看各维度。',
+      }),
       el('div', { class: 'tier-list' }, cards),
-      el('p', { class: 'tiny', text: 'L-01 只实现标准档的 4 项；快测与深度在后续任务里补齐。' }),
+      el('p', {
+        class: 'tiny',
+        text: '题量越多，分数旁边的 ±区间越窄。快测约 6 分钟，标准约 12 分钟，精细约 18 分钟。',
+      }),
       button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
     ]),
   );
