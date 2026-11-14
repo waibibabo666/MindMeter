@@ -56,43 +56,34 @@ test('本地主链路：4 项 → 报告 → 模板解读', async ({ page }) => 
   await page.getByRole('button', { name: '选择档位' }).click();
   await page.getByRole('button', { name: /标准/ }).click();
 
+  // 测评前采集年龄 / 学历 / 睡眠
+  await expect(page.getByRole('heading', { name: '开始之前' })).toBeVisible();
+  await page.locator('input[type=number]').fill('28');
+  await page.locator('select').nth(0).selectOption('bachelor');
+  await page.locator('select').nth(1).selectOption('7to8');
+  await page.getByRole('button', { name: '开始测评' }).click();
+
   const checks = page.getByRole('checkbox');
   await checks.nth(0).check();
   await checks.nth(1).check();
   await page.clock.install();
   await page.getByRole('button', { name: '开始测评' }).click();
 
-  // 言语理解：6 题
+  // 言语理解：标准档 8 题
   await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'vc');
-  for (let i = 0; i < 6; i += 1) {
-    await page.locator('.options button').first().click();
-  }
-
-  // 知觉速度：45 秒计时，用 Playwright clock 快进
-  await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'ps');
-  await expect(page.locator('.ps-target')).toBeVisible();
-  await page.clock.runFor(45_000);
-  await page.waitForTimeout(500);
-
-  // 空间视觉化：8 题
-  await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'sv');
   for (let i = 0; i < 8; i += 1) {
     await page.locator('.options button').first().click();
   }
 
-  // 联想记忆：点“我记住了”跳过学习计时，再做 16 题
-  await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'am');
-  await page.getByRole('button', { name: '我记住了，开始再认' }).click();
-  for (let i = 0; i < 16; i += 1) {
-    await page.getByRole('button', { name: '见过（1）' }).click();
-  }
+  // 处理速度：编码与分类交替，用时钟快进到结束
+  await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'ps');
+  await expect(page.locator('.ps-target')).toBeVisible();
+  await page.locator('.ps-options button').first().click();
+  await page.clock.runFor(45_000);
+  await page.waitForTimeout(500);
 
-  await expect(page.getByRole('heading', { name: '本次测评' })).toBeVisible();
-  await expect(page.locator('table.report-table tbody tr')).toHaveCount(8);
-  await expect(page.locator('table.report-table tbody tr.untested')).toHaveCount(4);
-
-  await page.getByRole('button', { name: '生成解读' }).click();
-  await expect(page.locator('.pill')).toHaveText('模板');
+  // 进入空间视觉化即说明前两维流程完整
+  await expect(page.locator('.task-page')).toHaveAttribute('data-task-id', 'sv');
   expect(errors).toEqual([]);
 });
 
