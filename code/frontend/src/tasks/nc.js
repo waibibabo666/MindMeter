@@ -8,7 +8,8 @@
 import { el, clear } from '../ui.js';
 
 const PER_LEVEL_MS = 15000;
-const OPS = ['+', '-', '×', '÷'];
+const ADDITIVE = ['+', '-'];
+const MULTIPLICATIVE = ['×', '÷'];
 
 function randInt(min, max, random = Math.random) {
   return min + Math.floor(random() * (max - min + 1));
@@ -38,9 +39,17 @@ function applyOp(value, op, random) {
 export function buildChain(steps, random = Math.random) {
   let value = randInt(3, 12, random);
   const parts = [String(value)];
+  // 同一道题只用同一优先级的运算符，避免「左到右」与「先乘除」冲突
+  const ops = random() < 0.5 ? ADDITIVE : MULTIPLICATIVE;
   for (let i = 0; i < steps; i += 1) {
-    const op = OPS[Math.floor(random() * OPS.length)];
-    const result = applyOp(value, op, random) || { value: value + 2, op: '+', operand: 2 };
+    const op = ops[Math.floor(random() * ops.length)];
+    // 退化时也要留在同一优先级里，且数值必须跟着运算符算，不能「写 × 却加 2」
+    const additive = ops.includes('+');
+    const result =
+      applyOp(value, op, random) ||
+      (additive
+        ? { value: value + 2, op: '+', operand: 2 }
+        : { value: value * 2, op: '×', operand: 2 });
     value = result.value;
     parts.push(result.op, String(result.operand));
   }

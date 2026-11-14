@@ -15,3 +15,5 @@ python-multipart==0.0.33
 pywebview==6.2.1
 # Optional: local pgvector embeddings. Without it RAG falls back to BM25.
 fastembed==0.9.1
+# Optional: offline speech-to-text for the verbal fluency task.
+vosk==0.3.45

@@ -31,7 +31,14 @@ function fmtMs(value) {
 
 function describe(id, metrics) {
   if (!metrics || !STATUS[id] || !DETAIL[id]) return '—';
-  return `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
+  try {
+    const text = `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
+    // 指标结构改版后旧描述会读到 undefined，宁可只显示横线
+    return text.includes('undefined') || text.includes('NaN') ? '—' : text;
+  } catch {
+    // 指标结构缺字段时只显示横线，不让报告整页失败
+    return '—';
+  }
 }
 
 /** 该维度的 95% 区间半宽；限时维度用经验表。 */
@@ -48,16 +55,20 @@ function reportRows(scored, results, level) {
     const has = typeof score === 'number';
     const payload = results[dim.id];
     const ci = has ? ciFor(dim.id, score, payload, level) : null;
+    const failed = Boolean(payload && payload.failed);
+    let label = '未测';
+    if (has) label = String(score);
+    else if (failed) label = '未完成';
+    let note = '本档未包含';
+    if (has) note = describe(dim.id, payload?.metrics);
+    else if (failed) note = '该项未完成，可重测';
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
       el('td', { class: 'score-cell' }, [
-        el('span', { text: has ? String(score) : '未测' }),
+        el('span', { text: label }),
         ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
       ]),
-      el('td', {
-        class: 'muted',
-        text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
-      }),
+      el('td', { class: 'muted', text: note }),
     ]);
   });
 }

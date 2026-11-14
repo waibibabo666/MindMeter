@@ -3,7 +3,7 @@
  *
  * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
  */
-import { el, clear } from '../ui.js';
+import { el, button, clear } from '../ui.js';
 import { STANDARD_ORDER, TASK_META } from '../data.js';
 import { specFor } from '../scoring/levels.js';
 import { vcTask } from '../tasks/vc.js';
@@ -12,10 +12,18 @@ import { svTask } from '../tasks/sv.js';
 import { amTask } from '../tasks/am.js';
 import { ncTask } from '../tasks/nc.js';
 import { irTask } from '../tasks/ir.js';
+import { vfTask } from '../tasks/vf.js';
 import { species } from '../games/quizzes.js';
-import { naming } from '../games/speech.js';
 
-const TASK_RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask, nc: ncTask, ir: irTask };
+const TASK_RUNNERS = {
+  vc: vcTask,
+  ps: psTask,
+  sv: svTask,
+  am: amTask,
+  nc: ncTask,
+  ir: irTask,
+  vf: vfTask,
+};
 
 /** 游戏接入测评：把游戏的 (score, detail) 换成统一的结果结构。 */
 function gameRunner(game, toMetrics) {
@@ -36,11 +44,6 @@ function gameRunner(game, toMetrics) {
 
 const GAME_RUNNERS = {
   ni: gameRunner(species, (score, d) => ({ total: d.total, correct: d.correct })),
-  vf: gameRunner(naming, (score, d) => ({
-    validCount: d.valid,
-    seconds: d.seconds,
-    unavailable: d.unavailable,
-  })),
 };
 
 const RUNNERS = Object.assign({}, TASK_RUNNERS, GAME_RUNNERS);
@@ -104,8 +107,11 @@ export function renderTask(root, ctx, taskId) {
       current = Object.assign({}, current, patch);
       ctx.patchDraft(taskId, current);
     },
-    finish: (payload) => {
+    // 两种调用风格都要支持：
+    //   任务式 ctx.finish({ metrics })   游戏式 ctx.finish(score, metrics)
+    finish: (first, second) => {
       cleanup();
+      const payload = second === undefined ? first : { metrics: second };
       ctx.finishTask(taskId, payload);
     },
     toast: ctx.toast,
@@ -129,8 +135,13 @@ export function renderTask(root, ctx, taskId) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title', text: '这一项打不开' }),
           el('p', { class: 'muted', text: '本地保存的进度可能已损坏，可以重开这一项后再试。' }),
+          el('div', { class: 'row' }, [
+            button('跳过这一项', () => ctx.finishTask(taskId, { metrics: null, failed: true })),
+          ]),
         ]),
       );
+      // 记录失败，避免这一步在报告里变成「从未测过」
+      ctx.finishTask(taskId, { metrics: null, failed: true });
     }
   }
   section.dataset.taskId = taskId;
