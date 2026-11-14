@@ -60,6 +60,22 @@ export function button(label, onClick, options = {}) {
   );
 }
 
+/**
+ * 空状态：一句标题 + 一句解释 + 可选主行动 + 可选提示。
+ * 统一各页「还没有…」的写法，避免只剩一行灰字。
+ */
+export function emptyState({ title, text, actionLabel, onAction, hint }) {
+  const node = el('div', { class: 'empty-state' }, [
+    el('p', { class: 'empty-state-title', text: title }),
+    el('p', { class: 'muted', text }),
+  ]);
+  if (actionLabel && onAction) {
+    node.appendChild(button(actionLabel, onAction, { variant: 'primary' }));
+  }
+  if (hint) node.appendChild(el('p', { class: 'tiny', text: hint }));
+  return node;
+}
+
 /** 秒级倒计时；返回值用于清理。 */
 export function ticker(seconds, onTick, onEnd) {
   let left = seconds;

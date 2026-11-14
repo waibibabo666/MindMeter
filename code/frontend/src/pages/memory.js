@@ -4,7 +4,7 @@
  * 只读写本机数据库（通过 API），不联网；删除后不再被引用。
  */
 
-import { button, el } from '../ui.js';
+import { button, el, emptyState } from '../ui.js';
 import { readSessions } from '../storage.js';
 import {
   PROFILE_KEYS,
@@ -34,16 +34,19 @@ function actionButton(label, onClick) {
   return el('button', { type: 'button', style: ACTION_STYLE, text: label, onclick: onClick });
 }
 
-function profileCard(view, rerender) {
+function profileCard(view, ctx, rerender) {
   const profile = view.profile || {};
   const hasDraft = PROFILE_KEYS.some((key) => String(profile[key] || '').trim());
   const card = el('div', { class: 'card' }, [el('h2', { class: 'card-title', text: '画像' })]);
 
   if (!hasDraft) {
     card.appendChild(
-      el('p', {
-        class: 'muted',
-        text: '还没有画像。画像只有在你确认后才会被引用，用来决定建议的详略。',
+      emptyState({
+        title: '还没有画像',
+        text: '画像只在你确认后才会被 AI 引用，用来决定建议的详略。',
+        actionLabel: '去对话里聊聊',
+        onAction: () => ctx.go('/chat'),
+        hint: '在对话里提到备考、作息或时间安排，会生成一份待确认的画像草稿。',
       }),
     );
     return card;
@@ -95,7 +98,12 @@ function summaryCard(view, ctx, rerender) {
   ]);
 
   if (view.summaries.length === 0) {
-    card.appendChild(el('p', { class: 'tiny', text: '还没有摘要。' }));
+    card.appendChild(
+      emptyState({
+        title: '还没有摘要',
+        text: '每次测评可以生成一条摘要，只记录最低项和建议数量，不写能力评价。',
+      }),
+    );
     const sessions = readSessions().sessions || [];
     if (sessions.length > 0) {
       card.appendChild(
@@ -131,11 +139,18 @@ function summaryCard(view, ctx, rerender) {
   return card;
 }
 
-function adviceCard(view, rerender) {
+function adviceCard(view, ctx, rerender) {
   const card = el('div', { class: 'card' }, [el('h2', { class: 'card-title', text: '建议记录' })]);
 
   if (view.advice.length === 0) {
-    card.appendChild(el('p', { class: 'tiny', text: '还没有建议记录。' }));
+    card.appendChild(
+      emptyState({
+        title: '还没有建议记录',
+        text: 'AI 引用练习类知识块并给出建议后，会在这里留下一条记录，方便你打勾完成。',
+        actionLabel: '去对话',
+        onAction: () => ctx.go('/chat'),
+      }),
+    );
     return card;
   }
 
@@ -170,9 +185,9 @@ export function renderMemory(root, ctx) {
   const page = el('section', { class: 'page', 'aria-labelledby': 'memory-title' }, [
     el('h1', { id: 'memory-title', class: 'page-title', text: '我的记忆' }),
     el('p', { class: 'muted', text: '这些信息只存在本机数据库；删除后 AI 不会再引用。' }),
-    profileCard(view, rerender),
+    profileCard(view, ctx, rerender),
     summaryCard(view, ctx, rerender),
-    adviceCard(view, rerender),
+    adviceCard(view, ctx, rerender),
     el('div', { class: 'card' }, [
       el('h2', { class: 'card-title', text: '对话记录' }),
       el('p', {
