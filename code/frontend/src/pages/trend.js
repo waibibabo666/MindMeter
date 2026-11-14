@@ -2,7 +2,7 @@ import { el, button } from '../ui.js';
 import { DIMS, LIMITS } from '../data.js';
 import { readSessions } from '../storage.js';
 import { buildTrend, repeatHint, REPEAT_MIN_DAYS } from '../trend.js';
-import { buildTrendSeries, trendChartMarkup, TREND_COLORS } from '../charts/trend.js';
+import { buildTrendSeries, trendChartMarkup, seriesColor } from '../charts/trend.js';
 import { setPendingQuestion } from '../chat.js';
 
 const TREND_QUESTION = '帮我解释这两次测评的变化';
