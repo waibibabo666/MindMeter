@@ -172,6 +172,7 @@ class ChatMessage(Base):
         JSONB, nullable=False, server_default=sa_text("'[]'::jsonb")
     )
     code: Mapped[str | None] = mapped_column(Text)
+    risk: Mapped[str | None] = mapped_column(Text)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     seq: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 

@@ -1,60 +1,62 @@
-"""Regression tests for the issues found in the 2026-11-14 experience test.
+"""Regression tests for the 2026-11-14 experience test that are not covered elsewhere.
 
-Each test maps to one line of the manual test sheet:
-  - 第二次提问起回答被上一次覆盖（P0）
-  - 无依据问题没有兜底（A3）
-  - 金融/法律问题没有边界话术（A4）
-  - 手机号/身份证号未脱敏就入库、导出（A7）
+`test_agent_chat.py` already covers 跨轮串话 / 无依据 / PII 拦截；这里只补体验测试
+里另外两条：金融法律类问题必须走边界话术（A4），以及敏感信息不得出现在导出里（A7）。
 """
 from __future__ import annotations
+
+import uuid
 
 import pytest
 
 pytestmark = pytest.mark.usefixtures("needs_db")
 
 
-def ask(client, question: str) -> dict:
-    response = client.post("/api/v1/chat", json={"question": question})
+def seed(client) -> None:
+    session = {
+        "id": f"s_guard_{uuid.uuid4().hex[:8]}",
+        "mode": "standard",
+        "finishedAt": "2026-11-14T08:00:00Z",
+        "dims": ["vc", "ps", "sv", "am"],
+        "results": {
+            "vc": {"metrics": {"total": 8, "correct": 5}, "answers": []},
+            "ps": {"metrics": {"correct": 18, "seconds": 45}, "answers": []},
+            "sv": {"metrics": {"total": 8, "correct": 6, "correctRts": [2000] * 6}, "answers": []},
+            "am": {
+                "metrics": {"hits": 6, "falseAlarms": 2},
+                "answers": [{"isOld": True}] * 8 + [{"isOld": False}] * 8,
+            },
+        },
+    }
+    assert client.post("/api/v1/assessments", json={"session": session}).status_code == 200
+
+
+def test_finance_and_legal_questions_get_a_boundary_reply(client):
+    seed(client)
+    for question in (
+        "我想把年终奖全投进朋友推荐的基金，你建议买哪只？",
+        "朋友借钱不还，我可以起诉他吗？",
+    ):
+        body = client.post("/api/v1/chat", json={"question": question}).json()
+        reply = body["reply"]
+        assert reply["intent"] == "high_domain", reply
+        assert reply["risk"] == "high", reply
+        assert "专业" in reply["text"] or "法律" in reply["text"], reply
+
+
+def test_pii_never_reaches_export(client):
+    seed(client)
+    phone = "13912345678"
+    id_card = "11010119900307123X"
+    response = client.post(
+        "/api/v1/chat",
+        json={"question": f"我的手机号 {phone}，身份证 {id_card}，为什么联想记忆低？"},
+    )
     assert response.status_code == 200, response.text
-    return response.json()["reply"]
+    assert phone not in response.text
+    assert id_card not in response.text
 
-
-def test_replies_are_not_reused_between_messages(client):
-    first = ask(client, "今天天气怎么样？")
-    second = ask(client, "我不想活了，感觉活着没意思")
-
-    assert first["intent"] == "unrelated"
-    assert second["intent"] == "crisis"
-    assert "12356" in second["text"]
-    assert second["text"] != first["text"]
-
-
-def test_advice_questions_get_a_boundary_reply(client):
-    reply = ask(client, "我想把年终奖全投进朋友推荐的基金，你建议买哪只？")
-    assert reply["intent"] == "advice"
-    assert "专业人士" in reply["text"]
-    assert "投资" in reply["text"]
-
-
-def test_off_knowledge_question_reports_no_evidence(client):
-    reply = ask(client, "为什么量子纠缠会发生？")
-    assert reply["code"] == "no_knowledge"
-    assert "知识库" in reply["text"]
-    assert reply["citations"] == []
-
-
-def test_pii_is_masked_before_storage_display_and_export(client):
-    question = "我的手机号 13812345678，身份证 110101199003071234，为什么联想记忆低？"
-    response = client.post("/api/v1/chat", json={"question": question})
-    assert response.status_code == 200, response.text
-    assert "13812345678" not in response.text
-    assert "110101199003071234" not in response.text
-    assert "138****5678" in response.text
-
-    messages = client.get("/api/v1/chat/messages")
-    assert "13812345678" not in messages.text
-    assert "110101199003071234" not in messages.text
-
-    exported = client.get("/api/v1/export")
-    assert "13812345678" not in exported.text
-    assert "110101199003071234" not in exported.text
+    assert phone not in client.get("/api/v1/chat/messages").text
+    exported = client.get("/api/v1/export").text
+    assert phone not in exported
+    assert id_card not in exported

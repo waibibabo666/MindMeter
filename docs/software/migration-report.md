@@ -50,7 +50,7 @@
 | 命令 | 结果 |
 | --- | --- |
 | `npm run check` | 通过（lint + format + 前端/纯逻辑测试） |
-| `pytest -q tests/backend` | 13 passed（需 `MM_TEST_DATABASE_URL`） |
+| `pytest -q tests/backend` | 25 passed（需 `MM_TEST_DATABASE_URL`） |
 | `npm run test:e2e` | 4 passed（真实 PostgreSQL + FastAPI） |
 | `python scripts/check_docs.py` | 通过 |
 | `python scripts/check_secrets.py` | 通过 |

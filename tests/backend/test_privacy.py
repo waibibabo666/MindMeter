@@ -2,33 +2,34 @@
 from __future__ import annotations
 
 from app.agent import classify
-from app.privacy import contains_pii, redact_pii
+from app.privacy import find_sensitive, redact
 
 
-def test_classify_routes_crisis_boundary_advice_and_unrelated():
+def test_find_sensitive_detects_phone_id_and_email():
+    assert find_sensitive("我的手机号是 13800138000") == ["手机号"]
+    assert find_sensitive("身份证 110101199003071234") == ["身份证号"]
+    assert find_sensitive("邮箱 me@example.com") == ["邮箱"]
+    assert find_sensitive("言语理解正确 5/8") == []
+
+
+def test_redact_replaces_placeholders():
+    text = redact("手机 13800138000，身份证 110101199003071234，邮箱 me@example.com")
+    assert "13800138000" not in text
+    assert "110101199003071234" not in text
+    assert "me@example.com" not in text
+    assert "[手机号已隐藏]" in text
+    assert "[身份证号已隐藏]" in text
+    assert "[邮箱已隐藏]" in text
+
+
+def test_classify_routes_crisis_boundary_and_high_domain():
     assert classify("我不想活了，感觉活着没意思")["intent"] == "crisis"
     assert classify("我是不是得了抑郁症，要吃什么药？")["intent"] == "boundary"
-    assert classify("我想把年终奖全投进朋友推荐的基金")["intent"] == "advice"
-    assert classify("今天天气怎么样？")["intent"] == "unrelated"
+    # A4：金融/法律类此前没有任何边界话术，会落到普通解释流程。
+    assert classify("我想把年终奖全投进朋友推荐的基金")["intent"] == "high_domain"
+    assert classify("朋友借钱不还，我可以起诉他吗")["intent"] == "high_domain"
+
+
+def test_classify_keeps_domain_questions_out_of_boundary_buckets():
     assert classify("为什么联想记忆低？")["intent"] == "explain"
-
-
-def test_classify_keeps_domain_questions_out_of_the_unrelated_bucket():
-    # "股票" 属于禁答范围，但"分数"是产品内问题，不能被误判成 unrelated。
-    assert classify("为什么我的分数这么低？")["intent"] == "explain"
-    assert classify("基金怎么买")["intent"] == "advice"
-
-
-def test_redact_pii_masks_phone_and_id_card():
-    text = redact_pii("手机号 13812345678，身份证 110101199003071234")
-    assert "13812345678" not in text
-    assert "138****5678" in text
-    assert "110101199003071234" not in text
-    assert "110101" in text and "1234" in text
-
-
-def test_redact_pii_leaves_normal_numbers_alone():
-    text = "言语理解正确 5/8，知觉速度 45 秒完成 24 题"
-    assert redact_pii(text) == text
-    assert contains_pii(text) is False
-    assert contains_pii("电话13812345678") is True
+    assert classify("今天天气怎么样？")["intent"] == "unrelated"

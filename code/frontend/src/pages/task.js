@@ -108,9 +108,35 @@ export function renderTask(root, ctx, taskId) {
       ctx.patchDraft(taskId, current);
     },
     // 两种调用风格都要支持：
-    //   任务式 ctx.finish({ metrics })   游戏式 ctx.finish(score, metrics)
+    //   任务式 ctx.finish({ metrics }) / ctx.finish(null, detail)
+    //   游戏式 ctx.finish(score, metrics)
     finish: (first, second) => {
       cleanup();
+      // 任务模块用 finish(null, detail) 交回原始作答：补齐 ps / am 的派生指标，
+      // 并保留 answers，否则报告里会显示不出这一项。
+      if (first === null && second && typeof second === 'object') {
+        const metrics = Object.assign({}, second);
+        if (taskId === 'ps') {
+          metrics.trials =
+            (second.encCorrect || 0) +
+            (second.encWrong || 0) +
+            (second.catCorrect || 0) +
+            (second.catWrong || 0);
+          metrics.correct = (second.encCorrect || 0) + (second.catCorrect || 0);
+          metrics.wrong = metrics.trials - metrics.correct;
+        }
+        if (taskId === 'am') {
+          metrics.hits = second.firstTry || 0;
+          metrics.falseAlarms = second.errors || 0;
+          metrics.trials = second.targets || 0;
+        }
+        ctx.finishTask(taskId, {
+          taskId,
+          metrics,
+          answers: Array.isArray(second.answers) ? second.answers : [],
+        });
+        return;
+      }
       const payload = second === undefined ? first : { metrics: second };
       ctx.finishTask(taskId, payload);
     },

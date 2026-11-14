@@ -98,7 +98,7 @@ async function saveConfig(form, ctx, status, keyNote, silent = false) {
     form.apiKey = '';
     const configured = Boolean(saved.enabled && saved.endpoint && saved.model && saved.hasKey);
     if (!silent) ctx.toast('已保存到本机');
-    status.textContent = configured ? '已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
+    status.textContent = configured ? '✓ 已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
     status.className = `status ${configured ? 'ok' : 'warn'}`;
     keyNote.textContent = saved.hasKey ? `已保存：${saved.keyHint}` : '尚未保存 Key';
     return { saved, configured };

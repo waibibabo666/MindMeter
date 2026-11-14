@@ -19,6 +19,7 @@
 - **Keyring only**：LLM Key 只在 Windows Credential Manager；`ai_settings` 只存 `key_ref`/`key_hint`。
 - **旧数据导入**：设置页选择旧版导出 JSON；导入前自动 `pg_dump`；忽略 `apiKey`。
 - **测试**：`npm run check`、`pytest tests/backend`、`npm run test:e2e`（真实 PostgreSQL）。
+- **Agent 安全与可信度**：移除跨轮状态泄漏；风险分级（crisis/boundary/high-domain/support）；手机号/身份证/邮箱拦截与脱敏；引用改为可展开来源卡片；无依据不再伪造引用；等待状态与慢响应提示；新增“我的认知怎么样”总览意图与问候意图；总览与报告 AI 解读改为 facts + 知识库 + 具体建议并带来源；清理 NO_PROXY 中的 `[::1]` 以避免 httpx 0.28 在模型调用前崩溃。
 
 ### 变更
 
@@ -37,12 +38,23 @@
 
 ### 修复
 
-- **对话状态跨请求泄漏**：`agent.answer()` 用固定 `thread_id` + `MemorySaver`，第二条消息起 `text` 被上一条回答覆盖，危机/越界话术全部失效。改为无 checkpointer 的单次调用，回归用例见 `tests/backend/test_chat_guardrails.py`。
-- **「无依据」兜底不可达**：BM25 未过滤「为什么/怎么/我的」这类通用成分，任何问题都能凑出 3 条弱相关引用。检索改为剔除问句停用词与高文档频率词，并加相关性门槛（`MM_RAG_MIN_SCORE`，默认 3.0），低于门槛返回「本地知识库里没有…我不猜」。
-- **金融/法律类没有边界话术**：`BOUNDARY_WORDS` 原本只有医疗词。新增 `advice` 意图与 `ADVICE_WORDS`（投资/基金/起诉/律师…），统一回「我不能提供投资、法律或医疗方面的建议」。
-- **敏感信息未脱敏**：手机号、身份证号此前原样入库、回显并进入导出 JSON。新增 `app/privacy.py`，`/chat` 与 `/chat/messages` 落库前脱敏为 `138****5678`、`110101********1234`。
-- **首个问答卡 40 秒**：`_get_model()` 同步加载 fastembed 模型，模型文件缺失时会联网重试。改为带超时的后台加载（`MM_RAG_LOAD_TIMEOUT_S`，默认 6 秒），超时直接回退 BM25。
-- **加载与出错体验**：发送后显示「正在整理本次指标…」状态行；请求失败时把原问题放回输入框，提示改为「本地服务不可用，消息没有发送，可以直接重发」。
+- **敏感信息拦截**：手机号 / 身份证号 / 邮箱命中时不保存原文、不发给模型，返回固定提示；回显、导出同步生效。
+- **「无依据」兜底可达**：检索剔除问句停用词，并用 `MIN_BM25_SCORE` / `MIN_VECTOR_SCORE` 过滤弱相关命中，避免任何问题都凑出 3 条引用。
+- **首个问答卡 40 秒**：`_get_model()` 改为带超时加载（`MM_RAG_LOAD_TIMEOUT_S`，默认 6 秒），超时直接回退 BM25。
+- **出错不丢输入**：请求失败时把原问题放回输入框，提示「本地服务不可用，消息没有发送，可以直接重发」。
+
+### 新增
+
+- **趋势联动（Agent P0）**：对话新增 `trend` 与 `self_blame` 意图；趋势页「让 Agent 解释这两次的变化」入口带预置提问；`/chat` 的 facts 携带两次对比数据（共同维度、差值、间隔、练习效应标记）；趋势解释有专用场景模板兜底。
+- **场景策略统一**：`agent/policies.py` 集中每个场景的长度上限、引用/边界声明要求与附加禁词；公共 prompt 新增「禁止换算为 MoCA 等量表分值」「禁止特质归因（含褒义）」两条纪律；`BANNED_WORDS` 增补减退/受损/退化。
+- **可观测**：`/chat` 每次回答写入 `AIRun`（意图、模型、延迟、降级、校验明细），与报告解读卡同表可查。
+- **测试**：后端新增 `test_agent_workflow` / `test_trend_assembly` / `test_agent_trend_api`；文档新增 [ADR-0002 非临床定位与 Agent 语言契约](docs/adr/0002-agent-positioning-language-contract.md) 与 [Agent P0 改造包设计](docs/software/agent-trend-workflow.md)。
+
+### 变更
+
+- **统一 AI 出口**：报告解读卡 `POST /reports/{id}/explain` 收编进 LangGraph 主图（scene=report），模型输出不再绕过校验直达用户；响应协议不变。
+- **校验策略分档**：缺引用/缺边界声明改为软记录（不再一票否决整段回答）；facts 数字的确定性派生（同维度加差、整数百分比、毫秒→秒）进入白名单；检索为空但 facts 可答时不再误回退「我不猜」。
+- **对话时序修复**：`build_messages` 历史消息不再排在当前问题之后；对话路由不再持有无效 checkpoint（去掉 MemorySaver）。
 
 ### 已知缺口
 

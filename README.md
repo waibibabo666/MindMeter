@@ -72,9 +72,11 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [算法设计](docs/algorithm/algorithm.md) | 8 项公式、`scoring-v3`、服务端计分 |
 | [技术方案](docs/software/architecture.md) | 历史 L2 方案；当前桌面版见 ADR/本地运行时 |
 | [ADR-0001](docs/adr/0001-local-desktop-runtime.md) | 桌面本地运行时决策，取代旧 M1 范围 |
+| [ADR-0002（提议）](docs/adr/0002-agent-positioning-language-contract.md) | 非临床定位与 Agent 语言契约：MoCA 参考三分法、不借诊断权威 |
 | [本地运行时](docs/software/local-runtime.md) | 双击入口、便携 PostgreSQL、启停、日志、排障 |
 | [迁移报告](docs/software/migration-report.md) | 保留/重写/删除、测试结果、限制 |
 | [软件设计](docs/software/software.md) | 模块总览 |
+| [Agent P0 改造包设计](docs/software/agent-trend-workflow.md) | 统一出口 + 趋势联动详细设计（评审稿） |
 | [诊断日志](docs/software/logging.md) | 前端内存日志、脱敏、导出 |
 | [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
 | [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |

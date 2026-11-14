@@ -89,3 +89,19 @@ export function adviceFromReply(reply) {
     .filter((item) => String(item?.id || '').startsWith('kb-plan'))
     .map((item) => ({ id: item.id, title: item.title }));
 }
+
+/**
+ * 预置提问中继：趋势页等入口跳转 /chat 时带一个一次性问题，对话页渲染时
+ * 取走并自动发送一次。SPA 内存级、一次性消费，重启后自然消失，不入存储。
+ */
+let pendingQuestion = '';
+
+export function setPendingQuestion(text) {
+  pendingQuestion = String(text || '');
+}
+
+export function takePendingQuestion() {
+  const question = pendingQuestion;
+  pendingQuestion = '';
+  return question;
+}

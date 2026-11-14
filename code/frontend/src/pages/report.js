@@ -1,4 +1,4 @@
-﻿import { el, button } from '../ui.js';
+import { el, button } from '../ui.js';
 import { api } from '../api.js';
 import { readSessions, readSettings } from '../storage.js';
 import { DIMS } from '../data.js';
@@ -6,6 +6,7 @@ import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { ciHalfWidth, specFor, timedCi } from '../scoring/levels.js';
 import { ageBand, ageNote, readProfile, stateWarning } from '../profile.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
+import { iconSvg } from '../icons.js';
 
 const STATUS = {
   vc: (m) => `正确 ${m.correct} / ${m.total}`,
@@ -56,6 +57,7 @@ function reportRows(scored, results, level) {
     const payload = results[dim.id];
     const ci = has ? ciFor(dim.id, score, payload, level) : null;
     const failed = Boolean(payload && payload.failed);
+    const width = has ? Math.max(3, Math.min(100, score)) : 0;
     let label = '未测';
     if (has) label = String(score);
     else if (failed) label = '未完成';
@@ -65,22 +67,23 @@ function reportRows(scored, results, level) {
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
       el('td', { class: 'score-cell' }, [
-        el('span', { text: label }),
+        el('span', { class: 'score-num', text: label }),
         ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
+        has ? el('div', { class: 'gauge' }, [el('i', { style: `width:${width}%` })]) : null,
       ]),
       el('td', { class: 'muted', text: note }),
     ]);
   });
 }
 
-function reportScores(ctx, latest, results) {
+function reportScores(ctx, latest, results, level) {
   if (ctx.state.scores && Object.keys(ctx.state.scores).length > 0) {
     return { version: SCORING_VERSION, scores: ctx.state.scores };
   }
   if (latest && latest.scores) {
     return { version: SCORING_VERSION, scores: latest.scores };
   }
-  return safeScore(results, ctx);
+  return safeScore(results, ctx, level);
 }
 
 function emptyReport(ctx) {
@@ -176,9 +179,9 @@ function fullReport(ctx, results, scored, radar, assessmentId, level) {
 }
 
 /** 计分或雷达失败时退回「全部未测」的报告，而不是整页报错。 */
-function safeScore(results, ctx) {
+function safeScore(results, ctx, level = 'standard') {
   try {
-    return scoreSession(results);
+    return scoreSession(results, level);
   } catch (error) {
     if (ctx && typeof ctx.log === 'function')
       ctx.log('error', 'score failed', error && error.message);
@@ -196,7 +199,7 @@ export function renderReport(root, ctx) {
       : (latest && latest.results) || {};
   const measured = Object.keys(results);
   const level = ctx.state.level || (latest && latest.level) || 'standard';
-  const scored = reportScores(ctx, latest, results);
+  const scored = reportScores(ctx, latest, results, level);
   const radar = buildRadar(DIMS, scored.scores || {});
   const assessmentId = ctx.state.assessmentId || (latest && latest.id) || null;
   const body =
@@ -233,6 +236,7 @@ function renderAiCard(ctx, assessmentId) {
     text: '默认用模板解读；在设置里配置自己的模型服务后可切换。',
   });
   const output = el('p', { class: 'ai-text', text: '' });
+  const citations = el('p', { class: 'tiny', text: '' });
 
   const runExplain = async () => {
     if (!assessmentId) {
@@ -245,6 +249,10 @@ function renderAiCard(ctx, assessmentId) {
     try {
       const result = await api.post(`/reports/${encodeURIComponent(assessmentId)}/explain`);
       output.textContent = result.text;
+      citations.textContent =
+        Array.isArray(result.citations) && result.citations.length > 0
+          ? `引用：${result.citations.join(' · ')}`
+          : '';
       badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
       badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
       reason.textContent =
@@ -264,10 +272,15 @@ function renderAiCard(ctx, assessmentId) {
   // 没配 Key 时模板解读是本机即时返回的，直接显示，别让用户面对空白卡片。
   if (!readSettings().hasKey) runExplain();
 
-  return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
+  return el('div', { class: 'card ai-card' }, [
+    el('h2', { class: 'card-title' }, [
+      el('span', { class: 'ai-icon', html: iconSvg('sparkle') }),
+      'AI 解读 ',
+      badge,
+    ]),
     reason,
     output,
+    citations,
     el('div', { class: 'row' }, [
       run,
       button('去设置', () => ctx.go('/settings'), { variant: 'ghost' }),

@@ -1,28 +1,30 @@
-"""Redact personal data before it is stored, displayed or exported.
+"""Small PII guard for chat input.
 
-The assistant runs locally, but chat turns are persisted in PostgreSQL and are
-included in the "导出数据" JSON. Phone numbers and ID card numbers must not
-survive that round trip, otherwise a screenshot or an exported file leaks them.
+The product deliberately does not collect phone numbers or national IDs. If a
+user pastes one, we redact it before storage and do not send the turn to a
+model. This is a safety net, not a general DLP system.
 """
 from __future__ import annotations
 
 import re
 
-# 18-digit mainland ID card: keep the region prefix and the last 4 characters.
-ID_CARD_RE = re.compile(r"(?<!\d)(\d{6})\d{8}(\d{3}[\dXx])(?!\d)")
-# 11-digit mobile number: keep the first 3 and last 4 digits.
-PHONE_RE = re.compile(r"(?<!\d)(1[3-9]\d)\d{4}(\d{4})(?!\d)")
+PHONE_RE = re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)")
+ID_RE = re.compile(r"(?<!\d)\d{17}[\dXx](?!\d)")
+EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 
 
-def redact_pii(value: object) -> str:
-    """Return the text with phone / ID numbers masked in place."""
-    text = str(value or "")
-    if not text:
-        return ""
-    text = ID_CARD_RE.sub(r"\1********\2", text)
-    return PHONE_RE.sub(r"\1****\2", text)
+def find_sensitive(text: str) -> list[str]:
+    value = str(text or "")
+    found: list[str] = []
+    for name, pattern in (("手机号", PHONE_RE), ("身份证号", ID_RE), ("邮箱", EMAIL_RE)):
+        if pattern.search(value):
+            found.append(name)
+    return found
 
 
-def contains_pii(value: object) -> bool:
-    text = str(value or "")
-    return bool(ID_CARD_RE.search(text) or PHONE_RE.search(text))
+def redact(text: str) -> str:
+    value = str(text or "")
+    value = PHONE_RE.sub("[手机号已隐藏]", value)
+    value = ID_RE.sub("[身份证号已隐藏]", value)
+    value = EMAIL_RE.sub("[邮箱已隐藏]", value)
+    return value

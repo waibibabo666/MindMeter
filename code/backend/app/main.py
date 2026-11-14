@@ -5,16 +5,18 @@ migrations. The desktop launcher owns both.
 """
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .api import api_router
 from .config import settings
 from .logging_setup import setup_logging
-from .security import enforce_local_request
+from .rag import warmup
+from .security import LocalGuardMiddleware
 
 setup_logging(settings.data_dir)
 
@@ -25,13 +27,22 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
-app.middleware("http")(enforce_local_request)
+app.add_middleware(LocalGuardMiddleware)
 app.include_router(api_router)
+
+
+@app.on_event("startup")
+def _warm_embedding_model() -> None:
+    """Load the optional local model off the request path (never starts DB)."""
+    if settings.rag_mode.lower() != "keyword":
+        threading.Thread(target=warmup, daemon=True).start()
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return JSONResponse(status_code=204, content=None)
+    # 204 不能带响应体：之前用 JSONResponse(content=None) 会发 "null"，
+    # h11 会抛 Too much data for declared Content-Length。
+    return Response(status_code=204)
 
 
 frontend = Path(settings.frontend_dir).resolve()

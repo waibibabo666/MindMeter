@@ -15,6 +15,8 @@
 | `software/` | [本地运行时](software/local-runtime.md) | 当前 | 双击入口、便携 PostgreSQL、启停、日志、排障 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
 | `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 已接受 | 取代 m1_scope 的“无后端”范围 |
+| `adr/` | [ADR-0002 非临床定位与 Agent 语言契约](adr/0002-agent-positioning-language-contract.md) | 提议 | MoCA 参考三分法、不借临床权威、Agent 措辞/校验约束 |
+| `software/` | [Agent P0 改造包设计](software/agent-trend-workflow.md) | 评审稿 v0.2 | 统一出口 + 趋势联动 + 定位落地（受 ADR-0002 约束） |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
 | `software/` | [诊断日志](software/logging.md) | 当前 v1.0 | 前端内存日志、脱敏、导出 |
 | `software/` | [本地知识库设计](software/knowledge-base.md) | 草案 v1.0 | P-06：分类、chunk schema、30 条计划、来源候选 |

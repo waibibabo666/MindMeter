@@ -23,40 +23,30 @@ from ..models import KBChunk
 
 BM25_K1 = 1.2
 BM25_B = 0.75
+MIN_BM25_SCORE = 2.5
+MIN_VECTOR_SCORE = 0.45
+MIN_VECTOR_ONLY_SCORE = 0.6
 EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 NOISE = set("的了是 吗呢啊我你会 有在和与就都".replace(" ", ""))
-# 问句里的通用成分，几乎每条 chunk 都含，留着它们会让任何问题都"检索命中"。
-QUESTION_STOP = {
-    "为什",
-    "什么",
+QUERY_STOP_PHRASES = (
+    "为什么",
     "怎么",
-    "么样",
     "如何",
-    "是不",
-    "不是",
-    "我的",
-    "我们",
-    "你们",
-    "可以",
-    "能否",
-    "是否",
-    "哪些",
-    "这个",
-    "那个",
-    "时候",
-    "现在",
-    "一直",
-    "总是",
-    "感觉",
-    "觉得",
-    "知道",
-    "告诉",
+    "怎样",
+    "提高",
+    "提升",
+    "建议",
+    "练习",
+    "解释",
+    "原因",
+    "哪项",
+    "哪一项",
+    "什么意思",
+    "怎么看",
     "一下",
-    "帮我",
-}
-# 命中率过低就不要硬凑引用：低于门槛按"知识库没有依据"处理。
-RELATIVE_FLOOR = 0.32
-VECTOR_MIN_SCORE = 0.35
+    "可以",
+    "是否",
+)
 
 _model = None
 _model_failed = False
@@ -86,8 +76,8 @@ def _load_model() -> None:
 def _get_model():
     """Load the embedding model with a hard deadline.
 
-    以前是同步加载：模型文件缺失时会联网下载，首个问答要等 40 s 甚至更久。
-    现在超时就直接回退 BM25，后台线程失败也不影响回答。
+    同步加载时，模型文件缺失会联网重试，首个问答要等 40 秒以上。超时就先用
+    BM25，后台线程结果不再采用（下一进程启动时再试）。
     """
     global _model, _model_failed
     if _model is not None or _model_failed:
@@ -102,6 +92,13 @@ def _get_model():
         return None
     _model = _model_holder["model"]
     return _model
+
+
+def _query_text(value: str) -> str:
+    text = str(value or "")
+    for phrase in QUERY_STOP_PHRASES:
+        text = text.replace(phrase, " ")
+    return text
 
 
 def tokenize(value: str) -> list[str]:
@@ -135,15 +132,7 @@ def _bm25(rows: list[KBChunk], query: str, limit: int) -> list[dict]:
     if not docs:
         return []
     avgdl = total_len / len(docs)
-    total = len(docs)
-    raw_terms = list(dict.fromkeys(tokenize(query)))
-    # 去掉"为什么/怎么/我的"这类通用成分和到处都出现的词，否则任何问题都能
-    # 蹭到几条引用，"知识库没有依据"这个分支永远走不到。
-    terms = [
-        term
-        for term in raw_terms
-        if term not in QUESTION_STOP and df.get(term, 0) <= 0.5 * total
-    ]
+    terms = list(dict.fromkeys(tokenize(_query_text(query))))
     if not terms:
         return []
 
@@ -154,21 +143,29 @@ def _bm25(rows: list[KBChunk], query: str, limit: int) -> list[dict]:
     scored = []
     for chunk, tf, length in docs:
         score = 0.0
+        matched = 0
         for term in terms:
             freq = tf.get(term, 0)
             if not freq:
                 continue
+            matched += 1
             denom = freq + BM25_K1 * (1 - BM25_B + BM25_B * length / (avgdl or 1))
             score += idf(term) * (freq * (BM25_K1 + 1) / denom)
-        if score > 0:
-            scored.append(
-                {
-                    "id": chunk.id,
-                    "title": chunk.title,
-                    "text": chunk.text,
-                    "score": round(score, 6),
-                }
-            )
+        # One common term (e.g. "能力") is not enough evidence; a single rare
+        # term (e.g. "睡眠") can still be a strong hit.
+        if matched == 0:
+            continue
+        if matched < 2 and score < MIN_BM25_SCORE:
+            continue
+        scored.append(
+            {
+                "id": chunk.id,
+                "title": chunk.title,
+                "text": chunk.text,
+                "source": chunk.source or {},
+                "score": round(score, 6),
+            }
+        )
     scored.sort(key=lambda item: item["score"], reverse=True)
     return scored[:limit]
 
@@ -184,7 +181,7 @@ def _vector_search(db: Session, query: str, limit: int) -> list[dict]:
 
     sql = text(
         """
-        SELECT id, title, text, 1 - (embedding <=> CAST(:q AS vector)) AS score
+        SELECT id, title, text, source, 1 - (embedding <=> CAST(:q AS vector)) AS score
         FROM kb_chunks
         WHERE review_status = 'reviewed' AND embedding IS NOT NULL
         ORDER BY embedding <=> CAST(:q AS vector)
@@ -196,8 +193,15 @@ def _vector_search(db: Session, query: str, limit: int) -> list[dict]:
         {"q": "[" + ",".join(f"{float(v):.8f}" for v in vector) + "]", "limit": max(limit, 20)},
     ).all()
     return [
-        {"id": row.id, "title": row.title, "text": row.text, "score": float(row.score or 0)}
+        {
+            "id": row.id,
+            "title": row.title,
+            "text": row.text,
+            "source": row.source or {},
+            "score": float(row.score or 0),
+        }
         for row in rows
+        if float(row.score or 0) >= MIN_VECTOR_SCORE
     ]
 
 
@@ -217,21 +221,6 @@ def _rrf(*rankings: list[dict], limit: int) -> list[dict]:
     return out
 
 
-def _relevant(items: list[dict]) -> list[dict]:
-    """Keep only hits that clear the absolute and relative relevance floor."""
-    if not items:
-        return []
-    best = float(items[0].get("score") or 0)
-    floor = max(float(settings.rag_min_score or 0), best * RELATIVE_FLOOR)
-    if best < floor:
-        return []
-    return [item for item in items if float(item.get("score") or 0) >= floor]
-
-
-def _relevant_semantic(items: list[dict]) -> list[dict]:
-    return [item for item in items if float(item.get("score") or 0) >= VECTOR_MIN_SCORE]
-
-
 def retrieve(db: Session, query: str, limit: int = 3) -> list[dict]:
     query = str(query or "").strip()
     if not query:
@@ -243,14 +232,23 @@ def retrieve(db: Session, query: str, limit: int = 3) -> list[dict]:
             .order_by(KBChunk.id)
         ).all()
     )
-    lexical = _relevant(_bm25(rows, query, max(limit, 20)))
+    lexical = _bm25(rows, query, max(limit, 20))
     mode = (settings.rag_mode or "auto").lower()
     if mode == "keyword":
         return lexical[:limit]
-    semantic = _relevant_semantic(_vector_search(db, query, max(limit, 20)))
+    semantic = _vector_search(db, query, max(limit, 20))
+    if not semantic and not lexical:
+        return []
     if not semantic:
         return lexical[:limit]
+    if not lexical:
+        return semantic[:limit] if semantic[0]["score"] >= MIN_VECTOR_ONLY_SCORE else []
     return _rrf(semantic, lexical, limit=limit)
+
+
+def warmup() -> None:
+    """Load the optional embedding model before the first user question."""
+    _get_model()
 
 
 def content_hash(chunk: dict) -> str:

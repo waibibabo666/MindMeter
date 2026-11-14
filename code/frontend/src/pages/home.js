@@ -1,7 +1,9 @@
 import { el, button } from '../ui.js';
 import { DIMS } from '../data.js';
 import { readSessions } from '../storage.js';
+import { scoreSession } from '../scoring/index.js';
 import { MIRROR_ART } from '../icons.js';
+import { DIM_COLORS } from '../charts/trend.js';
 
 const TIER_LABEL = { quick: '快测', standard: '标准', deep: '深度' };
 
@@ -12,18 +14,31 @@ function fmtDate(iso) {
   return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
 }
 
+/** 会话分数：新流程存 scores，老数据用 results 现算。 */
+function sessionScores(session) {
+  if (session.scores) return session.scores;
+  try {
+    return scoreSession(session.results || {}).scores;
+  } catch {
+    return {};
+  }
+}
+
 /** 最近一次测评摘要卡：有记录给分数 chips，没有给空态引导。 */
 function recentCard(ctx) {
   const last = (readSessions().sessions || [])[0];
-  if (!last || !last.scores) {
+  const scores = last ? sessionScores(last) : {};
+  const measured = DIMS.filter((dim) => typeof scores[dim.id] === 'number');
+
+  if (measured.length === 0) {
     return el('div', { class: 'card' }, [
       el('h2', { class: 'card-title', text: '最近一次测评' }),
-      el('p', { class: 'muted', text: '还没有记录。完成一次标准测评后，这里会显示各维度分数。' }),
+      el('p', { class: 'muted', text: '还没有记录。完成一次测评后，这里会显示各维度分数。' }),
     ]);
   }
 
-  const chips = DIMS.filter((dim) => typeof last.scores[dim.id] === 'number').map((dim) =>
-    el('span', { class: 'score-chip' }, [dim.name, el('b', { text: String(last.scores[dim.id]) })]),
+  const chips = measured.map((dim) =>
+    el('span', { class: 'score-chip' }, [dim.name, el('b', { text: String(scores[dim.id]) })]),
   );
 
   return el('div', { class: 'card' }, [
@@ -41,6 +56,33 @@ function recentCard(ctx) {
   ]);
 }
 
+/** 八维总览：每个维度一行，带维度色与本次状态。 */
+function dimsCard() {
+  const last = (readSessions().sessions || [])[0];
+  const scores = last ? sessionScores(last) : {};
+
+  const cells = DIMS.map((dim) =>
+    el('div', { class: 'dim-cell' }, [
+      el('span', {
+        class: 'dim-dot',
+        style: `background:${DIM_COLORS[dim.id] || 'var(--accent)'}`,
+      }),
+      el('div', { class: 'dim-body' }, [
+        el('p', { class: 'dim-name', text: dim.name }),
+        el('p', { class: 'tiny', text: dim.desc }),
+      ]),
+      typeof scores[dim.id] === 'number'
+        ? el('span', { class: 'dim-score', text: String(scores[dim.id]) })
+        : el('span', { class: 'dim-badge', text: '未测' }),
+    ]),
+  );
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '八个维度' }),
+    el('div', { class: 'dim-grid' }, cells),
+  ]);
+}
+
 export function renderHome(root, ctx) {
   const state = ctx.state;
   const done = Object.keys(state.results || {}).length;
@@ -52,12 +94,8 @@ export function renderHome(root, ctx) {
       el('div', { class: 'card main-entry' }, [
         el('h1', { id: 'home-title', class: 'hero' }, [
           '玩一局，看清你的',
-          el('em', { text: '能力结构' }),
+          el('em', { text: '心智认知' }),
         ]),
-        el('p', {
-          class: 'lead',
-          text: '13 分钟 · 4 项标准测评。分维度参考，不设总分，不和任何人比。',
-        }),
         el('div', { class: 'row' }, [
           button(
             inProgress ? `继续上次测评（${done}/${total}）` : '选择档位',
@@ -65,19 +103,11 @@ export function renderHome(root, ctx) {
             { variant: 'primary' },
           ),
         ]),
-        inProgress
-          ? el('p', { class: 'tiny', text: '草稿 24 小时内有效，从上次中断的任务继续。' })
-          : null,
         el('div', { class: 'hero-art', html: MIRROR_ART }),
       ]),
 
       recentCard(ctx),
-
-      el('p', { class: 'tiny', text: '数据只存本机数据库 · 可随时清除 · 非临床诊断 · 18+' }),
-      el('p', { class: 'tiny' }, [
-        '测什么、怎么测、分数怎么来、AI 的边界：',
-        el('a', { class: 'link', href: '#/about', text: '查看完整说明' }),
-      ]),
+      dimsCard(),
     ]),
   );
 }
