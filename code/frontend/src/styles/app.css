@@ -1743,6 +1743,10 @@ button.spot-cell {
   margin-bottom: 16px;
 }
 .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .link {
   color: var(--accent-deep);
   text-decoration: underline;
