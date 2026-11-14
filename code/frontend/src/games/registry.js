@@ -12,18 +12,17 @@ import {
   chainCalc,
   cloze,
   describe,
-  foodChain,
   fold,
   idiom,
   pattern,
   season,
   sequence,
-  species,
   twentyFour,
 } from './quizzes.js';
 import { svMirror, svRotate } from './svGames.js';
 import { linkLink, pairLink, shoppingList, spotDiff } from './visual.js';
 import { categoryFlip, charChain, naming } from './speech.js';
+import { foodChainOrder, speciesDrag } from './nature.js';
 
 const BY_DIM = {
   vc: [idiom, cloze, describe],
@@ -33,7 +32,7 @@ const BY_DIM = {
   ir: [guess, sequence, pattern],
   sv: [svRotate, svMirror, fold],
   am: [flip, pairLink, shoppingList],
-  ni: [species, foodChain, season],
+  ni: [speciesDrag, foodChainOrder, season],
 };
 
 export const GAMES = Object.entries(BY_DIM).flatMap(([dim, list]) =>

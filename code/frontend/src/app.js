@@ -13,11 +13,12 @@ import { addSession, clearAllData, exportData } from './storage.js';
 import { bootstrap, installFlushHook } from './boot.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { log } from './log.js';
-import { STANDARD_ORDER } from './data.js';
+import { STANDARD_ORDER, TIERS } from './data.js';
 import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
 import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
+import { renderIntake } from './pages/intake.js';
 import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
@@ -60,6 +61,7 @@ const PAGES = {
   '/': renderHome,
   '/tier': renderTier,
   '/consent': renderConsent,
+  '/intake': renderIntake,
   '/task': renderTask,
   '/report': renderReport,
   '/settings': renderSettings,
@@ -90,9 +92,9 @@ function setState(mutator) {
 }
 
 /** 计分失败不能阻断交卷：分数留空，原始作答照常保存。 */
-function safeScores(results) {
+function safeScores(results, level) {
   try {
-    return scoreSession(results).scores;
+    return scoreSession(results, level).scores;
   } catch (error) {
     log('error', 'scoring failed', error && error.message);
     return null;
@@ -125,7 +127,7 @@ async function finishTask(taskId, payload) {
     return;
   }
 
-  const localScores = safeScores(state.results);
+  const localScores = safeScores(state.results, state.level || 'standard');
   try {
     const saved = await addSession({
       id: `s_${Date.now().toString(36)}`,
@@ -135,8 +137,9 @@ async function finishTask(taskId, payload) {
       results: state.results,
       scoringVersion: SCORING_VERSION,
     });
+    // 前端按档位题量本地计分；后端算式尚未支持分档，故以本地结果为准。
     setState(() => ({
-      scores: (saved && saved.scores) || localScores,
+      scores: localScores || (saved && saved.scores),
       assessmentId: saved && saved.id,
     }));
   } catch (error) {
@@ -156,24 +159,29 @@ const ctx = {
   log,
   pickTier: (tier) => {
     setState(() => ({ tier }));
-    router.go('/consent');
+    router.go('/intake');
   },
   startAssessment: () => {
-    log('info', '开始测评', 'standard', STANDARD_ORDER.join('→'));
+    const current = readState();
+    const tierId = current.tier || 'standard';
+    const tier = TIERS.find((item) => item.id === tierId) || TIERS[1];
+    const order = tier.tasks.slice();
+    log('info', '开始测评', tier.level, order.join('→'));
     setState(() => ({
-      tier: 'standard',
+      tier: tier.id,
+      level: tier.level,
       consented: true,
       consentedAge: true,
       startedAt: Date.now(),
-      order: STANDARD_ORDER.slice(),
+      order,
       cursor: 0,
       results: {},
       drafts: {},
       scores: null,
       assessmentId: null,
-      route: '/task/vc',
+      route: `/task/${order[0]}`,
     }));
-    router.go('/task/vc');
+    router.go(`/task/${order[0]}`);
   },
   patchDraft: (taskId, draft) => {
     setState((state) => ({
