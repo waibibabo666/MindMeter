@@ -35,6 +35,19 @@
 
 ## [未发布]
 
+### 新增
+
+- **趋势联动（Agent P0）**：对话新增 `trend` 与 `self_blame` 意图；趋势页「让 Agent 解释这两次的变化」入口带预置提问；`/chat` 的 facts 携带两次对比数据（共同维度、差值、间隔、练习效应标记）；趋势解释有专用场景模板兜底。
+- **场景策略统一**：`agent/policies.py` 集中每个场景的长度上限、引用/边界声明要求与附加禁词；公共 prompt 新增「禁止换算为 MoCA 等量表分值」「禁止特质归因（含褒义）」两条纪律；`BANNED_WORDS` 增补减退/受损/退化。
+- **可观测**：`/chat` 每次回答写入 `AIRun`（意图、模型、延迟、降级、校验明细），与报告解读卡同表可查。
+- **测试**：后端新增 `test_agent_workflow` / `test_trend_assembly` / `test_agent_trend_api`；文档新增 [ADR-0002 非临床定位与 Agent 语言契约](docs/adr/0002-agent-positioning-language-contract.md) 与 [Agent P0 改造包设计](docs/software/agent-trend-workflow.md)。
+
+### 变更
+
+- **统一 AI 出口**：报告解读卡 `POST /reports/{id}/explain` 收编进 LangGraph 主图（scene=report），模型输出不再绕过校验直达用户；响应协议不变。
+- **校验策略分档**：缺引用/缺边界声明改为软记录（不再一票否决整段回答）；facts 数字的确定性派生（同维度加差、整数百分比、毫秒→秒）进入白名单；检索为空但 facts 可答时不再误回退「我不猜」。
+- **对话时序修复**：`build_messages` 历史消息不再排在当前问题之后；对话路由不再持有无效 checkpoint（去掉 MemorySaver）。
+
 ### 已知缺口
 
 - **D-03**：Agent 检索为空时的回复是「我不猜」，而 M1 验收要求字面出现「不知道」。

@@ -9,14 +9,16 @@ from sqlalchemy.orm import Session
 from ..agent import answer
 from ..db import get_db
 from ..models import (
+    AIRun,
     Assessment,
     ChatMessage,
     MemoryAdvice,
     MemoryProfile,
     MemorySummary,
 )
-from ..serializers import assessment_to_session, memory_payload
+from ..serializers import assessment_to_session, memory_payload, sessions_payload
 from ..timeutil import parse_dt
+from ..trend import build_trend_payload
 
 router = APIRouter()
 
@@ -47,6 +49,10 @@ def _facts(db: Session) -> tuple[dict, str | None]:
             score = (session.get("scores") or {}).get(dim)
             if isinstance(score, int):
                 facts[dim]["score"] = score
+    # 趋势数据挂在专用键下：delta/days 随 collect_numbers 进入校验白名单。
+    trend = build_trend_payload(sessions_payload(db, limit=2)["sessions"])
+    if trend is not None:
+        facts["trend"] = trend
     return facts, row.id
 
 
@@ -151,6 +157,19 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
         citations=result.get("citations") or [],
         code=result.get("code"),
     )
+    code = result.get("code")
+    db.add(
+        AIRun(
+            assessment_id=assessment_id,
+            model=result.get("model"),
+            intent=result.get("intent"),
+            latency_ms=result.get("latency_ms"),
+            degraded=result.get("source") != "llm",
+            error_code=None if code in (None, "ok") else str(code),
+            validation=result.get("validation") or None,
+        )
+    )
+    db.commit()
 
     if result.get("source") == "llm":
         for source in result.get("sources") or []:
