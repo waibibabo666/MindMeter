@@ -4,7 +4,7 @@
   "private": true,
   "description": "MindMeter desktop: pywebview + FastAPI + local PostgreSQL + pgvector",
   "scripts": {
-    "test": "npm run test:prototype && npm run test:app-shell && npm run test:memory && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:kb && npm run test:units && npm run test:log && npm run test:chat",
+    "test": "npm run test:prototype && npm run test:app-shell && npm run test:memory && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:kb && npm run test:units && npm run test:log && npm run test:chat && npm run test:games",
     "test:prototype": "node scripts/test_prototype.js",
     "test:app-shell": "node scripts/test_app_shell.js",
     "test:report": "node scripts/test_report_trend.js",
@@ -13,6 +13,7 @@
     "test:agent": "node scripts/test_agent.js",
     "test:memory": "node scripts/test_memory.js",
     "test:kb": "node scripts/test_kb.js",
+    "test:games": "node scripts/test_games.js",
     "test:chat": "node scripts/test_chat.js",
     "test:log": "node scripts/test_log.js",
     "test:backend": "python -m pytest -q tests/backend -rs",

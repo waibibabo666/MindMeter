@@ -24,6 +24,8 @@ import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
 import { renderChat } from './pages/chat.js';
+import { renderGames } from './pages/games.js';
+import { renderGame } from './pages/game.js';
 
 /**
  * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
@@ -63,6 +65,8 @@ const PAGES = {
   '/trend': renderTrend,
   '/memory': renderMemory,
   '/chat': renderChat,
+  '/games': renderGames,
+  '/game': renderGame,
 };
 
 const root = document.getElementById('app');
