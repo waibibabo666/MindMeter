@@ -107,5 +107,7 @@ export const api = {
   put: (path, body, options) => request(path, { ...options, method: 'PUT', body }),
   patch: (path, body, options) => request(path, { ...options, method: 'PATCH', body }),
   del: (path, options) => request(path, { ...options, method: 'DELETE' }),
+  /** 上传 FormData（音频等二进制）；不设置 Content-Type，交给浏览器带 boundary。 */
+  upload: (path, form, options) => request(path, { ...options, method: 'POST', body: form }),
   request,
 };
