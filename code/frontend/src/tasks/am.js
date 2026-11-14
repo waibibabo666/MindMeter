@@ -6,7 +6,6 @@ import { AM_PAIRS } from '../data.js';
 import { mountPal } from './amPal.js';
 import { mulberry32, shuffle } from '../random.js';
 
-
 /** 构造再认题：8 组原配（旧）+ 8 组错配（新）。 */
 export function buildRecognition(seed = 20261107) {
   const random = mulberry32(seed);
@@ -49,10 +48,6 @@ export function summarizeAm(trials) {
       trials.length === 0 ? null : Number(((hits + correctRejections) / trials.length).toFixed(3)),
   };
 }
-
-
-
-
 
 export const amTask = {
   id: 'am',

@@ -106,7 +106,6 @@ export function summarizeSv(answers, rts = []) {
   };
 }
 
-
 export const svTask = {
   id: 'sv',
   mount(root, ctx) {

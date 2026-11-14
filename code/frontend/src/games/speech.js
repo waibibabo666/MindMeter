@@ -42,7 +42,11 @@ function createSpeechGame(config) {
       const Ctor = recognitionCtor();
       if (!Ctor) {
         notice(root, title);
-        const skip = el('button', { class: 'btn ghost', type: 'button', text: '继续（本维度记为未测）' });
+        const skip = el('button', {
+          class: 'btn ghost',
+          type: 'button',
+          text: '继续（本维度记为未测）',
+        });
         skip.addEventListener('click', () => ctx.finish(0, { unavailable: true }));
         root.querySelector('.card')?.appendChild(skip);
         return () => clear(root);

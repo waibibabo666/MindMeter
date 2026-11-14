@@ -52,8 +52,8 @@ export function buildVcPaper(level = 'standard', random = Math.random) {
   const batchOfBand = [];
   for (let i = 1; i <= 3; i += 1) {
     batchOfBand.push(
-      ...alternateDir(vocab.filter((item) => item.band === i)).sort(
-        () => (random() < 0.5 ? -1 : 1),
+      ...alternateDir(vocab.filter((item) => item.band === i)).sort(() =>
+        random() < 0.5 ? -1 : 1,
       ),
     );
   }

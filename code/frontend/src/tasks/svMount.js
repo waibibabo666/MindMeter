@@ -83,12 +83,36 @@ export function buildRotate() {
 }
 
 const FOLD_BANK = [
-  { q: '正方形纸对折一次，在折边处剪一个洞，展开后有几个洞？', options: ['1 个', '2 个', '3 个', '4 个'], answer: 1 },
-  { q: '正方形纸沿中线对折两次（两个方向），在折角处剪一刀，展开后有几个洞？', options: ['1 个', '2 个', '4 个', '8 个'], answer: 2 },
-  { q: '正方形纸对折两次后打一个洞，展开后洞的个数是？', options: ['2 个', '3 个', '4 个', '6 个'], answer: 2 },
-  { q: '纸对折一次后沿折线内侧剪去一个小三角，展开后形状是？', options: ['一个更大的三角', '两个对称的三角', '一个菱形', '一个圆'], answer: 1 },
-  { q: '不折叠，直接剪去一个角，展开后有几个缺口？', options: ['0 个', '1 个', '2 个', '4 个'], answer: 1 },
-  { q: '正方形纸对折三次后打一个洞，展开后最可能有几个洞？', options: ['2 个', '4 个', '8 个', '16 个'], answer: 2 },
+  {
+    q: '正方形纸对折一次，在折边处剪一个洞，展开后有几个洞？',
+    options: ['1 个', '2 个', '3 个', '4 个'],
+    answer: 1,
+  },
+  {
+    q: '正方形纸沿中线对折两次（两个方向），在折角处剪一刀，展开后有几个洞？',
+    options: ['1 个', '2 个', '4 个', '8 个'],
+    answer: 2,
+  },
+  {
+    q: '正方形纸对折两次后打一个洞，展开后洞的个数是？',
+    options: ['2 个', '3 个', '4 个', '6 个'],
+    answer: 2,
+  },
+  {
+    q: '纸对折一次后沿折线内侧剪去一个小三角，展开后形状是？',
+    options: ['一个更大的三角', '两个对称的三角', '一个菱形', '一个圆'],
+    answer: 1,
+  },
+  {
+    q: '不折叠，直接剪去一个角，展开后有几个缺口？',
+    options: ['0 个', '1 个', '2 个', '4 个'],
+    answer: 1,
+  },
+  {
+    q: '正方形纸对折三次后打一个洞，展开后最可能有几个洞？',
+    options: ['2 个', '4 个', '8 个', '16 个'],
+    answer: 2,
+  },
 ];
 
 export function buildFold() {
@@ -96,14 +120,14 @@ export function buildFold() {
   return { kind: 'fold', q: item.q, options: item.options, answer: item.answer };
 }
 
-
-
-
 function gridNode(grid, size) {
   const node = el('div', { class: 'grid9' });
   for (const cell of grid) {
     node.appendChild(
-      el('span', { class: `grid9-cell${cell ? ' on' : ''}`, style: `width:${size}px;height:${size}px` }),
+      el('span', {
+        class: `grid9-cell${cell ? ' on' : ''}`,
+        style: `width:${size}px;height:${size}px`,
+      }),
     );
   }
   return node;

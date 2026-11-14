@@ -18,7 +18,10 @@ const RULES = {
   colShape: (r, c) => ({ shape: SHAPES[c % 3], count: r + 1 }),
   diagonal: (r, c) => ({ shape: SHAPES[(r + c) % 3], count: r + c + 1 }),
   combine: (r, c, A) => ({ shape: A, count: r + c + 1 }),
-  alternate: (r, c, A) => ({ shape: r % 2 === 0 ? A : SHAPES[(SHAPES.indexOf(A) + 1) % 4], count: c + 1 }),
+  alternate: (r, c, A) => ({
+    shape: r % 2 === 0 ? A : SHAPES[(SHAPES.indexOf(A) + 1) % 4],
+    count: c + 1,
+  }),
   mirror: (r, c) => ({ shape: SHAPES[c % 3], count: 3 - r }),
 };
 
@@ -75,7 +78,9 @@ function cellNode(cell, size = 12) {
   }
   const count = Math.min(cell.count, 4);
   for (let i = 0; i < count; i += 1) {
-    node.appendChild(el('span', { class: 'mx-sym', style: `font-size:${size}px`, text: cell.shape }));
+    node.appendChild(
+      el('span', { class: 'mx-sym', style: `font-size:${size}px`, text: cell.shape }),
+    );
   }
   return node;
 }
