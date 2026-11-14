@@ -123,6 +123,18 @@ async function main() {
     eq(quickmath.scoreMath(40), 100, '超过封顶');
   });
 
+  test('口算：干扰项与答案个位数一致，避免尾数投机', () => {
+    const random = seeded(23);
+    const ones = (n) => Math.abs(n) % 10;
+    for (let i = 0; i < 60; i += 1) {
+      const item = quickmath.makeQuestion(random);
+      const target = ones(item.answer);
+      for (const opt of item.options) {
+        eq(ones(opt), target, `${item.text}=${item.answer} 的选项 ${opt} 个位不符`);
+      }
+    }
+  });
+
   // ---------- 翻牌 ----------
 
   test('翻牌：16 张牌、8 组图案各两张', () => {
@@ -165,9 +177,11 @@ async function main() {
     assert(!guess.isValidGuess('1123'), '有重复应拒绝');
     assert(!guess.isValidGuess('123'), '位数不对应拒绝');
     assert(!guess.isValidGuess('12a4'), '含字母应拒绝');
-    eq(guess.scoreGuess(7), 100, '7 次');
-    eq(guess.scoreGuess(10), 0, '10 次');
+    eq(guess.scoreGuess(8), 100, '8 次满分');
+    eq(guess.scoreGuess(14), 0, '14 次零分');
     assert(guess.scoreGuess(5) === 100, '更快也给满分');
+    eq(guess.scoreGuess(11), 50, '中间值');
+    assert(guess.scoreGuess(9) > guess.scoreGuess(13), '次数越少分越高');
   });
 
   // ---------- 存储 ----------
@@ -253,6 +267,23 @@ async function main() {
         const keys = item.options.map((o) => o.grid.join(''));
         eq(new Set(keys).size, 4, `${name} 选项应互不相同`);
       }
+    }
+  });
+
+  test('图形规律：题干给前两行，正确选项补全第三行', () => {
+    for (const item of quizzes.pattern.bank) {
+      assert(Array.isArray(item.grid) && item.grid.length === 9, '题干应有 9 格前两行');
+      eq(item.options.length, 4, '选项数');
+      const right = item.options[item.answer];
+      assert(Array.isArray(right.grid) && right.grid.length === 9, '正确选项应为 9 格');
+      for (let i = 0; i < 6; i += 1) {
+        eq(right.grid[i], item.grid[i], `正确选项前两行第 ${i} 格应与题干一致`);
+      }
+      for (let i = 6; i < 9; i += 1) {
+        eq(item.grid[i], 0, `题干第三行第 ${i} 格应为空`);
+      }
+      const keys = item.options.map((o) => o.grid.join(''));
+      eq(new Set(keys).size, 4, '选项应互不相同');
     }
   });
 
