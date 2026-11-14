@@ -490,8 +490,11 @@ def wait_health(port: int, token: str, timeout: float = 45.0) -> dict:
     raise RuntimeError("本地服务未就绪：" + last_error)
 
 
-def start_backend(port: int, token: str, pg_port: int) -> subprocess.Popen:
+def start_backend(
+    port: int, token: str, pg_port: int, extra_env: dict | None = None
+) -> subprocess.Popen:
     env = dict(os.environ)
+    env.update(extra_env or {})
     env.update(
         {
             "MM_API_TOKEN": token,

@@ -21,6 +21,6 @@ export default defineConfig({
     url: 'http://127.0.0.1:8100/',
     reuseExistingServer: false,
     timeout: 90_000,
-    env: { MM_E2E_TOKEN: 'e2e-token', MM_E2E_PORT: '8100' },
+    env: { ...process.env, MM_E2E_TOKEN: 'e2e-token', MM_E2E_PORT: '8100' },
   },
 });

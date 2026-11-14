@@ -16,6 +16,7 @@ if BACKEND.is_dir() and str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
 os.environ.setdefault("MM_API_TOKEN", "test-token")
+os.environ.setdefault("PYTHON_KEYRING_BACKEND", "app.testing_keyring.InMemoryKeyring")
 os.environ.setdefault("MM_RAG_MODE", "keyword")
 os.environ.setdefault("MM_DATA_DIR", str(Path(__file__).resolve().parents[2] / "runtime" / "pytest-data"))
 if os.environ.get("MM_TEST_DATABASE_URL"):

@@ -68,6 +68,7 @@ def main() -> int:
         env["MM_DATABASE_URL"] = external
         env["MM_API_TOKEN"] = TOKEN
         env["MM_DATA_DIR"] = str(ROOT / "runtime" / "e2e-data")
+        env["PYTHON_KEYRING_BACKEND"] = "app.testing_keyring.InMemoryKeyring"
         backend = subprocess.Popen(
             [
                 sys.executable,
@@ -87,6 +88,12 @@ def main() -> int:
         backend.wait()
         return 0
 
+    if os.name != "nt":
+        raise SystemExit(
+            "MM_E2E_DATABASE_URL is required on non-Windows. "
+            "CI must provide a pgvector/pgvector:pg17 service."
+        )
+
     # Portable Windows path: reuse the launcher's DB helpers.
     os.environ.setdefault("MM_DATA_DIR", str(ROOT / "runtime" / "e2e-data"))
     os.environ["MM_API_TOKEN"] = TOKEN
@@ -101,7 +108,12 @@ def main() -> int:
     launcher.ensure_database(pg_port)
     launcher.backup_before_migration(pg_port)
     launcher.run_migrations(pg_port)
-    backend = launcher.start_backend(PORT, TOKEN, pg_port)
+    backend = launcher.start_backend(
+        PORT,
+        TOKEN,
+        pg_port,
+        extra_env={"PYTHON_KEYRING_BACKEND": "app.testing_keyring.InMemoryKeyring"},
+    )
     children.append(backend)
     while backend.poll() is None:
         time.sleep(1)
