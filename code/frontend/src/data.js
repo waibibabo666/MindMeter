@@ -19,31 +19,33 @@ export const TIERS = [
   {
     id: 'quick',
     name: '快测',
-    minutes: 5,
-    tasks: ['ps', 'vf'],
-    available: false,
-    note: 'L-01 未交付',
+    minutes: 6,
+    level: 'quick',
+    tasks: ['vc', 'ps', 'sv', 'am', 'nc', 'ir', 'ni', 'vf'],
+    available: true,
+    note: '题量少，区间较宽',
   },
   {
     id: 'standard',
     name: '标准',
-    minutes: 13,
-    tasks: ['vc', 'ps', 'sv', 'am'],
+    minutes: 12,
+    level: 'standard',
+    tasks: ['vc', 'ps', 'sv', 'am', 'nc', 'ir', 'ni', 'vf'],
     available: true,
     note: '',
   },
   {
     id: 'deep',
-    name: '深度',
-    minutes: 28,
-    tasks: ['vc', 'nc', 'ir', 'ps', 'sv', 'am', 'ni', 'vf'],
-    available: false,
-    note: 'L-01 未交付',
+    name: '精细',
+    minutes: 18,
+    level: 'deep',
+    tasks: ['vc', 'ps', 'sv', 'am', 'nc', 'ir', 'ni', 'vf'],
+    available: true,
+    note: '限时维度更长，区间更窄',
   },
 ];
 
-/** L-01 只交付标准档的 4 项；顺序即测评顺序。 */
-export const STANDARD_ORDER = ['vc', 'ps', 'sv', 'am'];
+export const STANDARD_ORDER = ['vc', 'ps', 'sv', 'am', 'nc', 'ir', 'ni', 'vf'];
 
 export const TASK_META = {
   vc: { id: 'vc', name: '言语理解', minutes: 2, desc: '6 道四选一：近义词、反义词、句子理解。' },
@@ -60,6 +62,15 @@ export const TASK_META = {
     desc: '8 道三乘三图案旋转题，选出旋转后的正确图案。',
   },
   am: { id: 'am', name: '联想记忆', minutes: 3, desc: '先记 12 组词对，再做 16 题配对再认。' },
+  nc: { id: 'nc', name: '数字运算', minutes: 2, desc: '连续几步运算，求最终结果。' },
+  ir: { id: 'ir', name: '归纳推理', minutes: 2, desc: '数列找规律，推出下一项。' },
+  ni: { id: 'ni', name: '自然探索', minutes: 2, desc: '生物分类与自然现象判断。' },
+  vf: {
+    id: 'vf',
+    name: '言语流畅性',
+    minutes: 2,
+    desc: '限时说出尽量多的同类词（需要麦克风）。',
+  },
 };
 
 /** 言语理解题库：question / options / answer。 */

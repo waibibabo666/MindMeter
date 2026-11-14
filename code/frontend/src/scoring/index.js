@@ -16,6 +16,7 @@
  */
 
 import { CONFIG, DIMENSION_IDS, SCORING_VERSION } from './config.js';
+import { specFor } from './levels.js';
 import {
   scoreAm,
   scoreIr,
@@ -41,7 +42,7 @@ function pick(results, id) {
  * @param {object} results store 中的 results
  * @returns {{version:string, dimensions:object, measured:string[], missing:string[]}}
  */
-export function scoreSession(results) {
+export function scoreSession(results, level = 'standard') {
   const dimensions = {};
   for (const id of DIMENSION_IDS) dimensions[id] = null;
 
@@ -54,14 +55,14 @@ export function scoreSession(results) {
   const ir = pick(results, 'ir');
   const ni = pick(results, 'ni');
 
-  dimensions.vc = vc ? scoreVc(vc.metrics) : null;
-  dimensions.ps = ps ? scorePs(ps.metrics) : null;
-  dimensions.sv = sv ? scoreSv(sv.metrics) : null;
+  dimensions.vc = vc ? scoreVc(vc.metrics, specFor(level, 'vc').items) : null;
+  dimensions.ps = ps ? scorePs(ps.metrics, specFor(level, 'ps').seconds) : null;
+  dimensions.sv = sv ? scoreSv(sv.metrics, specFor(level, 'sv').items) : null;
   dimensions.am = am ? scoreAm(am.metrics, am.answers) : null;
-  dimensions.vf = vf ? scoreVf(vf.metrics) : null;
-  dimensions.nc = nc ? scoreNc(nc.metrics) : null;
-  dimensions.ir = ir ? scoreIr(ir.metrics) : null;
-  dimensions.ni = ni ? scoreNi(ni.metrics) : null;
+  dimensions.vf = vf ? scoreVf(vf.metrics, specFor(level, 'vf').seconds) : null;
+  dimensions.nc = nc ? scoreNc(nc.metrics, specFor(level, 'nc').items) : null;
+  dimensions.ir = ir ? scoreIr(ir.metrics, specFor(level, 'ir').items) : null;
+  dimensions.ni = ni ? scoreNi(ni.metrics, specFor(level, 'ni').items) : null;
 
   const measured = DIMENSION_IDS.filter((id) => dimensions[id] !== null);
   const missing = DIMENSION_IDS.filter((id) => dimensions[id] === null);

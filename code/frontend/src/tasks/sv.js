@@ -3,6 +3,7 @@
  * 只记录正确数与反应时；旋转用纯函数实现，可在 Node 侧单测。
  */
 import { SV_PATTERNS } from '../data.js';
+import { sliceItems } from '../scoring/levels.js';
 import { el, button, clear, now } from '../ui.js';
 import { mulberry32, shuffle } from '../random.js';
 
@@ -114,7 +115,8 @@ function patternNode(grid, label) {
 export const svTask = {
   id: 'sv',
   mount(root, ctx) {
-    const items = (ctx.draft && ctx.draft.items) || buildItems();
+    const items =
+      (ctx.draft && ctx.draft.items) || sliceItems(buildItems(), (ctx.spec && ctx.spec.items) || 8);
     const saved = ctx.draft || {};
     const answers = Array.isArray(saved.answers) ? saved.answers.slice() : [];
     const rts = Array.isArray(saved.rts) ? saved.rts.slice() : [];

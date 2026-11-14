@@ -1606,3 +1606,31 @@ button.spot-cell {
     grid-template-columns: 1fr;
   }
 }
+
+/* 分数区间 */
+.ci {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+.tier-note {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--accent-deep);
+}
+
+/* 报告表格：原始指标列保持可读宽度 */
+.page-report table {
+  width: 100%;
+  table-layout: auto;
+}
+.page-report table th:last-child,
+.page-report table td:last-child {
+  min-width: 220px;
+  white-space: normal;
+}
+.page-report table td.score-cell {
+  white-space: nowrap;
+}

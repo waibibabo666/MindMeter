@@ -1,11 +1,45 @@
+/**
+ * 测评步骤页：按维度分发到「任务」或「游戏」。
+ *
+ * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
+ */
 import { el, clear } from '../ui.js';
 import { STANDARD_ORDER, TASK_META } from '../data.js';
+import { specFor } from '../scoring/levels.js';
 import { vcTask } from '../tasks/vc.js';
 import { psTask } from '../tasks/ps.js';
 import { svTask } from '../tasks/sv.js';
 import { amTask } from '../tasks/am.js';
+import { chainCalc, sequence, species } from '../games/quizzes.js';
+import { naming } from '../games/speech.js';
 
-const RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask };
+const TASK_RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask };
+
+/** 游戏接入测评：把游戏的 (score, detail) 换成统一的结果结构。 */
+function gameRunner(game, toMetrics) {
+  return {
+    mount(root, ctx) {
+      const gameCtx = {
+        toast: ctx.toast,
+        level: ctx.level,
+        spec: ctx.spec,
+        finish: (score, detail) => {
+          ctx.finish({ metrics: toMetrics(score, detail || {}) });
+        },
+      };
+      return game.mount(root, gameCtx) || (() => {});
+    },
+  };
+}
+
+const GAME_RUNNERS = {
+  nc: gameRunner(chainCalc, (score, d) => ({ total: d.total, correct: d.correct })),
+  ir: gameRunner(sequence, (score, d) => ({ total: d.total, correct: d.correct })),
+  ni: gameRunner(species, (score, d) => ({ total: d.total, correct: d.correct })),
+  vf: gameRunner(naming, (score, d) => ({ validCount: d.valid, seconds: d.seconds })),
+};
+
+const RUNNERS = Object.assign({}, TASK_RUNNERS, GAME_RUNNERS);
 
 export function renderTask(root, ctx, taskId) {
   const state = ctx.state;
@@ -23,12 +57,15 @@ export function renderTask(root, ctx, taskId) {
 
   const position = order.indexOf(taskId) + 1;
   const meta = TASK_META[taskId];
+  const level = state.level || 'standard';
+  const spec = specFor(level, taskId);
+  const isGame = Boolean(GAME_RUNNERS[taskId]);
 
   const host = el('div', { class: 'task-host' });
   const section = el('section', { class: 'page task-page', 'aria-labelledby': 'task-title' }, [
     el('div', { class: 'hud' }, [
       el('span', { class: 'kicker', text: `第 ${position} / ${order.length} 项` }),
-      el('span', { class: 'muted', text: meta.name }),
+      el('span', { class: 'muted', text: `${meta.name} · ${levelLabel(level)}` }),
     ]),
     el(
       'div',
@@ -42,7 +79,12 @@ export function renderTask(root, ctx, taskId) {
       [el('i', { style: `width:${Math.round(((position - 1) / order.length) * 100)}%` })],
     ),
     host,
-    el('p', { class: 'tiny', text: '本页只采集原始指标；计时与进度已存本机，刷新可继续。' }),
+    el('p', {
+      class: 'tiny',
+      text: isGame
+        ? '本项为游戏化测量，结束后统一计分；进度已存本机。'
+        : '本页只采集原始指标；计时与进度已存本机，刷新可继续。',
+    }),
   ]);
   root.appendChild(section);
 
@@ -52,6 +94,8 @@ export function renderTask(root, ctx, taskId) {
 
   const taskCtx = {
     draft,
+    level,
+    spec,
     saveDraft: (patch) => {
       current = Object.assign({}, current, patch);
       ctx.patchDraft(taskId, current);
@@ -69,7 +113,6 @@ export function renderTask(root, ctx, taskId) {
   try {
     cleanup = runner.mount(host, taskCtx) || (() => {});
   } catch (error) {
-    // 草稿损坏（结构不对、题目为 undefined）时，丢掉草稿重开一次，别让整页挂掉。
     ctx.toast('这一项的进度读取失败，已重开');
     ctx.clearDraft(taskId);
     taskCtx.draft = null;
@@ -92,4 +135,10 @@ export function renderTask(root, ctx, taskId) {
     cleanup();
     clear(host);
   };
+}
+
+function levelLabel(level) {
+  if (level === 'quick') return '快测档';
+  if (level === 'deep') return '精细档';
+  return '标准档';
 }

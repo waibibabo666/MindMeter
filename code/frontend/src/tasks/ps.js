@@ -6,7 +6,7 @@ import { PS_SYMBOLS } from '../data.js';
 import { el, button, clear, now, ticker } from '../ui.js';
 import { mulberry32, shuffle, pick } from '../random.js';
 
-const DURATION = 45;
+const TIMING = { duration: 45 };
 const GROUP = 3;
 
 export function makeTrial(random) {
@@ -58,7 +58,7 @@ export function summarizePs(trials) {
     correct,
     wrong: done - correct,
     meanRtMs: rts.length === 0 ? null : Math.round(rts.reduce((a, b) => a + b, 0) / rts.length),
-    seconds: DURATION,
+    seconds: TIMING.duration,
   };
 }
 
@@ -105,13 +105,14 @@ function bindKeys(choose) {
 export const psTask = {
   id: 'ps',
   mount(root, ctx) {
+    TIMING.duration = (ctx.spec && ctx.spec.seconds) || 45;
     const trials = buildTrials();
     const done = ctx.draft && Array.isArray(ctx.draft.trials) ? ctx.draft.trials.slice() : [];
     let index = done.length % trials.length;
     let shownAt = now();
     let finished = false;
 
-    const timerNode = el('span', { class: 'timer', text: `剩余 ${DURATION} 秒` });
+    const timerNode = el('span', { class: 'timer', text: `剩余 ${TIMING.duration} 秒` });
     const board = el('div', { class: 'ps-board' });
     const progress = el('span', { class: 'muted', text: '已完成 0 题' });
 
@@ -150,7 +151,7 @@ export const psTask = {
     root.appendChild(board);
 
     stopTimer = ticker(
-      DURATION,
+      TIMING.duration,
       (left) => {
         timerNode.textContent = `剩余 ${left} 秒`;
       },

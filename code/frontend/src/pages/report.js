@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { readSessions, readSettings } from '../storage.js';
 import { DIMS, LIMITS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
+import { ciHalfWidth, specFor, timedCi } from '../scoring/levels.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
 
 const STATUS = {
@@ -32,14 +33,26 @@ function describe(id, metrics) {
   return `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
 }
 
-function reportRows(scored, results) {
+/** 该维度的 95% 区间半宽；限时维度用经验表。 */
+function ciFor(dimId, score, payload, level) {
+  if (dimId === 'ps' || dimId === 'vf') return timedCi(dimId, specFor(level, dimId).seconds);
+  const metrics = (payload && payload.metrics) || {};
+  const n = Number(metrics.total) || Number(metrics.trials) || 0;
+  return ciHalfWidth(score, n, 0.25);
+}
+
+function reportRows(scored, results, level) {
   return DIMS.map((dim) => {
     const score = scored.scores[dim.id];
     const has = typeof score === 'number';
     const payload = results[dim.id];
+    const ci = has ? ciFor(dim.id, score, payload, level) : null;
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
-      el('td', { class: 'score-cell', text: has ? String(score) : '未测' }),
+      el('td', { class: 'score-cell' }, [
+        el('span', { text: has ? String(score) : '未测' }),
+        ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
+      ]),
       el('td', {
         class: 'muted',
         text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
@@ -64,7 +77,7 @@ function emptyReport(ctx) {
       el('h2', { class: 'card-title', text: '还没有结果' }),
       el('p', {
         class: 'muted',
-        text: '完成一次标准测评后，这里会显示 4 项分数与 4 项未测。',
+        text: '完成一次测评后，这里会显示 8 个维度、分数区间与原始指标。',
       }),
       button('开始测评', () => ctx.go('/tier'), { variant: 'primary' }),
     ]),
@@ -115,14 +128,14 @@ function reportActions(ctx) {
   ]);
 }
 
-function fullReport(ctx, results, scored, radar, assessmentId) {
+function fullReport(ctx, results, scored, radar, assessmentId, level) {
   return [
     el('p', {
       class: 'lead',
       text: `8 个维度中测了 ${radar.measuredCount} 个，其余 ${radar.total - radar.measuredCount} 个显示「未测」。不设总分，也不做百分位。`,
     }),
     radarCard(radar),
-    scoreTable(reportRows(scored, results)),
+    scoreTable(reportRows(scored, results, level)),
     renderAiCard(ctx, assessmentId),
     scoreNote(),
     reportActions(ctx),
@@ -149,13 +162,14 @@ export function renderReport(root, ctx) {
       ? ctx.state.results
       : (latest && latest.results) || {};
   const measured = Object.keys(results);
+  const level = ctx.state.level || (latest && latest.level) || 'standard';
   const scored = reportScores(ctx, latest, results);
   const radar = buildRadar(DIMS, scored.scores || {});
   const assessmentId = ctx.state.assessmentId || (latest && latest.id) || null;
   const body =
     measured.length === 0
       ? emptyReport(ctx)
-      : fullReport(ctx, results, scored, radar, assessmentId);
+      : fullReport(ctx, results, scored, radar, assessmentId, level);
 
   root.appendChild(
     el('section', { class: 'page page-report', 'aria-labelledby': 'report-title' }, [

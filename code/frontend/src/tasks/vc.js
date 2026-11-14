@@ -3,6 +3,7 @@
  * 只采集原始指标（正确数、每题反应时），不做任何计分。
  */
 import { VC_ITEMS } from '../data.js';
+import { sliceItems } from '../scoring/levels.js';
 import { el, button, clear, now } from '../ui.js';
 
 export function summarizeVc(answers) {
@@ -20,6 +21,7 @@ export function summarizeVc(answers) {
 export const vcTask = {
   id: 'vc',
   mount(root, ctx) {
+    const items = sliceItems(VC_ITEMS, (ctx.spec && ctx.spec.items) || items.length);
     const saved = ctx.draft || {};
     const answers = Array.isArray(saved.answers) ? saved.answers.slice() : [];
     let index = typeof saved.index === 'number' ? saved.index : answers.length;
@@ -35,7 +37,7 @@ export const vcTask = {
     };
 
     const choose = (choice) => {
-      const item = VC_ITEMS[index];
+      const item = items[index];
       if (!item) return;
       answers[index] = {
         choice,
@@ -44,7 +46,7 @@ export const vcTask = {
       };
       index += 1;
       commitDraft();
-      if (index >= VC_ITEMS.length) {
+      if (index >= items.length) {
         finish();
         return;
       }
@@ -52,7 +54,7 @@ export const vcTask = {
     };
 
     const draw = () => {
-      const item = VC_ITEMS[index];
+      const item = items[index];
       shownAt = now();
 
       const options = item.options.map((text, i) =>
@@ -62,7 +64,7 @@ export const vcTask = {
       clear(root);
       root.appendChild(
         el('div', { class: 'task-head' }, [
-          el('span', { class: 'kicker', text: `第 ${index + 1} / ${VC_ITEMS.length} 题` }),
+          el('span', { class: 'kicker', text: `第 ${index + 1} / ${items.length} 题` }),
           el('span', { class: 'muted', text: '按键 1–4 也可作答' }),
         ]),
       );
