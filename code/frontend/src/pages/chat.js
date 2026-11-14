@@ -1,4 +1,4 @@
-﻿/**
+/**
  * L-05 对话页（/chat）。
  *
  * 只做三件事：渲染消息、把问题交给本地 /api/v1/chat、用返回的消息刷新。
@@ -6,7 +6,7 @@
  * LangGraph Agent 里，这里不重复实现。
  */
 
-import { button, el } from '../ui.js';
+import { button, el, emptyState } from '../ui.js';
 import { api } from '../api.js';
 import { cache } from '../cache.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
@@ -52,17 +52,18 @@ function configBanner(ctx, settings) {
   ]);
 }
 
-function emptyCard() {
-  return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '还没有对话' }),
-    el('p', {
-      class: 'muted',
-      text: '可以问「为什么联想记忆低」「知觉速度怎么练」。回答只依据本次结果和本地知识库，并标注来源。',
-    }),
-  ]);
+function emptyChat() {
+  return emptyState({
+    title: '还没有对话',
+    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。回答只依据本次结果和本地知识库，并标注来源。',
+    hint: 'Enter 发送，Shift+Enter 换行；对话只保留最近 20 条。',
+  });
 }
 
-export function renderChat(root, ctx) {
+export function renderChat(root, ctx, options = {}) {
+  // 路由没有 param 时会传 null，这里兜一下再读 options。
+  const opts = options || {};
+  const restored = Boolean(opts.restored);
   const settings = readSettings();
   const sessions = readSessions().sessions || [];
   const facts = buildFacts(sessions[0]);
@@ -71,13 +72,21 @@ export function renderChat(root, ctx) {
   const messages = readMemory().messages || [];
   const list = el('div', { class: 'chat-list' }, messages.map(messageNode));
 
-  const input = el('input', {
-    class: 'input',
-    type: 'text',
-    placeholder: hasFacts ? '问问这次的结果…' : '完成一次测评后才能针对结果提问',
+  const input = el('textarea', {
+    class: 'input chat-input',
+    rows: '1',
+    maxlength: '300',
+    placeholder: hasFacts
+      ? '问问这次的结果…（Enter 发送，Shift+Enter 换行）'
+      : '完成一次测评后才能针对结果提问',
     'aria-label': '输入问题',
-    maxlength: '200',
   });
+
+  const autoGrow = () => {
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(132, input.scrollHeight)}px`;
+  };
+  input.addEventListener('input', autoGrow);
 
   const send = button('发送', null, { variant: 'primary' });
 
@@ -86,6 +95,7 @@ export function renderChat(root, ctx) {
     if (!question) return;
 
     input.value = '';
+    autoGrow();
     send.disabled = true;
     send.textContent = '…';
 
@@ -100,13 +110,15 @@ export function renderChat(root, ctx) {
       send.disabled = false;
       send.textContent = '发送';
       root.replaceChildren();
-      renderChat(root, ctx);
+      renderChat(root, ctx, { restored: true });
     }
   }
 
   send.addEventListener('click', onSend);
   input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') onSend();
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    onSend();
   });
 
   if (!hasFacts) {
@@ -119,7 +131,7 @@ export function renderChat(root, ctx) {
       el('p', { class: 'kicker', text: '问问 AI' }),
       el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
       configBanner(ctx, settings),
-      messages.length === 0 ? emptyCard() : list,
+      messages.length === 0 ? emptyChat() : list,
       el('div', { class: 'row' }, [input, send]),
       el('div', { class: 'row' }, [
         button('返回报告', () => ctx.go('/report'), { variant: 'ghost' }),
@@ -131,4 +143,12 @@ export function renderChat(root, ctx) {
       }),
     ]),
   );
+
+  // 发完消息后回到输入框、并把最新一条滚进视野；首次进入有记录时也滚到底部。
+  if (restored || messages.length > 0) {
+    autoGrow();
+    if (restored && hasFacts) input.focus();
+    const lastMessage = root.querySelector('.chat-list > :last-child');
+    if (lastMessage) lastMessage.scrollIntoView({ block: 'nearest' });
+  }
 }

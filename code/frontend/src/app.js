@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 静态 App 壳（L-01）入口。
  *
  * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report → #/trend
@@ -25,6 +25,7 @@ import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
 import { renderChat } from './pages/chat.js';
 import { renderGames } from './pages/games.js';
+import { renderAbout } from './pages/about.js';
 import { renderGame } from './pages/game.js';
 
 /**
@@ -66,6 +67,7 @@ const PAGES = {
   '/memory': renderMemory,
   '/chat': renderChat,
   '/games': renderGames,
+  '/about': renderAbout,
   '/game': renderGame,
 };
 

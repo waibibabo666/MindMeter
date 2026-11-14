@@ -32,6 +32,32 @@
         <span class="chip" id="chip" role="status"></span>
         <span class="topbar-right">
           <button class="toplink-btn" id="quit-task" type="button" hidden>退出测评</button>
+          <button
+            class="toplink-btn icon-btn"
+            id="toggle-nav"
+            type="button"
+            aria-pressed="false"
+            title="收起 / 展开左侧菜单"
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none">
+              <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" />
+              <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" />
+            </svg>
+            <span class="sr-only">收起或展开左侧菜单</span>
+          </button>
+          <button
+            class="toplink-btn icon-btn"
+            id="toggle-rail"
+            type="button"
+            aria-pressed="false"
+            title="收起 / 展开右侧快捷操作栏"
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none">
+              <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" />
+              <line x1="10" y1="2.5" x2="10" y2="13.5" stroke="currentColor" />
+            </svg>
+            <span class="sr-only">收起或展开右侧快捷操作栏</span>
+          </button>
           <a class="toplink" href="#/settings">设置</a>
         </span>
       </header>
@@ -44,6 +70,7 @@
           <a class="navitem" href="#/chat" data-nav="对话"><i aria-hidden="true"></i>对话</a>
           <a class="navitem" href="#/memory" data-nav="记忆"><i aria-hidden="true"></i>记忆</a>
           <a class="navitem" href="#/trend" data-nav="趋势"><i aria-hidden="true"></i>趋势</a>
+          <a class="navitem" href="#/about" data-nav="说明"><i aria-hidden="true"></i>说明</a>
           <a class="navitem" href="#/settings" data-nav="设置"><i aria-hidden="true"></i>设置</a>
           <p class="sidefoot">本机运行 · 数据不出这台电脑<br />课程演示版 · 非临床诊断</p>
         </nav>

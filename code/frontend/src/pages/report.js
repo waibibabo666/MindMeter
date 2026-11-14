@@ -1,7 +1,7 @@
-import { el, button } from '../ui.js';
+﻿import { el, button } from '../ui.js';
 import { api } from '../api.js';
 import { readSessions, readSettings } from '../storage.js';
-import { DIMS, LIMITS } from '../data.js';
+import { DIMS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
 
@@ -163,14 +163,17 @@ export function renderReport(root, ctx) {
       el('h1', { id: 'report-title', class: 'page-title', text: '本次测评' }),
       ...body,
       el('div', { class: 'card' }, [
-        el('h2', { class: 'card-title', text: '局限' }),
-        el(
-          'ul',
-          { class: 'plain-list' },
-          LIMITS.map((text) => el('li', { text })),
-        ),
+        el('h2', { class: 'card-title', text: '局限与说明' }),
+        el('p', {
+          class: 'muted',
+          text: '分数只描述本次任务中的表现：无总分、无百分位、不与人群比较；本产品不是医疗器械，不提供诊断、治疗或医疗建议。',
+        }),
+        el('p', { class: 'tiny' }, [
+          '完整口径、计分依据与 AI 边界见 ',
+          el('a', { class: 'link', href: '#/about', text: '说明' }),
+          '。',
+        ]),
       ]),
-      el('p', { class: 'disclaimer', text: LIMITS[3] }),
     ]),
   );
 }
