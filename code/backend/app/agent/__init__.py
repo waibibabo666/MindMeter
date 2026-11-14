@@ -159,6 +159,16 @@ SUMMARY_PHRASES = [
     "总体",
 ]
 GREETING_WORDS = ["你好", "您好", "hi", "hello", "在吗"]
+ADVICE_PHRASES = [
+    "给点建议",
+    "给些建议",
+    "有什么建议",
+    "有啥建议",
+    "下一步怎么办",
+    "下一步怎么练",
+    "怎么提升",
+    "如何提升",
+]
 UNRELATED_WORDS = [
     "天气",
     "股票",
@@ -285,6 +295,8 @@ def classify(question: str) -> dict:
     matched = hits(text, SUPPORT_WORDS)
     if matched:
         return {"intent": INTENT["SUPPORT"], "matched": matched, "reason": "support-word"}
+    if any(phrase in text for phrase in ADVICE_PHRASES):
+        return {"intent": INTENT["SUMMARY"], "matched": [], "reason": "advice-question"}
     if unrelated and not domain:
         return {"intent": INTENT["UNRELATED"], "matched": unrelated, "reason": "off-topic"}
     trend = hits(text, TREND_STRONG_WORDS)

@@ -97,3 +97,8 @@ def test_summary_and_greeting_do_not_fall_into_clarify(client):
     greeting = chat(client, "你好")
     assert greeting["reply"]["intent"] == "greeting"
     assert "解读助手" in greeting["reply"]["text"]
+
+    advice = chat(client, "给点建议")
+    assert advice["reply"]["intent"] == "summary"
+    assert "可以试试" in advice["reply"]["text"]
+    assert "限时任务先练" not in advice["reply"]["text"]
