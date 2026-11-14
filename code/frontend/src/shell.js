@@ -8,6 +8,7 @@ import { readState } from './store.js';
 import { STANDARD_ORDER } from './data.js';
 import { button, clear, el } from './ui.js';
 import { flashChip } from './motion.js';
+import { readUiPrefs, writeUiPrefs, applyUiPrefs } from './ui-prefs.js';
 
 const NAV_GROUP = {
   '/': '测评',
@@ -21,6 +22,7 @@ const NAV_GROUP = {
   '/trend': '趋势',
   '/games': '游戏',
   '/game': '游戏',
+  '/about': '说明',
   '/settings': '设置',
 };
 
@@ -35,6 +37,7 @@ const PAGE_LABEL = {
   '/trend': '趋势',
   '/games': '游戏中心',
   '/game': '游戏中',
+  '/about': '说明',
   '/settings': '设置',
 };
 
@@ -53,6 +56,34 @@ export function createShell({ ctx, router }) {
   const railNode = document.getElementById('rail');
   const chipNode = document.getElementById('chip');
   const quitNode = document.getElementById('quit-task');
+  const navToggle = document.getElementById('toggle-nav');
+  const railToggle = document.getElementById('toggle-rail');
+
+  const prefs = readUiPrefs();
+  applyUiPrefs(prefs);
+
+  function syncToggles() {
+    if (navToggle) navToggle.setAttribute('aria-pressed', String(prefs.navCollapsed));
+    if (railToggle) railToggle.setAttribute('aria-pressed', String(prefs.railCollapsed));
+  }
+
+  if (navToggle) {
+    navToggle.addEventListener('click', () => {
+      prefs.navCollapsed = !prefs.navCollapsed;
+      applyUiPrefs(prefs);
+      writeUiPrefs(prefs);
+      syncToggles();
+    });
+  }
+  if (railToggle) {
+    railToggle.addEventListener('click', () => {
+      prefs.railCollapsed = !prefs.railCollapsed;
+      applyUiPrefs(prefs);
+      writeUiPrefs(prefs);
+      syncToggles();
+    });
+  }
+  syncToggles();
 
   if (quitNode) {
     quitNode.addEventListener('click', () => {

@@ -1,5 +1,5 @@
-import { el, button } from '../ui.js';
-import { DIMS, LIMITS } from '../data.js';
+﻿import { el, button } from '../ui.js';
+import { DIMS } from '../data.js';
 import { readSessions } from '../storage.js';
 
 const TIER_LABEL = { quick: '快测', standard: '标准', deep: '深度' };
@@ -72,7 +72,10 @@ export function renderHome(root, ctx) {
       recentCard(ctx),
 
       el('p', { class: 'tiny', text: '数据只存本机数据库 · 可随时清除 · 非临床诊断 · 18+' }),
-      el('p', { class: 'disclaimer', text: LIMITS[3] }),
+      el('p', { class: 'tiny' }, [
+        '测什么、怎么测、分数怎么来、AI 的边界：',
+        el('a', { class: 'link', href: '#/about', text: '查看完整说明' }),
+      ]),
     ]),
   );
 }

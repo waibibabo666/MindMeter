@@ -2,6 +2,7 @@ import { el, button } from '../ui.js';
 import { DIMS, LIMITS } from '../data.js';
 import { readSessions } from '../storage.js';
 import { buildTrend, repeatHint, REPEAT_MIN_DAYS } from '../trend.js';
+import { buildTrendSeries, trendChartMarkup, TREND_COLORS } from '../charts/trend.js';
 
 const DIM_NAME = Object.fromEntries(DIMS.map((d) => [d.id, d.name]));
 
@@ -79,6 +80,41 @@ function skippedNames(trend) {
   return [...new Set([...trend.onlyPrev, ...trend.onlyNext])].map((id) => DIM_NAME[id] || id);
 }
 
+/** 折线图卡片：最近几次的同一维度连成线，只画每次都测到的维度。 */
+function trendChartCard(sessions) {
+  const view = buildTrendSeries(
+    sessions,
+    DIMS.map((dim) => dim.id),
+  );
+  if (view.dims.length === 0) {
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title', text: '各维度走势' }),
+      el('p', { class: 'muted', text: '最近的记录里没有每次都测到的共同维度，暂时画不出走势。' }),
+    ]);
+  }
+
+  const legend = el(
+    'div',
+    { class: 'trend-legend' },
+    view.dims.map((id, index) =>
+      el('span', { class: 'trend-legend-item' }, [
+        el('i', { style: `background:${TREND_COLORS[index % TREND_COLORS.length]}` }),
+        DIM_NAME[id] || id,
+      ]),
+    ),
+  );
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '各维度走势' }),
+    el('div', { class: 'trend-chart', html: trendChartMarkup(view) }),
+    legend,
+    el('p', {
+      class: 'tiny',
+      text: `最近 ${view.count} 次记录；只连线每次都测到的维度，缺一次就不画，不做插值。`,
+    }),
+  ]);
+}
+
 function trendNotes(skipped) {
   return el('div', { class: 'card' }, [
     el('h2', { class: 'card-title', text: '怎么读这张表' }),
@@ -134,6 +170,7 @@ export function renderTrend(root, ctx) {
         text: rangeText,
       }),
       hint ? el('div', { class: 'notice', role: 'status' }, [hint]) : null,
+      trendChartCard(sessions),
       trendTable(trend, rows),
       trendNotes(skippedNames(trend)),
       el('div', { class: 'row' }, [

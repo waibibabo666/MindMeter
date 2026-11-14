@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 极简 hash 路由。
  *
  * 为什么用 hash 而不是 History API：静态文件可以直接双击打开，也能被
@@ -18,6 +18,7 @@ export const ROUTES = [
   '/memory',
   '/chat',
   '/games',
+  '/about',
   '/game',
 ];
 
