@@ -38,15 +38,6 @@ function seeded(seed) {
   };
 }
 
-function fakeStorage() {
-  const map = new Map();
-  return {
-    getItem: (k) => (map.has(k) ? map.get(k) : null),
-    setItem: (k, v) => map.set(k, String(v)),
-    removeItem: (k) => map.delete(k),
-  };
-}
-
 async function main() {
   const registry = await import(href(path.join(SRC, 'games', 'registry.js')));
   const schulte = await import(href(path.join(SRC, 'games', 'schulte.js')));
@@ -60,7 +51,7 @@ async function main() {
   const speech = await import(href(path.join(SRC, 'games', 'speech.js')));
   const { svRotate, svMirror } = svGames;
   const data = await import(href(path.join(SRC, 'data.js')));
-  const storage = await import(href(path.join(SRC, 'storage.js')));
+  const gameStore = await import(href(path.join(SRC, 'games', 'store.js')));
 
   // ---------- 登记表 ----------
 
@@ -181,22 +172,33 @@ async function main() {
 
   // ---------- 存储 ----------
 
-  test('存储：最高分只升不降，且与 sessions 隔离', () => {
-    storage.__setStorageForTests(fakeStorage());
-    storage.clearAllData();
+  test('游戏记录：最高分只升不降，且独立于测评存储', () => {
+    const map = new Map();
+    globalThis.localStorage = {
+      getItem: (k) => (map.has(k) ? map.get(k) : null),
+      setItem: (k, v) => map.set(k, String(v)),
+      removeItem: (k) => map.delete(k),
+    };
+    gameStore.clearGames();
 
-    storage.recordGame('schulte', 80);
-    eq(storage.readGames().records.schulte.best, 80, '首次记录');
-    storage.recordGame('schulte', 55);
-    eq(storage.readGames().records.schulte.best, 80, '低分不覆盖');
-    eq(storage.readGames().records.schulte.plays, 2, '局数累加');
-    eq(storage.readGames().records.schulte.lastScore, 55, '最近一局');
+    gameStore.recordGame('schulte', 80);
+    eq(gameStore.readGames().records.schulte.best, 80, '首次记录');
+    gameStore.recordGame('schulte', 55);
+    eq(gameStore.readGames().records.schulte.best, 80, '低分不覆盖');
+    eq(gameStore.readGames().records.schulte.plays, 2, '局数累加');
+    eq(gameStore.readGames().records.schulte.lastScore, 55, '最近一局');
 
-    storage.recordGame('schulte', 120);
-    eq(storage.readGames().records.schulte.best, 100, '上限截断');
+    gameStore.recordGame('schulte', 120);
+    eq(gameStore.readGames().records.schulte.best, 100, '上限截断');
 
-    eq(storage.readSessions().sessions.length, 0, '不应写入 sessions');
-    storage.__setStorageForTests(null);
+    // 只写游戏自己的 key，不碰测评数据
+    const keys = [...map.keys()];
+    eq(keys.length, 1, '只应写一个 key');
+    assert(keys[0].includes('games'), '写入的应是游戏 key');
+
+    gameStore.clearGames();
+    eq(Object.keys(gameStore.readGames().records).length, 0, '清除后为空');
+    delete globalThis.localStorage;
   });
 
   // ---------- 纯逻辑（题库 / 视觉 / 语音） ----------
@@ -240,7 +242,10 @@ async function main() {
   });
 
   test('空间视觉化：旋转 / 镜像题目结构', () => {
-    for (const [name, game] of [['rotate', svRotate], ['mirror', svMirror]]) {
+    for (const [name, game] of [
+      ['rotate', svRotate],
+      ['mirror', svMirror],
+    ]) {
       assert(game.bank.length >= 6, `${name} 题量不足`);
       for (const item of game.bank) {
         eq(item.options.length, 4, `${name} 选项数`);

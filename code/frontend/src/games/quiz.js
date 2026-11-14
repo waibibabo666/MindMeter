@@ -39,9 +39,11 @@ function miniGrid(cells) {
 
 function optionNode(option, onPick) {
   if (option && Array.isArray(option.grid)) {
-    const node = el('button', { class: 'quiz-grid-option', type: 'button', 'aria-label': '图案选项' }, [
-      miniGrid(option.grid),
-    ]);
+    const node = el(
+      'button',
+      { class: 'quiz-grid-option', type: 'button', 'aria-label': '图案选项' },
+      [miniGrid(option.grid)],
+    );
     node.addEventListener('click', () => onPick(node));
     return node;
   }
@@ -95,7 +97,9 @@ export function createQuizGame(config) {
         if (Array.isArray(item.grid)) prompt.appendChild(miniGrid(item.grid));
         clear(options);
         // 打乱选项，避免正确答案固定落在某个位置
-        const shuffled = shuffle(item.options.map((option, i) => ({ option, right: i === item.answer })));
+        const shuffled = shuffle(
+          item.options.map((option, i) => ({ option, right: i === item.answer })),
+        );
         shuffled.forEach(({ option, right }) => {
           const node = optionNode(option, () => {
             if (closed) return;

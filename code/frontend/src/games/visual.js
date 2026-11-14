@@ -160,7 +160,12 @@ export const spotDiff = {
     const right = el('div', { class: 'game-grid spot' });
     for (const symbol of base) left.appendChild(el('span', { class: 'spot-cell', text: symbol }));
     target.forEach((symbol, index) => {
-      const node = el('button', { class: 'spot-cell', type: 'button', text: symbol, 'data-index': String(index) });
+      const node = el('button', {
+        class: 'spot-cell',
+        type: 'button',
+        text: symbol,
+        'data-index': String(index),
+      });
       node.addEventListener('click', () => {
         if (closed) return;
         if (found.has(index)) return;
@@ -246,7 +251,11 @@ export const pairLink = {
 
       const done = new Set();
       const leftNodes = leftOrder.map((pairIndex) => {
-        const node = el('button', { class: 'pair-item', type: 'button', text: WORD_PAIRS[pairIndex][0] });
+        const node = el('button', {
+          class: 'pair-item',
+          type: 'button',
+          text: WORD_PAIRS[pairIndex][0],
+        });
         node.addEventListener('click', () => {
           if (closed || done.has(pairIndex)) return;
           selectedLeft = pairIndex;
@@ -258,7 +267,11 @@ export const pairLink = {
       });
 
       rightOrder.forEach((pairIndex) => {
-        const node = el('button', { class: 'pair-item', type: 'button', text: WORD_PAIRS[pairIndex][1] });
+        const node = el('button', {
+          class: 'pair-item',
+          type: 'button',
+          text: WORD_PAIRS[pairIndex][1],
+        });
         node.addEventListener('click', () => {
           if (closed || selectedLeft === null) return;
           if (done.has(pairIndex)) return;
@@ -356,7 +369,11 @@ export const shoppingList = {
       const submit = el('button', { class: 'btn primary', type: 'button', text: '提交' });
 
       for (const item of options) {
-        const node = el('button', { class: 'shop-option', type: 'button', text: `${item.emoji} ${item.name}` });
+        const node = el('button', {
+          class: 'shop-option',
+          type: 'button',
+          text: `${item.emoji} ${item.name}`,
+        });
         node.addEventListener('click', () => {
           if (closed) return;
           const key = item.name;

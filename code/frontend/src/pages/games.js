@@ -50,7 +50,9 @@ export function renderGames(root, ctx) {
 
   const total = GAMES.length;
   const note =
-    ready === total ? `共 ${total} 个游戏，全部可玩。` : `已开放 ${ready} 个，其余标注「即将开放」。`;
+    ready === total
+      ? `共 ${total} 个游戏，全部可玩。`
+      : `已开放 ${ready} 个，其余标注「即将开放」。`;
 
   root.appendChild(
     el('section', { class: 'page', 'aria-labelledby': 'games-title' }, [
