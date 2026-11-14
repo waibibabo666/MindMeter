@@ -8,13 +8,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .api import api_router
 from .config import settings
 from .logging_setup import setup_logging
-from .security import enforce_local_request
+from .security import LocalGuardMiddleware
 
 setup_logging(settings.data_dir)
 
@@ -25,13 +25,15 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
-app.middleware("http")(enforce_local_request)
+app.add_middleware(LocalGuardMiddleware)
 app.include_router(api_router)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return JSONResponse(status_code=204, content=None)
+    # 204 不能带响应体：之前用 JSONResponse(content=None) 会发 "null"，
+    # h11 会抛 Too much data for declared Content-Length。
+    return Response(status_code=204)
 
 
 frontend = Path(settings.frontend_dir).resolve()

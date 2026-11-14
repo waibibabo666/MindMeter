@@ -30,6 +30,24 @@ IS_WINDOWS = os.name == "nt"
 CREATE_NO_WINDOW = 0x08000000 if IS_WINDOWS else 0
 
 
+def run_hidden(command, *, timeout=None, env=None, cwd=None):
+    """跑控制台程序时不弹黑框。
+
+    启动器自身是 pythonw（无控制台），initdb / alembic / pg_isready 这类
+    控制台子进程如果不带 CREATE_NO_WINDOW，各自会弹出一个黑色窗口。
+    """
+    kwargs = {"capture_output": True, "text": True}
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    if env is not None:
+        kwargs["env"] = env
+    if cwd is not None:
+        kwargs["cwd"] = cwd
+    if IS_WINDOWS:
+        kwargs["creationflags"] = CREATE_NO_WINDOW
+    return subprocess.run(command, **kwargs)
+
+
 def app_root() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
@@ -273,7 +291,7 @@ def initdb() -> None:
             "--data-checksums",
         ]
         log("initdb: " + " ".join(command))
-        result = subprocess.run(command, capture_output=True, text=True, timeout=180)
+        result = run_hidden(command, timeout=180)
         if result.returncode != 0:
             raise RuntimeError("initdb 失败：\n" + (result.stderr or result.stdout)[-2000:])
     finally:
@@ -304,7 +322,7 @@ def start_postgres(port: int) -> subprocess.Popen:
     for _ in range(120):
         if process.poll() is not None:
             raise RuntimeError("PostgreSQL 启动失败，查看日志：" + str(log_path))
-        probe = subprocess.run(
+        probe = run_hidden(
             [
                 str(PG_BIN / "pg_isready.exe"),
                 "-h",
@@ -316,8 +334,6 @@ def start_postgres(port: int) -> subprocess.Popen:
                 "-d",
                 "postgres",
             ],
-            capture_output=True,
-            text=True,
             timeout=5,
         )
         if probe.returncode == 0:
@@ -394,7 +410,7 @@ def backup_before_migration(port: int) -> Path | None:
     target = BACKUPS / f"mindmeter-{time.strftime('%Y%m%d-%H%M%S')}.dump"
     env = dict(os.environ)
     env["PGPASSWORD"] = admin
-    result = subprocess.run(
+    result = run_hidden(
         [
             str(PG_BIN / "pg_dump.exe"),
             "-Fc",
@@ -410,8 +426,6 @@ def backup_before_migration(port: int) -> Path | None:
             str(target),
         ],
         env=env,
-        capture_output=True,
-        text=True,
         timeout=120,
     )
     if result.returncode != 0:
@@ -425,12 +439,10 @@ def run_migrations(port: int) -> None:
     env = dict(os.environ)
     env["MM_MIGRATION_DATABASE_URL"] = pg_url("mm_admin", admin, port, "mindmeter")
     env["MM_DATABASE_URL"] = pg_url("mm_app", keyring_secret("pg-app"), port, "mindmeter")
-    result = subprocess.run(
+    result = run_hidden(
         [sys.executable, "-m", "alembic", "-c", str(BACKEND_DIR / "alembic.ini"), "upgrade", "head"],
         cwd=str(BACKEND_DIR),
         env=env,
-        capture_output=True,
-        text=True,
         timeout=180,
     )
     if result.returncode != 0:
@@ -454,12 +466,10 @@ def run_embedding_ingest(pg_port: int) -> None:
                 part for part in value.split(",") if part.strip() not in {"[::1]", "::1"}
             )
     try:
-        result = subprocess.run(
+        result = run_hidden(
             [sys.executable, "-m", "app.rag", "ingest"],
             cwd=str(BACKEND_DIR),
             env=env,
-            capture_output=True,
-            text=True,
             timeout=240,
         )
         if result.returncode == 0:
@@ -554,7 +564,7 @@ def stop_process(process: subprocess.Popen | None, name: str) -> None:
 
 def stop_postgres(port: int) -> None:
     try:
-        subprocess.run(
+        run_hidden(
             [
                 str(PG_BIN / "pg_ctl.exe"),
                 "-D",
@@ -566,8 +576,6 @@ def stop_postgres(port: int) -> None:
                 "-t",
                 "30",
             ],
-            capture_output=True,
-            text=True,
             timeout=40,
         )
     except Exception as exc:  # noqa: BLE001
@@ -580,6 +588,28 @@ class Bridge:
 
     def get_boot(self) -> dict:
         return {"apiBase": "/api/v1", "token": self._token, "version": "0.2.0"}
+
+    def quit_app(self) -> bool:
+        """前端「退出」按钮：关窗口，后台接着走 finally 停掉 FastAPI 与 PostgreSQL。
+
+        不把 Window 对象挂在 Bridge 上——pywebview 会遍历 js_api 的属性，
+        挂上去可能让整个 api 桥构建失败；这里用时再取。
+        """
+        import threading
+
+        threading.Thread(target=_destroy_window, daemon=True).start()
+        return True
+
+
+def _destroy_window() -> None:
+    import webview
+
+    try:
+        windows = getattr(webview, "windows", None) or []
+        if windows:
+            windows[0].destroy()
+    except Exception as exc:  # noqa: BLE001
+        log(f"destroy window failed: {exc}")
 
 
 SPLASH = """
@@ -601,13 +631,14 @@ background:#38bdf8;margin:0 3px;animation:b 1s infinite alternate}
 def run_window(token: str, port: int) -> None:
     import webview
 
+    bridge = Bridge(token)
     window = webview.create_window(
         WINDOW_TITLE,
         html=SPLASH,
         width=1280,
         height=900,
         min_size=(960, 640),
-        js_api=Bridge(token),
+        js_api=bridge,
     )
 
     def load_app() -> None:

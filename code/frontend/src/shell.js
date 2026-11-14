@@ -93,6 +93,19 @@ export function createShell({ ctx, router }) {
     });
   }
 
+  // 退出应用：桌面壳里通过 pywebview 的 js_api 关窗口；浏览器里只给提示。
+  const quitAppNode = document.getElementById('quit-app');
+  if (quitAppNode) {
+    quitAppNode.addEventListener('click', () => {
+      const bridge = window.pywebview && window.pywebview.api;
+      if (bridge && typeof bridge.quit_app === 'function') {
+        bridge.quit_app();
+        return;
+      }
+      ctx.toast('直接关闭窗口即可退出');
+    });
+  }
+
   function updateShell(route) {
     const group = NAV_GROUP[route.path] || '';
     document.body.classList.toggle('focus', route.path === '/task');
@@ -137,13 +150,10 @@ export function createShell({ ctx, router }) {
       ]),
     );
     railNode.appendChild(
-      el('div', { class: 'card' }, [
-        el('h2', { class: 'card-title', text: '数据说明' }),
-        el('p', {
-          class: 'tiny',
-          text: '本机运行：测评、对话与记忆只存这台设备的数据库，不上传；导出不含模型 Key。非临床诊断。',
-        }),
-      ]),
+      el('p', {
+        class: 'rail-note tiny',
+        text: '本机运行 · 不上传 · 导出不含 Key · 非临床诊断',
+      }),
     );
   }
 
