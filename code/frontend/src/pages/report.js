@@ -31,7 +31,14 @@ function fmtMs(value) {
 
 function describe(id, metrics) {
   if (!metrics || !STATUS[id] || !DETAIL[id]) return '—';
-  return `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
+  try {
+    const text = `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
+    // 指标结构改版后旧描述会读到 undefined，宁可只显示横线
+    return text.includes('undefined') || text.includes('NaN') ? '—' : text;
+  } catch {
+    // 指标结构缺字段时只显示横线，不让报告整页失败
+    return '—';
+  }
 }
 
 /** 该维度的 95% 区间半宽；限时维度用经验表。 */

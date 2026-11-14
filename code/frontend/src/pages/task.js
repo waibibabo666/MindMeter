@@ -107,8 +107,11 @@ export function renderTask(root, ctx, taskId) {
       current = Object.assign({}, current, patch);
       ctx.patchDraft(taskId, current);
     },
-    finish: (payload) => {
+    // 两种调用风格都要支持：
+    //   任务式 ctx.finish({ metrics })   游戏式 ctx.finish(score, metrics)
+    finish: (first, second) => {
       cleanup();
+      const payload = second === undefined ? first : { metrics: second };
       ctx.finishTask(taskId, payload);
     },
     toast: ctx.toast,
