@@ -1,4 +1,4 @@
-/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
+﻿/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
    布局：顶栏 56px ＋ 左侧栏 232px ＋ 主区 1fr（≤960）＋ 右上下文栏 340px；
    测评页切专注模式（760px 居中）；360px 为移动端回归底线（单栏）。
    配色：绿色系（品牌 #15803D），提醒用琥珀，不用红色做评判。 */
@@ -149,9 +149,9 @@ body {
 .wb {
   flex: 1;
   width: 100%;
-  max-width: 1440px;
+  max-width: 1760px;
   margin: 0 auto;
-  padding: 20px 24px 40px;
+  padding: 20px 32px 40px;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr) 340px;
   grid-template-areas: 'side main rail';
@@ -210,8 +210,9 @@ body {
 #app {
   grid-area: main;
   min-width: 0;
-  max-width: 960px;
+  max-width: 1080px;
   width: 100%;
+  margin-inline: auto;
 }
 #app:focus {
   outline: none;
@@ -1166,10 +1167,23 @@ body.focus #app {
   .radar {
     max-width: 460px;
   }
-  /* 报告页双栏：雷达 | 分数表（组长桌面方案第 2 步） */
+}
+
+/*
+ * 报告页双栏：雷达 | 分数表。
+ * 用容器查询而不是视口查询：侧栏 + 右栏会吃掉几百像素，
+ * 视口够宽不代表主区够宽（缩放到 125% 时就是这样，表格被挤成一列字）。
+ * 只有主区真正 ≥860px 才分栏，否则保持单列。
+ */
+#app {
+  container-type: inline-size;
+  container-name: main;
+}
+
+@container main (min-width: 740px) {
   .page-report {
     display: grid;
-    grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
     column-gap: 20px;
     align-items: start;
   }
@@ -1184,6 +1198,11 @@ body.focus #app {
     grid-column: 2;
     grid-row: 2;
   }
+}
+
+/* 原始指标那一列不许被挤成竖排单字 */
+.page-report .report-table td:last-child {
+  min-width: 170px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1605,4 +1624,152 @@ button.spot-cell {
   .pair-board {
     grid-template-columns: 1fr;
   }
+}
+
+.link {
+  color: var(--accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---- 趋势折线图 ---- */
+.trend-chart {
+  margin: 6px 0 2px;
+}
+.trend-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.trend-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.7;
+}
+.trend-tick {
+  fill: var(--dim);
+  font-size: 11px;
+}
+.trend-line {
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: trend-draw 1.2s ease-out forwards;
+}
+.trend-dot {
+  opacity: 0;
+  animation: fade-in 0.4s ease forwards 0.8s;
+}
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 10px 0 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.trend-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+@keyframes trend-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---- 顶栏图标按钮 + 侧栏/右栏折叠 ---- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.icon-btn:hover {
+  background: var(--card-2);
+  color: var(--accent-deep);
+}
+.icon-btn[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+/* 窄窗口下侧栏已变成顶部横条，折叠按钮没有意义 */
+@media (max-width: 1199px) {
+  .icon-btn {
+    display: none;
+  }
+}
+
+@media (min-width: 1200px) {
+  body.nav-collapsed .sidebar,
+  body.rail-collapsed .rail {
+    display: none;
+  }
+  body.nav-collapsed .wb {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-areas: 'main rail';
+  }
+  body.rail-collapsed .wb {
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-areas: 'side main';
+  }
+  body.nav-collapsed.rail-collapsed .wb {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main';
+  }
+}
+
+/* ---- 对话输入（多行自适应）---- */
+.chat-input {
+  resize: none;
+  line-height: 1.6;
+  min-height: var(--tap);
+  max-height: 132px;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+.row > .chat-input {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.row > .chat-input + .btn {
+  flex: 0 0 96px;
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.empty-state-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.empty-state .muted {
+  margin: 0;
+}
+.empty-state .btn {
+  width: auto;
+  min-width: 128px;
+  padding: 8px 18px;
 }
