@@ -5,8 +5,8 @@
 import { el, clear, now } from '../ui.js';
 
 const LENGTH = 4;
-const WORST_ATTEMPTS = 10;
-const BEST_ATTEMPTS = 7;
+const WORST_ATTEMPTS = 14;
+const BEST_ATTEMPTS = 8;
 
 /** 生成 4 个互不重复的数字。 */
 export function makeSecret(random = Math.random) {
@@ -33,7 +33,7 @@ export function judge(secret, guess) {
   return { a, b };
 }
 
-/** 7 次内猜中得满分，10 次及以上得 0 分。 */
+/** 8 次内猜中得满分，14 次及以上得 0 分。 */
 export function scoreGuess(attempts) {
   const safe = Math.max(1, Math.round(Number(attempts) || 1));
   const span = WORST_ATTEMPTS - BEST_ATTEMPTS;

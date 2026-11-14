@@ -186,8 +186,15 @@ export const spotDiff = {
       });
       right.appendChild(node);
     });
-    wrap.appendChild(left);
-    wrap.appendChild(right);
+    wrap.appendChild(
+      el('div', { class: 'spot-col' }, [el('p', { class: 'spot-label', text: '原图' }), left]),
+    );
+    wrap.appendChild(
+      el('div', { class: 'spot-col' }, [
+        el('p', { class: 'spot-label', text: '找出 4 处不同' }),
+        right,
+      ]),
+    );
     root.appendChild(status);
     root.appendChild(wrap);
 
@@ -250,7 +257,10 @@ export const pairLink = {
       status.textContent = '点左边一个、右边一个，把词对连起来';
 
       const done = new Set();
-      const leftNodes = leftOrder.map((pairIndex) => {
+      // 按 pairIndex 建立左列节点映射：右列点击时能精确找到对应的左词，
+      // 而不是用「左列位置下标」去索引（两者在打乱后并不一致）。
+      const leftNodes = {};
+      leftOrder.forEach((pairIndex) => {
         const node = el('button', {
           class: 'pair-item',
           type: 'button',
@@ -259,11 +269,11 @@ export const pairLink = {
         node.addEventListener('click', () => {
           if (closed || done.has(pairIndex)) return;
           selectedLeft = pairIndex;
-          for (const item of leftNodes) item.classList.remove('sel');
+          for (const item of Object.values(leftNodes)) item.classList.remove('sel');
           node.classList.add('sel');
         });
         leftCol.appendChild(node);
-        return node;
+        leftNodes[pairIndex] = node;
       });
 
       rightOrder.forEach((pairIndex) => {
@@ -278,9 +288,11 @@ export const pairLink = {
           if (pairIndex === selectedLeft) {
             done.add(pairIndex);
             matched += 1;
-            leftNodes[pairIndex].classList.add('done');
+            const leftNode = leftNodes[pairIndex];
+            leftNode.classList.remove('sel');
+            leftNode.classList.add('done');
             node.classList.add('done');
-            leftNodes[pairIndex].disabled = true;
+            leftNode.disabled = true;
             node.disabled = true;
             status.textContent = `已连对 ${matched} / ${WORD_PAIRS.length}`;
             selectedLeft = null;
@@ -294,7 +306,7 @@ export const pairLink = {
           globalThis.setTimeout(() => node.classList.remove('miss'), 200);
           status.textContent = '这一对不匹配，再想想';
           selectedLeft = null;
-          for (const item of leftNodes) item.classList.remove('sel');
+          for (const item of Object.values(leftNodes)) item.classList.remove('sel');
         });
         rightCol.appendChild(node);
       });
