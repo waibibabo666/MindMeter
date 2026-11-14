@@ -59,7 +59,7 @@ const DIMENSION_WORDS = [
   '归纳推理',
   '空间视觉',
   '联想记忆',
-  '自然探索',
+  '自然知识',
 ];
 
 const DOMAIN_WORDS = [

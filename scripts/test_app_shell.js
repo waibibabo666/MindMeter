@@ -4,7 +4,7 @@
  *
  * 覆盖：
  *   - 目录与入口文件存在、无后端调用（静态壳不 fetch）
- *   - 标准档 4 项顺序与档位可用性
+ *   - 三个档位都是 8 维，顺序与可用性
  *   - 4 个任务的纯逻辑：旋转、选项唯一性、再认构造、指标汇总
  *   - 路由解析与状态读写（含损坏数据回退）
  *   - 360px / 触控区 / 减少动效等样式约定
@@ -102,9 +102,10 @@ async function main() {
     assert(!api.includes('apiKey'), 'api.js must not know about LLM keys');
   });
 
-  test('标准档 4 项且顺序固定', () => {
+  test('标准档 8 项且顺序固定', () => {
     assert(
-      JSON.stringify(data.STANDARD_ORDER) === JSON.stringify(['vc', 'ps', 'sv', 'am']),
+      JSON.stringify(data.STANDARD_ORDER) ===
+        JSON.stringify(['vc', 'ps', 'sv', 'am', 'nc', 'ir', 'ni', 'vf']),
       'unexpected standard order',
     );
     const standard = data.TIERS.find((t) => t.id === 'standard');
@@ -115,7 +116,11 @@ async function main() {
     );
     for (const id of ['quick', 'deep']) {
       const tier = data.TIERS.find((t) => t.id === id);
-      assert(tier && tier.available === false, `${id} must stay unavailable in L-01`);
+      assert(tier && tier.available === true, `${id} 档应已开放`);
+      assert(
+        JSON.stringify(tier.tasks) === JSON.stringify(data.STANDARD_ORDER),
+        `${id} 档也应是同样的 8 个维度`,
+      );
     }
   });
 

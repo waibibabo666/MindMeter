@@ -1,10 +1,11 @@
-import { el, button } from '../ui.js';
+﻿import { el, button } from '../ui.js';
 import { api } from '../api.js';
 import { readSessions, readSettings } from '../storage.js';
 import { DIMS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
+import { ciHalfWidth, specFor, timedCi } from '../scoring/levels.js';
+import { ageBand, ageNote, readProfile, stateWarning } from '../profile.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
-import { iconSvg } from '../icons.js';
 
 const STATUS = {
   vc: (m) => `正确 ${m.correct} / ${m.total}`,
@@ -33,25 +34,26 @@ function describe(id, metrics) {
   return `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
 }
 
-function scoreCell(score) {
-  if (typeof score !== 'number') {
-    return el('td', { class: 'score-cell', text: '未测' });
-  }
-  const width = Math.max(3, Math.min(100, score));
-  return el('td', { class: 'score-cell' }, [
-    el('span', { class: 'score-num', text: String(score) }),
-    el('div', { class: 'gauge' }, [el('i', { style: `width:${width}%` })]),
-  ]);
+/** 该维度的 95% 区间半宽；限时维度用经验表。 */
+function ciFor(dimId, score, payload, level) {
+  if (dimId === 'ps' || dimId === 'vf') return timedCi(dimId, specFor(level, dimId).seconds);
+  const metrics = (payload && payload.metrics) || {};
+  const n = Number(metrics.total) || Number(metrics.trials) || 0;
+  return ciHalfWidth(score, n, 0.25);
 }
 
-function reportRows(scored, results) {
+function reportRows(scored, results, level) {
   return DIMS.map((dim) => {
     const score = scored.scores[dim.id];
     const has = typeof score === 'number';
     const payload = results[dim.id];
+    const ci = has ? ciFor(dim.id, score, payload, level) : null;
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
-      scoreCell(has ? score : null),
+      el('td', { class: 'score-cell' }, [
+        el('span', { text: has ? String(score) : '未测' }),
+        ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
+      ]),
       el('td', {
         class: 'muted',
         text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
@@ -76,7 +78,7 @@ function emptyReport(ctx) {
       el('h2', { class: 'card-title', text: '还没有结果' }),
       el('p', {
         class: 'muted',
-        text: '完成一次标准测评后，这里会显示 4 项分数与 4 项未测。',
+        text: '完成一次测评后，这里会显示 8 个维度、分数区间与原始指标。',
       }),
       button('开始测评', () => ctx.go('/tier'), { variant: 'primary' }),
     ]),
@@ -127,14 +129,35 @@ function reportActions(ctx) {
   ]);
 }
 
-function fullReport(ctx, results, scored, radar, assessmentId) {
+/** 状态与年龄提示：只解释结果，不改分数。 */
+function contextCard() {
+  const profile = readProfile();
+  const warn = stateWarning(profile);
+  const note = ageNote(profile.age);
+  if (!warn && !note && !profile.age) return null;
+
+  const bits = [];
+  if (profile.age) bits.push(`${profile.age} 岁（${ageBand(profile.age)}）`);
+  if (profile.sleep) bits.push('睡眠已记录');
+
+  return el('div', { class: `card${warn ? ' card-warn' : ''}` }, [
+    el('h2', { class: 'card-title', text: '解读提示' }),
+    bits.length ? el('p', { class: 'tiny', text: bits.join(' · ') }) : null,
+    warn ? el('p', { class: 'muted', text: warn }) : null,
+    note ? el('p', { class: 'muted', text: note }) : null,
+    el('p', { class: 'tiny', text: '这些信息只用于解释结果，不参与计分。' }),
+  ]);
+}
+
+function fullReport(ctx, results, scored, radar, assessmentId, level) {
   return [
     el('p', {
       class: 'lead',
       text: `8 个维度中测了 ${radar.measuredCount} 个，其余 ${radar.total - radar.measuredCount} 个显示「未测」。不设总分，也不做百分位。`,
     }),
+    contextCard(),
     radarCard(radar),
-    scoreTable(reportRows(scored, results)),
+    scoreTable(reportRows(scored, results, level)),
     renderAiCard(ctx, assessmentId),
     scoreNote(),
     reportActions(ctx),
@@ -161,13 +184,14 @@ export function renderReport(root, ctx) {
       ? ctx.state.results
       : (latest && latest.results) || {};
   const measured = Object.keys(results);
+  const level = ctx.state.level || (latest && latest.level) || 'standard';
   const scored = reportScores(ctx, latest, results);
   const radar = buildRadar(DIMS, scored.scores || {});
   const assessmentId = ctx.state.assessmentId || (latest && latest.id) || null;
   const body =
     measured.length === 0
       ? emptyReport(ctx)
-      : fullReport(ctx, results, scored, radar, assessmentId);
+      : fullReport(ctx, results, scored, radar, assessmentId, level);
 
   root.appendChild(
     el('section', { class: 'page page-report', 'aria-labelledby': 'report-title' }, [
@@ -229,12 +253,8 @@ function renderAiCard(ctx, assessmentId) {
   // 没配 Key 时模板解读是本机即时返回的，直接显示，别让用户面对空白卡片。
   if (!readSettings().hasKey) runExplain();
 
-  return el('div', { class: 'card ai-card' }, [
-    el('h2', { class: 'card-title' }, [
-      el('span', { class: 'ai-icon', html: iconSvg('sparkle') }),
-      'AI 解读 ',
-      badge,
-    ]),
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
     reason,
     output,
     el('div', { class: 'row' }, [

@@ -1,19 +1,35 @@
 /**
- * 知觉速度：45 秒符号匹配。
- * 记录正确数、错误数、平均反应时；不计分。
+ * 处理速度：编码（SDMT 式）+ 颜色分类，两种题交替出。
+ *
+ * 规则：
+ *   - 对照表常驻，每 10 题重排数字（强制继续查表）
+ *   - 编码 5 题 → 分类 5 题 → 循环
+ *   - 错题扣 0.5；<200ms 的作答不计分
+ *   - 限时 30 / 45 / 90 秒
+ *
+ * 旧版的符号匹配逻辑（makeTrial / buildTrials）保留，供既有测试使���。
  */
 import { PS_SYMBOLS } from '../data.js';
-import { el, button, clear, now, ticker } from '../ui.js';
+import { el, button, clear, now } from '../ui.js';
 import { mulberry32, shuffle, pick } from '../random.js';
+import { COLOR_LABEL, SHAPES, pickCombos, shapeNode } from './shapes.js';
 
-const DURATION = 45;
-const GROUP = 3;
+const RT_FLOOR = 200;
+const BLOCK_SIZE = 5;
+const DIGITS = [1, 2, 3, 4, 5, 6];
+const DIFFICULTY_CYCLE = [1, 2, 2, 3];
+const COLOR_PAIRS = {
+  1: ['red', 'blue'],
+  2: ['blue', 'green'],
+  3: ['red', 'orange'],
+};
+
+// ---------- 旧版符号匹配（保留导出，测试仍在用） ----------
 
 export function makeTrial(random) {
-  // 目标至少要有两个不同符号，否则干扰项容易退化。
   let target;
   do {
-    target = Array.from({ length: GROUP }, () => pick(PS_SYMBOLS, random)).join('');
+    target = Array.from({ length: 3 }, () => pick(PS_SYMBOLS, random)).join('');
   } while (new Set(target).size < 2);
 
   const options = new Set([target]);
@@ -21,7 +37,7 @@ export function makeTrial(random) {
   while (options.size < 4 && guard < 60) {
     guard += 1;
     const chars = target.split('');
-    const at = Math.floor(random() * GROUP);
+    const at = Math.floor(random() * 3);
     const alternatives = PS_SYMBOLS.filter((symbol) => symbol !== chars[at]);
     chars[at] = pick(alternatives, random);
     options.add(chars.join(''));
@@ -31,7 +47,6 @@ export function makeTrial(random) {
   return { target, options: list, answer: list.indexOf(target) };
 }
 
-/** 生成若干互不相同的题，保证每题只有一个正确答案。 */
 export function buildTrials(seed = 20261107, count = 24) {
   const random = mulberry32(seed);
   const trials = [];
@@ -58,110 +73,207 @@ export function summarizePs(trials) {
     correct,
     wrong: done - correct,
     meanRtMs: rts.length === 0 ? null : Math.round(rts.reduce((a, b) => a + b, 0) / rts.length),
-    seconds: DURATION,
+    seconds: 45,
   };
 }
 
-function targetBlock(trial) {
-  return el('div', { class: 'ps-target', 'aria-label': `目标：${trial.target}` }, [
-    el('span', { class: 'ps-target-label', text: '目标' }),
-    el('span', { class: 'ps-target-value', text: trial.target }),
-  ]);
+// ---------- 新版：编码 + 分类 ----------
+
+export function makeTable(random = Math.random) {
+  const combos = pickCombos(6, random);
+  const digits = shuffle(DIGITS, random);
+  return combos.map((combo, i) => ({ shape: combo.shape, color: combo.color, digit: digits[i] }));
 }
 
-function optionButtons(trial, choose) {
-  return trial.options.map((text, i) =>
-    button(text, () => choose(i), {
-      variant: 'option symbol',
-      ariaLabel: `选项 ${i + 1}：${text}`,
-    }),
-  );
+/** 重排数字，符号不变——被试必须继续查表。 */
+export function remapTable(table, random = Math.random) {
+  const digits = shuffle(DIGITS, random);
+  return table.map((entry, i) => ({ ...entry, digit: digits[i] }));
 }
 
-function renderBoard(board, trial, choose) {
-  clear(board);
-  board.appendChild(targetBlock(trial));
-  board.appendChild(
-    el(
-      'div',
-      { class: 'options options-grid', role: 'group', 'aria-label': '选项' },
-      optionButtons(trial, choose),
-    ),
-  );
+/**
+ * 编码题：n 个符号 → 选出对应的数字序列。
+ * n 由难度决定：易 2 / 中 3 / 难 4。
+ */
+export function buildEncoding(table, difficulty, random = Math.random) {
+  const count = [2, 3, 3, 4][difficulty] || 3;
+  const picked = shuffle(table, random).slice(0, count);
+  const answer = picked.map((entry) => entry.digit);
+  const key = answer.join('');
+  const options = [answer.slice()];
+  const seen = new Set([key]);
+  let guard = 0;
+  while (options.length < 4 && guard < 200) {
+    guard += 1;
+    const candidate = shuffle(answer, random);
+    const candidateKey = candidate.join('');
+    if (seen.has(candidateKey)) continue;
+    seen.add(candidateKey);
+    options.push(candidate);
+  }
+  const list = shuffle(options, random);
+  return { kind: 'encode', shapes: picked, options: list, answer: list.indexOf(answer) };
 }
 
-function bindKeys(choose) {
-  const onKey = (event) => {
-    const n = Number(event.key);
-    if (n >= 1 && n <= 4) {
-      event.preventDefault();
-      choose(n - 1);
-    }
-  };
-  document.addEventListener('keydown', onKey);
-  return () => document.removeEventListener('keydown', onKey);
+/** 分类题：判断图形是两种相近颜色中的哪一种。 */
+export function buildCategory(difficulty, random = Math.random) {
+  const pair = COLOR_PAIRS[difficulty] || COLOR_PAIRS[1];
+  const color = pair[Math.floor(random() * pair.length)];
+  const shape = SHAPES[Math.floor(random() * SHAPES.length)];
+  return { kind: 'category', shape, color, options: pair, answer: pair.indexOf(color) };
+}
+
+export function nextQuestion(state, random = Math.random) {
+  return state.phase === 'encode'
+    ? buildEncoding(state.table, state.difficulty, random)
+    : buildCategory(state.difficulty, random);
 }
 
 export const psTask = {
   id: 'ps',
   mount(root, ctx) {
-    const trials = buildTrials();
-    const done = ctx.draft && Array.isArray(ctx.draft.trials) ? ctx.draft.trials.slice() : [];
-    let index = done.length % trials.length;
+    const seconds = (ctx.spec && ctx.spec.seconds) || 45;
+    const durationMs = seconds * 1000;
+    const state = {
+      phase: 'encode',
+      blockLeft: BLOCK_SIZE,
+      difficulty: 1,
+      questionIndex: 0,
+      blocks: 0,
+      table: makeTable(),
+      encCorrect: 0,
+      encWrong: 0,
+      catCorrect: 0,
+      catWrong: 0,
+      done: 0,
+      ignored: 0,
+    };
+    let current = null;
     let shownAt = now();
-    let finished = false;
+    let closed = false;
+    const startedAt = now();
 
-    const timerNode = el('span', { class: 'timer', text: `剩余 ${DURATION} 秒` });
-    const board = el('div', { class: 'ps-board' });
-    const progress = el('span', { class: 'muted', text: '已完成 0 题' });
+    const status = el('p', { class: 'game-status', text: '' });
+    const legend = el('div', { class: 'legend' });
+    const host = el('div', { class: 'ps-host' });
+    root.appendChild(status);
+    root.appendChild(legend);
+    root.appendChild(host);
 
-    let cleanupKeys = () => {};
-    let stopTimer = () => {};
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      stopTimer();
-      cleanupKeys();
-      ctx.finish({ taskId: 'ps', metrics: summarizePs(done), answers: done });
+    const renderLegend = () => {
+      clear(legend);
+      for (const entry of state.table) {
+        legend.appendChild(
+          el('span', { class: 'legend-item' }, [
+            shapeNode(entry.shape, entry.color, 24),
+            el('span', { class: 'legend-digit', text: String(entry.digit) }),
+          ]),
+        );
+      }
     };
 
-    const choose = (choice) => {
-      if (finished) return;
-      const trial = trials[index];
-      if (!trial) return;
-      done.push({ correct: choice === trial.answer, rtMs: Math.round(now() - shownAt) });
-      index = (index + 1) % trials.length;
-      ctx.saveDraft({ trials: done });
+    const summary = () => {
+      // 只显示当前阶段在做的题型，避免另一类的统计干扰
+      if (state.phase === 'encode') {
+        return `已答 ${state.done} · 编码 ${state.encCorrect}对${state.encWrong}错`;
+      }
+      return `已答 ${state.done} · 分类 ${state.catCorrect}对${state.catWrong}错`;
+    };
+
+    const finish = () => {
+      if (closed) return;
+      closed = true;
+      globalThis.clearInterval(timer);
+      ctx.finish(null, {
+        encCorrect: state.encCorrect,
+        encWrong: state.encWrong,
+        catCorrect: state.catCorrect,
+        catWrong: state.catWrong,
+        seconds,
+      });
+    };
+
+    const advance = () => {
+      state.questionIndex += 1;
+      state.blockLeft -= 1;
+      if (state.questionIndex % 10 === 0) {
+        state.table = remapTable(state.table);
+        renderLegend();
+      }
+      if (state.blockLeft <= 0) {
+        state.blocks += 1;
+        state.phase = state.phase === 'encode' ? 'category' : 'encode';
+        state.blockLeft = BLOCK_SIZE;
+        state.difficulty = DIFFICULTY_CYCLE[state.blocks % DIFFICULTY_CYCLE.length];
+      }
       draw();
     };
 
-    const draw = () => {
-      const trial = trials[index];
-      shownAt = now();
-      progress.textContent = `已完成 ${done.length} 题`;
-      renderBoard(board, trial, choose);
-      cleanupKeys();
-      cleanupKeys = bindKeys(choose);
+    const answer = (choice) => {
+      if (closed || !current) return;
+      const rt = now() - shownAt;
+      state.done += 1;
+      if (rt < RT_FLOOR) {
+        state.ignored += 1;
+      } else if (current.kind === 'encode') {
+        if (choice === current.answer) state.encCorrect += 1;
+        else state.encWrong += 1;
+      } else if (choice === current.answer) {
+        state.catCorrect += 1;
+      } else {
+        state.catWrong += 1;
+      }
+      advance();
     };
 
-    clear(root);
-    root.appendChild(el('div', { class: 'task-head' }, [timerNode, progress]));
-    root.appendChild(board);
+    const draw = () => {
+      current = nextQuestion(state);
+      shownAt = now();
+      clear(host);
+      // 分类题不需要对照表，隐藏它以免干扰
+      legend.style.display = current.kind === 'encode' ? 'flex' : 'none';
+      status.textContent = summary();
 
-    stopTimer = ticker(
-      DURATION,
-      (left) => {
-        timerNode.textContent = `剩余 ${left} 秒`;
-      },
-      finish,
-    );
+      if (current.kind === 'encode') {
+        const target = el('div', { class: 'ps-target' });
+        for (const entry of current.shapes) {
+          target.appendChild(shapeNode(entry.shape, entry.color, 32));
+        }
+        host.appendChild(target);
+        host.appendChild(el('p', { class: 'tiny', text: '按对照表填出数字' }));
+      } else {
+        host.appendChild(
+          el('div', { class: 'ps-target' }, [shapeNode(current.shape, current.color, 44)]),
+        );
+        host.appendChild(el('p', { class: 'tiny', text: '这是什么颜色？' }));
+      }
 
+      const options = el('div', { class: 'ps-options' });
+      current.options.forEach((option, i) => {
+        const label = current.kind === 'encode' ? option.join(' ') : COLOR_LABEL[option];
+        options.appendChild(button(label, () => answer(i), { variant: 'option' }));
+      });
+      host.appendChild(options);
+    };
+
+    renderLegend();
     draw();
+
+    const timer = globalThis.setInterval(() => {
+      const left = Math.max(0, durationMs - (now() - startedAt));
+      if (closed) return;
+      if (left <= 0) {
+        finish();
+        return;
+      }
+      status.textContent = `剩余 ${(left / 1000).toFixed(1)}s · ${summary()}`;
+    }, 300);
+
     return () => {
-      finished = true;
-      stopTimer();
-      cleanupKeys();
+      closed = true;
+      globalThis.clearInterval(timer);
+      clear(host);
+      clear(legend);
     };
   },
 };

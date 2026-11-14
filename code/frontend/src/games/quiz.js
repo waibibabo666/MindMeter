@@ -65,7 +65,8 @@ export function createQuizGame(config) {
     desc,
     bank,
     mount(root, ctx) {
-      const questions = shuffle(bank).slice(0, Math.min(pick, bank.length));
+      const want = (ctx.spec && ctx.spec.items) || pick;
+      const questions = shuffle(bank).slice(0, Math.min(want, bank.length));
       let index = 0;
       let correct = 0;
       let closed = false;
