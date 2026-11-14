@@ -1,6 +1,6 @@
 # MindMeter 文档索引
 
-> 当前口径：**L2 = 8 项测评 + 账号 + 服务端计分 + LangGraph Agent + 记忆 + RAG + 长期趋势**。L1（静态/无账号/BYOK 直连）只保留为 UI 参考与历史。
+> 当前口径：**桌面本地版 = pywebview + FastAPI + 便携 PostgreSQL + pgvector + LangGraph + keyring；单用户、无账号/JWT**。旧 L1/L2 文档保留为历史；架构以 [ADR-0001](adr/0001-local-desktop-runtime.md) 为准。
 
 ## 核心文档
 
@@ -11,7 +11,10 @@
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | 当前 v3.0 | 性能、可靠、安全、隐私、AI 质量 |
 | `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
-| `software/` | [技术方案](software/architecture.md) | 当前 v4.0 | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
+| `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前桌面版见本地运行时 |
+| `software/` | [本地运行时](software/local-runtime.md) | 当前 | 双击入口、便携 PostgreSQL、启停、日志、排障 |
+| `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
+| `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 已接受 | 取代 m1_scope 的“无后端”范围 |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
 | `software/` | [诊断日志](software/logging.md) | 当前 v1.0 | 前端内存日志、脱敏、导出 |
 | `software/` | [本地知识库设计](software/knowledge-base.md) | 草案 v1.0 | P-06：分类、chunk schema、30 条计划、来源候选 |
@@ -24,7 +27,7 @@
 | `mgmt/` | [沟通管理计划](mgmt/communication_mgmt_plan.md) | 当前 v2.0 | 分工、阶段节奏、升级 |
 | `mgmt/` | [风险管理计划](mgmt/risk_mgmt_plan.md) | 当前 v2.0 | 范围、Key、RAG、隐私、素材 |
 | `mgmt/` | [任务拆分](mgmt/task_breakdown.md) | 当前 v1.1 | L2 backlog + M1 本地执行（L-01～L-09） |
-| `mgmt/` | [M1 范围与验收](mgmt/m1_scope.md) | 已确认 v1.1 | M1 本地范围、验收、L-01～L-09 |
+| `mgmt/` | [M1 范围与验收](mgmt/m1_scope.md) | 历史 v1.1（被 ADR 取代） | M1 本地范围、验收、L-01～L-09 |
 | `mgmt/` | [AI 协作任务设计](mgmt/ai_collaboration.md) | 当前 v1.0 | 人机分工、审查清单、关键任务卡 |
 | `mgmt/` | [Issue 导入](mgmt/issue_import.md) | 当前 v1.0 | 标签/里程碑/CSV/批量建单 |
 | `retrospection/` | [复盘模板](retrospection/retrospection.md) | 模板 | 阶段复盘 |

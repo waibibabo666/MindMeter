@@ -82,7 +82,7 @@ export function createShell({ ctx, router }) {
         el('h2', { class: 'card-title', text: '数据说明' }),
         el('p', {
           class: 'tiny',
-          text: '本机运行：测评、对话与记忆只存这台设备的浏览器，不上传；导出不含模型 Key。非临床诊断。',
+          text: '本机运行：测评、对话与记忆只存这台设备的数据库，不上传；导出不含模型 Key。非临床诊断。',
         }),
       ]),
     );

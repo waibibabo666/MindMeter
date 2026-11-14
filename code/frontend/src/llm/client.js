@@ -1,4 +1,9 @@
 /**
+ * LEGACY (not imported by the desktop app). The production LLM call is
+ * code/backend/app/llm.py, which reads the key from Windows Credential Manager.
+ * Kept only for the old test:legacy oracle.
+ */
+/**
  * OpenAI 兼容接口的最小客户端（BYOK）。
  *
  * 设计约束（L-04）：

@@ -32,22 +32,23 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ## 技术架构
 
-**M1（当前执行）**
+**当前（桌面本地版）**
 
-- 前端：原生 HTML/CSS/JS，静态托管；
-- 存储：浏览器本地（sessions/draft/settings/memory）；
-- 计分：浏览器 `scoring-v3`；
-- Agent：本地状态机 + 用户自备 LLM API（BYOK）；
-- RAG：本地知识块 JSON + 关键词/BM25 检索；
-- 部署：静态文件，无后端。
+- 桌面壳：pywebview 窗口加载本地 FastAPI；
+- 后端：FastAPI 子进程，只监听 `127.0.0.1`，随机端口 + 本地 token；
+- 数据库：随应用分发 PostgreSQL 17.12 便携版 + Alembic；
+- RAG：pgvector + 本地 `bge-small-zh-v1.5`，无模型时 BM25 fallback；
+- Agent：LangGraph 小图（classify → retrieve → generate → validate）；
+- 计分：服务端 Python `scoring-v3.1` 唯一权威；
+- Key：Windows Credential Manager（keyring），不进前端/DB/日志/导出；
+- 入口：双击 `MindMeter.cmd` / `MindMeter.vbs`。
 
-**L2（后续目标）**
+**不再采用**
 
-- 后端：FastAPI + PostgreSQL + pgvector；
-- Agent：LangGraph + Postgres checkpointer；
-- 计分：服务端 Python；
-- 模型 Key：加密存库；
-- 部署：Docker + 托管 Postgres；仍不上 K8s/Redis/Milvus。
+- 浏览器 localStorage 存业务数据；
+- 浏览器直连 LLM API；
+- SQLite 过渡方案；
+- 账号/JWT/托管 Postgres（桌面单用户不需要）。
 
 ## 路线图（无固定 deadline）
 
@@ -69,7 +70,10 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [非功能需求规范](docs/requirements/nonfunctional_spec.md) | 性能、可靠、安全、隐私、AI 质量 |
 | [Agent 设计](docs/requirements/xlragentdesign.md) | LangGraph、记忆、RAG、校验、评测 |
 | [算法设计](docs/algorithm/algorithm.md) | 8 项公式、`scoring-v3`、服务端计分 |
-| [技术方案](docs/software/architecture.md) | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
+| [技术方案](docs/software/architecture.md) | 历史 L2 方案；当前桌面版见 ADR/本地运行时 |
+| [ADR-0001](docs/adr/0001-local-desktop-runtime.md) | 桌面本地运行时决策，取代旧 M1 范围 |
+| [本地运行时](docs/software/local-runtime.md) | 双击入口、便携 PostgreSQL、启停、日志、排障 |
+| [迁移报告](docs/software/migration-report.md) | 保留/重写/删除、测试结果、限制 |
 | [软件设计](docs/software/software.md) | 模块总览 |
 | [诊断日志](docs/software/logging.md) | 前端内存日志、脱敏、导出 |
 | [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
@@ -127,24 +131,33 @@ MindMeter/
 
 ## 当前状态
 
-- 文档已切到 L2（Agent-first）；M1 已按**纯本地 + 用户 LLM API** 冻结，执行清单为 [m1_scope.md](docs/mgmt/m1_scope.md) 的 L-01～L-09；
-- 后端/账号/DB/pgvector/LangGraph 属于 L2 目标，不在 M1 范围；
+- 当前实现为**桌面本地版**：pywebview + FastAPI + 便携 PostgreSQL + Alembic + pgvector + LangGraph + keyring；
+- 旧 `m1_scope.md` 的“无后端”范围已被 [ADR-0001](docs/adr/0001-local-desktop-runtime.md) 取代；
+- 单用户、无账号/JWT；本地 API 需要每次启动的 `X-MM-Token`；
+- LLM Key 只存 Windows Credential Manager，不进入前端/localStorage/日志/导出；
 - 课程提交版只作历史快照，不代表当前口径。
 
 ## 开发与测试
 
-```bash
-npm ci
-npm run check          # ESLint + Prettier + 5 套测试
+```powershell
+# 首次：
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
+# 或手动：python -m pip install -r requirements-dev.txt && npm ci && scripts/fetch_pgsql.ps1
+
+npm run check          # ESLint + Prettier + 前端/纯逻辑测试
 npm run complexity     # 复杂度报告（warn，不阻塞）
-npm run test:e2e       # Playwright Chromium 浏览器 E2E
+npm run test:e2e       # Playwright：真实本地 FastAPI + PostgreSQL
 
 python scripts/check_docs.py
 python scripts/check_secrets.py
 python scripts/export_issues.py --check
 
-# 后端出现 code/backend/pyproject.toml（或 requirements.txt）后：
+# 后端测试（需要 pgvector Postgres；设 MM_TEST_DATABASE_URL 后）
 pytest -q tests/backend -rs
+
+# 双击启动 / 开发启动
+.\MindMeter.cmd
+python -m desktop.launcher --no-window
 ```
 
 - CI：`.github/workflows/ci.yml`（Node 24：lint/format/prototype；后端契约；secret scan）；

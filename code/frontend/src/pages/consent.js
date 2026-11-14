@@ -29,7 +29,7 @@ export function renderConsent(root, ctx) {
       el('h1', { id: 'consent-title', class: 'page-title', text: '开始之前' }),
       el('p', { class: 'lead', text: `标准档 · 4 项 · 约 13 分钟` }),
       el('div', { class: 'consent' }, [
-        el('p', { text: '数据仅保存在本机浏览器，可随时清除，清除后不可恢复。' }),
+        el('p', { text: '数据仅保存在本机数据库，可随时清除，清除后不可恢复。' }),
         el('p', { text: '本产品不是医疗器械，不提供诊断、治疗或医疗建议；报告不构成临床结论。' }),
         el('p', { text: '不设总分、没有常模、不做百分位，不与人群比较。' }),
       ]),

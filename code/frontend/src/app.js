@@ -2,12 +2,13 @@
  * 静态 App 壳（L-01）入口。
  *
  * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report → #/trend
- * 状态全部落在 localStorage，刷新或浏览器返回都不丢进度。
+ * 状态由 boot 预取到内存缓存，写回本地 FastAPI；刷新/返回不丢进度。
  */
 import { createRouter } from './router.js';
 import { createShell } from './shell.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
+import { bootstrap, installFlushHook } from './boot.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { log } from './log.js';
 import { STANDARD_ORDER } from './data.js';
@@ -90,7 +91,7 @@ function safeScores(results) {
   }
 }
 
-function finishTask(taskId, payload) {
+async function finishTask(taskId, payload) {
   setState((draft) => {
     const results = Object.assign({}, draft.results, { [taskId]: payload });
     const drafts = Object.assign({}, draft.drafts);
@@ -111,19 +112,31 @@ function finishTask(taskId, payload) {
 
   log('info', '完成一项', taskId, next ? `下一项 ${next}` : '全部完成，结算中');
 
-  if (!next) {
-    addSession({
+  if (next) {
+    router.go(`/task/${next}`);
+    return;
+  }
+
+  const localScores = safeScores(state.results);
+  try {
+    const saved = await addSession({
       id: `s_${Date.now().toString(36)}`,
       mode: state.tier || 'standard',
       finishedAt: new Date().toISOString(),
       dims: state.order.slice(),
       results: state.results,
-      scores: safeScores(state.results),
       scoringVersion: SCORING_VERSION,
     });
+    setState(() => ({
+      scores: (saved && saved.scores) || localScores,
+      assessmentId: saved && saved.id,
+    }));
+  } catch (error) {
+    log('error', '保存测评失败', error && error.message);
+    toast('保存失败：结果只保留在当前页面，请重启后重测');
+    setState(() => ({ scores: localScores, assessmentId: null }));
   }
-
-  router.go(next ? `/task/${next}` : '/report');
+  router.go('/report');
 }
 
 const ctx = {
@@ -148,6 +161,8 @@ const ctx = {
       cursor: 0,
       results: {},
       drafts: {},
+      scores: null,
+      assessmentId: null,
       route: '/task/vc',
     }));
     router.go('/task/vc');
@@ -158,9 +173,9 @@ const ctx = {
     }));
   },
   finishTask,
-  exportData: () => {
+  exportData: async () => {
     try {
-      const data = exportData();
+      const data = await exportData();
       log(
         'info',
         '导出本地数据',
@@ -178,14 +193,14 @@ const ctx = {
       toast('已导出本地数据（不含 LLM Key）');
     } catch (error) {
       log('error', 'export failed', error && error.message);
-      toast('导出失败：浏览器可能禁止了下载，检查权限后重试');
+      toast('导出失败：本地服务不可用或下载被拦截');
     }
   },
-  clearAll: () => {
+  clearAll: async () => {
     if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
     log('info', '清除本地数据');
     try {
-      clearAllData();
+      await clearAllData();
       resetState();
       toast('已清除本地数据');
       router.go('/');
@@ -229,11 +244,27 @@ const router = createRouter((route) => {
 
 const shell = createShell({ ctx, router });
 
-if (!window.location.hash) {
-  const saved = readState().route;
-  if (saved && saved !== '/') {
-    window.history.replaceState(null, '', `#${saved}`);
-  }
+function showBootError(error) {
+  log('error', 'boot failed', error && error.message);
+  clear(root);
+  root.appendChild(
+    el('section', { class: 'page' }, [
+      el('h1', { class: 'page-title', text: '本地服务没有启动' }),
+      el('p', {
+        class: 'lead',
+        text: 'MindMeter 的本地数据库或解读服务没有就绪。请关闭窗口后重新打开；如果反复出现，请查看启动日志。',
+      }),
+      el('div', { class: 'row' }, [
+        button(
+          '重试',
+          () => {
+            globalThis.location.reload();
+          },
+          { variant: 'primary' },
+        ),
+      ]),
+    ]),
+  );
 }
 
 /* 全局兜底：未捕获的异常与 Promise 拒绝都不该让页面白屏。 */
@@ -247,5 +278,17 @@ window.addEventListener('unhandledrejection', (event) => {
   toast('有一次请求没有完成，可稍后重试');
 });
 
-log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
-router.start();
+async function startApp() {
+  await bootstrap();
+  installFlushHook();
+  if (!window.location.hash) {
+    const saved = readState().route;
+    if (saved && saved !== '/') {
+      window.history.replaceState(null, '', `#${saved}`);
+    }
+  }
+  log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
+  router.start();
+}
+
+startApp().catch(showBootError);

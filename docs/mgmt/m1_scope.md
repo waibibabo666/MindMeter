@@ -1,5 +1,10 @@
 # M1 范围与验收（P-01）
 
+> **2026-11-14 架构变更：本文的“纯本地静态、无 FastAPI/Postgres/pgvector”范围已被
+> [ADR-0001](../adr/0001-local-desktop-runtime.md) 取代。** 当前实现为
+> pywebview + FastAPI + 便携 PostgreSQL + Alembic + pgvector + keyring；
+> 保留本文作为 M1 历史验收记录，不再作为架构约束。
+
 ## 一、文档信息
 
 | 项目 | 内容 |
@@ -143,3 +148,4 @@
 | --- | --- | --- |
 | 2026-11-07 | v1.0：M1 纵向切片范围、验收、不做清单 | P-01 初稿 |
 | 2026-11-07 | v1.1：改为纯本地 + 用户 LLM API；删除账号/服务端/DB/pgvector/LangGraph；删除确认表格，改为面对面决策记录 | 团队讨论决定 |
+| 2026-11-14 | v2.0：桌面本地架构（pywebview + FastAPI + PostgreSQL + pgvector + LangGraph + keyring）；本文旧范围被 ADR-0001 取代 | 架构方向修正 |

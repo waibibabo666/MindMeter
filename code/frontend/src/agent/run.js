@@ -1,4 +1,8 @@
 /**
+ * LEGACY (not imported by the desktop app). The production agent is
+ * code/backend/app/agent (LangGraph). Kept only for the old test:legacy oracle.
+ */
+/**
  * L-05 Agent 主流程（本地状态机，不依赖服务端）。
  *
  * 状态：input → classify → (retrieve) → generate → validate → output

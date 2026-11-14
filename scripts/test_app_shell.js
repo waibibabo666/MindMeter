@@ -89,13 +89,17 @@ async function main() {
     assert(/skip-link/.test(html), 'skip link missing');
   });
 
-  test('静态壳不发起任何网络请求', () => {
+  test('只有本地 API 客户端可以发起网络请求', () => {
     for (const file of listSrc()) {
+      const relative = path.relative(APP_DIR, file).replaceAll('\\', '/');
+      if (relative === 'src/api.js' || relative === 'src/llm/client.js') continue;
       const text = fs.readFileSync(file, 'utf8');
-      assert(!/\bfetch\s*\(/.test(text), `${path.relative(ROOT, file)} uses fetch()`);
-      assert(!/XMLHttpRequest/.test(text), `${path.relative(ROOT, file)} uses XMLHttpRequest`);
-      assert(!/['"]\/api\//.test(text), `${path.relative(ROOT, file)} references /api`);
+      assert(!/\bfetch\s*\(/.test(text), `${relative} uses fetch()`);
+      assert(!/XMLHttpRequest/.test(text), `${relative} uses XMLHttpRequest`);
     }
+    const api = read('src/api.js');
+    assert(api.includes("'X-MM-Token'"), 'api.js must attach the local token');
+    assert(!api.includes('apiKey'), 'api.js must not know about LLM keys');
   });
 
   test('标准档 4 项且顺序固定', () => {
@@ -235,34 +239,16 @@ async function main() {
     assert(!router.isKnown(router.parseHash('#/nope')), 'unknown path must be rejected');
   });
 
-  test('状态读写与损坏数据回退', () => {
-    const fake = {
-      data: new Map(),
-      getItem(k) {
-        return this.data.has(k) ? this.data.get(k) : null;
-      },
-      setItem(k, v) {
-        this.data.set(k, String(v));
-      },
-      removeItem(k) {
-        this.data.delete(k);
-      },
-    };
-    store.__setStorageForTests(fake);
+  test('状态缓存读写与重置', () => {
+    store.resetState();
     const fresh = store.readState();
     assert(fresh.tier === null && Array.isArray(fresh.order), 'default state wrong');
 
     store.writeState(Object.assign({}, fresh, { tier: 'standard', order: ['vc'] }));
     assert(store.readState().tier === 'standard', 'roundtrip failed');
 
-    fake.setItem(store.STORAGE_KEY, '{not json');
-    store.__setStorageForTests(fake);
-    assert(store.readState().tier === null, 'corrupted state must fall back to defaults');
-
-    fake.setItem(store.STORAGE_KEY, JSON.stringify({ version: 999, tier: 'standard' }));
-    store.__setStorageForTests(fake);
-    assert(store.readState().tier === null, 'version mismatch must fall back to defaults');
-    store.__setStorageForTests(null);
+    store.resetState();
+    assert(store.readState().tier === null, 'reset must clear the cache');
   });
 
   test('样式：360px 适配、44px 触控区、减少动效', () => {

@@ -42,6 +42,18 @@ data/local/
 *.db
 logs/
 tmp/
+runtime/
+backups/
+pgdata/
+*.dump
+
+# ---- Portable runtime (never commit binaries) ----
+vendor/
+code/backend/runtime/
+
+# ---- Model caches ----
+models/
+fastembed_cache/
 
 # ---- Playwright ----
 test-results/

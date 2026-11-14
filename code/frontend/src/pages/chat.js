@@ -1,22 +1,16 @@
-/**
+﻿/**
  * L-05 对话页（/chat）。
  *
- * 只做三件事：渲染消息、把问题交给 agent/run.js、把双方消息落到
- * storage 的 20 条队列。所有安全规则（意图分类、禁用词、数字溯源、
- * 引用、回退模板）都在 agent 层，这里不重复实现。
+ * 只做三件事：渲染消息、把问题交给本地 /api/v1/chat、用返回的消息刷新。
+ * 所有安全规则（意图分类、禁用词、数字溯源、引用、回退模板）都在后端
+ * LangGraph Agent 里，这里不重复实现。
  */
 
 import { button, el } from '../ui.js';
-import { addMessage, readMemory, readSessions, readSettings } from '../storage.js';
-import { isConfigured } from '../llm/client.js';
-import { answer } from '../agent/run.js';
-import { adviceFromReply, buildFacts, makeMessage, memoryContext, toHistory } from '../chat.js';
-import { isProfileUsable, recordAdvice } from '../memory.js';
-
-/** 模型真正引用了 plan 类知识块时，落一条建议记录（L-07 建议记录闭环）。 */
-function recordAdviceFromReply(reply) {
-  adviceFromReply(reply).forEach((item) => recordAdvice(item));
-}
+import { api } from '../api.js';
+import { cache } from '../cache.js';
+import { readMemory, readSessions, readSettings } from '../storage.js';
+import { buildFacts } from '../chat.js';
 
 function fmtTime(at) {
   const date = new Date(at);
@@ -48,7 +42,7 @@ function messageNode(message) {
 }
 
 function configBanner(ctx, settings) {
-  if (isConfigured(settings) && settings.enabled) return null;
+  if (settings.enabled && settings.hasKey && settings.endpoint && settings.model) return null;
   return el('div', { class: 'card' }, [
     el('p', {
       class: 'tiny',
@@ -91,33 +85,23 @@ export function renderChat(root, ctx) {
     const question = String(input.value || '').trim();
     if (!question) return;
 
-    const memory = readMemory();
-    const history = toHistory(memory.messages || []);
-    addMessage(makeMessage('user', question));
     input.value = '';
     send.disabled = true;
     send.textContent = '…';
 
-    const reply = await answer({
-      question,
-      facts,
-      history,
-      settings,
-      memory: memoryContext(memory, isProfileUsable),
-    });
-    recordAdviceFromReply(reply);
-    addMessage(
-      makeMessage('assistant', reply.text, {
-        source: reply.source,
-        citations: reply.citations,
-        code: reply.code,
-      }),
-    );
-
-    send.disabled = false;
-    send.textContent = '发送';
-    root.replaceChildren();
-    renderChat(root, ctx);
+    try {
+      const result = await api.post('/chat', { question });
+      cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
+      // eslint-disable-next-line sonarjs/no-ignored-exceptions
+    } catch (error) {
+      // The page stays usable; the toast is the only recovery action here.
+      ctx.toast('本地服务不可用，消息没有发送');
+    } finally {
+      send.disabled = false;
+      send.textContent = '发送';
+      root.replaceChildren();
+      renderChat(root, ctx);
+    }
   }
 
   send.addEventListener('click', onSend);
@@ -143,7 +127,7 @@ export function renderChat(root, ctx) {
       ]),
       el('p', {
         class: 'disclaimer',
-        text: 'AI 生成 · 仅解释本次结果 · 非诊断 · 对话只保留最近 20 条（本机）',
+        text: 'AI 生成 · 仅解释本次结果 · 非诊断 · 对话只保留最近 20 条（本机数据库）',
       }),
     ]),
   );

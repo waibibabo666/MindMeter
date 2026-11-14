@@ -3,6 +3,36 @@
 本文件记录 MindMeter 所有值得说明的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-11-14 — 桌面本地架构
+
+架构从“浏览器 UI + localStorage + 浏览器直连 LLM”迁移为
+“pywebview + FastAPI + 便携 PostgreSQL + Alembic + pgvector + LangGraph + keyring”。
+
+### 新增
+
+- **桌面 launcher**：单实例锁、随机端口、首次 initdb、二次复用、**pg_dump 后迁移**、Job Object 退出清理；双击 `MindMeter.cmd` / `MindMeter.vbs`。
+- **FastAPI 本地后端**：`/api/v1/*` 全部要求 `X-MM-Token`；只监听 `127.0.0.1`；拒绝非 loopback Host/跨源 Origin；CSP。
+- **PostgreSQL 17.12 + pgvector 0.8.6**：12 张表；Alembic `0001_initial` + `0002_seed_kb`；30 条知识块。
+- **服务端计分**：`scoring-v3.1` Python 唯一权威；22 项 JS 金标准平移到 pytest。
+- **pgvector RAG**：`BAAI/bge-small-zh-v1.5`（512 维）+ BM25 混合；模型不可用时 `keyword` 降级。
+- **LangGraph Agent**：classify → retrieve → generate → validate；无 Key/失败回退模板。
+- **Keyring only**：LLM Key 只在 Windows Credential Manager；`ai_settings` 只存 `key_ref`/`key_hint`。
+- **旧数据导入**：设置页选择旧版导出 JSON；导入前自动 `pg_dump`；忽略 `apiKey`。
+- **测试**：`npm run check`、`pytest tests/backend`、`npm run test:e2e`（真实 PostgreSQL）。
+
+### 变更
+
+- 前端 `storage.js` / `store.js` 改为内存缓存 + 本地 API；页面仍同步读取。
+- 报告/对话/设置不再直连模型；`llm/client.js` 与 `agent/run.js` 成为未引用的 legacy。
+- `tests/backend/test_openapi_contract.py` 的 auth/JWT 路径替换为本地无账号 API。
+- `m1_scope.md` 的“无后端”范围被 ADR-0001 取代。
+
+### 删除
+
+- localStorage 业务数据持久化（Key 尤其）。
+- 浏览器直连 LLM 的生产路径。
+- SQLite 过渡方案（未引入）。
+
 ## [未发布]
 
 ### 已知缺口

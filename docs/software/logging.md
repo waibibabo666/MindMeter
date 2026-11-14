@@ -1,4 +1,8 @@
-# 诊断日志（M1）
+# 诊断日志（桌面本地版）
+
+> 当前实现同时有前端内存日志（`code/frontend/src/log.js`）和后端脱敏文件日志
+> （`%LOCALAPPDATA%\MindMeter\logs\backend.log`）。后端不记录 prompt/回答/Key；
+> 详见 [本地运行时](local-runtime.md)。
 
 ## 目标
 

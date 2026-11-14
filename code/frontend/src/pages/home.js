@@ -71,7 +71,7 @@ export function renderHome(root, ctx) {
 
       recentCard(ctx),
 
-      el('p', { class: 'tiny', text: '数据只存本机 · 可随时清除 · 非临床诊断 · 18+' }),
+      el('p', { class: 'tiny', text: '数据只存本机数据库 · 可随时清除 · 非临床诊断 · 18+' }),
       el('p', { class: 'disclaimer', text: LIMITS[3] }),
     ]),
   );

@@ -24,6 +24,9 @@ REQUIRED_FILES = [
     "docs/requirements/xlragentdesign.md",
     "docs/algorithm/algorithm.md",
     "docs/software/architecture.md",
+    "docs/software/local-runtime.md",
+    "docs/software/migration-report.md",
+    "docs/adr/0001-local-desktop-runtime.md",
     "docs/software/software.md",
     "docs/software/logging.md",
     "docs/research/user_stories.md",
@@ -39,6 +42,7 @@ REQUIRED_FILES = [
     "docs/mgmt/issues.csv",
     "docs/retrospection/retrospection.md",
     "code/backend/README.md",
+    "code/desktop/launcher.py",
     "code/frontend/README.md",
     "code/frontend/src/log.js",
     "code/core_engine/README.md",
@@ -57,6 +61,9 @@ REQUIRED_FILES = [
     "scripts/export_issues.py",
     "scripts/create_issues.py",
     "package.json",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "scripts/setup.ps1",
     "package-lock.json",
     "eslint.config.mjs",
     "eslint.complexity.config.mjs",
@@ -86,6 +93,8 @@ REQUIRED_DIRS = [
     "tests/unit",
     "tests/integration",
     "tests/backend",
+    "docs/adr",
+    "code/desktop",
     "scripts",
     ".github/workflows",
 ]
@@ -95,7 +104,7 @@ TEXT_SUFFIXES = {
     ".yml", ".yaml", ".py", ".json", ".toml", ".ini", ".cfg",
     ".txt", ".sql",
 }
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "coverage"}
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "coverage", "vendor", "runtime", "pgdata", "models"}
 CONFLICT_RE = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.MULTILINE)
 LINK_RE = re.compile(r"\]\(([^)]+)\)")
 
