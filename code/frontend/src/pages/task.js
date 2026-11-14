@@ -3,7 +3,7 @@
  *
  * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
  */
-import { el, clear } from '../ui.js';
+import { el, button, clear } from '../ui.js';
 import { STANDARD_ORDER, TASK_META } from '../data.js';
 import { specFor } from '../scoring/levels.js';
 import { vcTask } from '../tasks/vc.js';
@@ -132,8 +132,13 @@ export function renderTask(root, ctx, taskId) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title', text: '这一项打不开' }),
           el('p', { class: 'muted', text: '本地保存的进度可能已损坏，可以重开这一项后再试。' }),
+          el('div', { class: 'row' }, [
+            button('跳过这一项', () => ctx.finishTask(taskId, { metrics: null, failed: true })),
+          ]),
         ]),
       );
+      // 记录失败，避免这一步在报告里变成「从未测过」
+      ctx.finishTask(taskId, { metrics: null, failed: true });
     }
   }
   section.dataset.taskId = taskId;

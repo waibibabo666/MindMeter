@@ -48,16 +48,20 @@ function reportRows(scored, results, level) {
     const has = typeof score === 'number';
     const payload = results[dim.id];
     const ci = has ? ciFor(dim.id, score, payload, level) : null;
+    const failed = Boolean(payload && payload.failed);
+    let label = '未测';
+    if (has) label = String(score);
+    else if (failed) label = '未完成';
+    let note = '本档未包含';
+    if (has) note = describe(dim.id, payload?.metrics);
+    else if (failed) note = '该项未完成，可重测';
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
       el('td', { class: 'score-cell' }, [
-        el('span', { text: has ? String(score) : '未测' }),
+        el('span', { text: label }),
         ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
       ]),
-      el('td', {
-        class: 'muted',
-        text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
-      }),
+      el('td', { class: 'muted', text: note }),
     ]);
   });
 }
