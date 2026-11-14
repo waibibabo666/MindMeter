@@ -1,6 +1,7 @@
-﻿import { el, button } from '../ui.js';
+import { el, button } from '../ui.js';
 import { DIMS } from '../data.js';
 import { readSessions } from '../storage.js';
+import { MIRROR_ART } from '../icons.js';
 
 const TIER_LABEL = { quick: '快测', standard: '标准', deep: '深度' };
 
@@ -67,6 +68,7 @@ export function renderHome(root, ctx) {
         inProgress
           ? el('p', { class: 'tiny', text: '草稿 24 小时内有效，从上次中断的任务继续。' })
           : null,
+        el('div', { class: 'hero-art', html: MIRROR_ART }),
       ]),
 
       recentCard(ctx),

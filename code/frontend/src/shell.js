@@ -6,9 +6,10 @@
  */
 import { readState } from './store.js';
 import { STANDARD_ORDER } from './data.js';
-import { button, clear, el } from './ui.js';
+import { clear, el } from './ui.js';
 import { flashChip } from './motion.js';
 import { readUiPrefs, writeUiPrefs, applyUiPrefs } from './ui-prefs.js';
+import { iconSvg } from './icons.js';
 
 const NAV_GROUP = {
   '/': '测评',
@@ -109,6 +110,14 @@ export function createShell({ ctx, router }) {
     }
   }
 
+  /** 右栏快捷操作：图标行式按钮，比并排五个盒子安静。 */
+  function railButton(label, iconName, onClick, tone) {
+    const cls = tone ? `rail-btn ${tone}` : 'rail-btn';
+    const node = el('button', { class: cls, type: 'button', onclick: onClick });
+    node.innerHTML = `${iconSvg(iconName)}<span>${label}</span>`;
+    return node;
+  }
+
   /** 右侧上下文栏：快捷操作 + 数据说明（测评专注模式下由 CSS 隐藏）。 */
   function renderRail() {
     if (!railNode) return;
@@ -116,12 +125,12 @@ export function createShell({ ctx, router }) {
     railNode.appendChild(
       el('div', { class: 'card' }, [
         el('h2', { class: 'card-title', text: '快捷操作' }),
-        el('div', { class: 'row' }, [
-          button('查看报告', () => router.go('/report'), { variant: 'ghost' }),
-          button('趋势', () => router.go('/trend'), { variant: 'ghost' }),
-          button('记忆', () => router.go('/memory'), { variant: 'ghost' }),
-          button('导出数据', () => ctx.exportData(), { variant: 'ghost' }),
-          button('清除本地数据', () => ctx.clearAll(), { variant: 'ghost' }),
+        el('div', { class: 'rail-actions' }, [
+          railButton('查看报告', 'file', () => router.go('/report')),
+          railButton('趋势', 'trending', () => router.go('/trend')),
+          railButton('记忆', 'bookmark', () => router.go('/memory')),
+          railButton('导出数据', 'download', () => ctx.exportData()),
+          railButton('清除本地数据', 'trash', () => ctx.clearAll(), 'danger'),
         ]),
       ]),
     );

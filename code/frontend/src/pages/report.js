@@ -1,9 +1,10 @@
-﻿import { el, button } from '../ui.js';
+import { el, button } from '../ui.js';
 import { api } from '../api.js';
 import { readSessions, readSettings } from '../storage.js';
 import { DIMS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
+import { iconSvg } from '../icons.js';
 
 const STATUS = {
   vc: (m) => `正确 ${m.correct} / ${m.total}`,
@@ -32,6 +33,17 @@ function describe(id, metrics) {
   return `${STATUS[id](metrics)} · ${DETAIL[id](metrics)}`;
 }
 
+function scoreCell(score) {
+  if (typeof score !== 'number') {
+    return el('td', { class: 'score-cell', text: '未测' });
+  }
+  const width = Math.max(3, Math.min(100, score));
+  return el('td', { class: 'score-cell' }, [
+    el('span', { class: 'score-num', text: String(score) }),
+    el('div', { class: 'gauge' }, [el('i', { style: `width:${width}%` })]),
+  ]);
+}
+
 function reportRows(scored, results) {
   return DIMS.map((dim) => {
     const score = scored.scores[dim.id];
@@ -39,7 +51,7 @@ function reportRows(scored, results) {
     const payload = results[dim.id];
     return el('tr', { class: has ? '' : 'untested' }, [
       el('th', { scope: 'row', text: dim.name }),
-      el('td', { class: 'score-cell', text: has ? String(score) : '未测' }),
+      scoreCell(has ? score : null),
       el('td', {
         class: 'muted',
         text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
@@ -217,8 +229,12 @@ function renderAiCard(ctx, assessmentId) {
   // 没配 Key 时模板解读是本机即时返回的，直接显示，别让用户面对空白卡片。
   if (!readSettings().hasKey) runExplain();
 
-  return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
+  return el('div', { class: 'card ai-card' }, [
+    el('h2', { class: 'card-title' }, [
+      el('span', { class: 'ai-icon', html: iconSvg('sparkle') }),
+      'AI 解读 ',
+      badge,
+    ]),
     reason,
     output,
     el('div', { class: 'row' }, [

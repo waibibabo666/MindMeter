@@ -37,7 +37,7 @@ function countOne(node, raw, sign, end) {
  */
 export function animateNumbers(root) {
   if (!root || reducedMotion()) return;
-  const targets = root.querySelectorAll('.score-cell, .score-chip b, .delta');
+  const targets = root.querySelectorAll('.score-num, .score-chip b, .delta');
   for (const node of targets) {
     const raw = node.textContent;
     const parsed = parseCountdown(raw);
