@@ -13,13 +13,17 @@ function badge(item, record) {
 }
 
 function card(item, record, ctx) {
-  const node = el('div', { class: `game-card${item.ready ? '' : ' disabled'}` }, [
-    el('div', { class: 'game-card-head' }, [
-      el('span', { class: 'game-card-title', text: item.title }),
-      badge(item, record),
-    ]),
-    el('p', { class: 'tiny', text: item.desc }),
-  ]);
+  const node = el(
+    'div',
+    { class: `game-card${item.ready ? '' : ' disabled'}`, dataset: { dim: item.dim } },
+    [
+      el('div', { class: 'game-card-head' }, [
+        el('span', { class: 'game-card-title', text: item.title }),
+        badge(item, record),
+      ]),
+      el('p', { class: 'tiny', text: item.desc }),
+    ],
+  );
 
   if (item.ready) {
     const open = () => ctx.go(`/game/${item.id}`);
@@ -38,7 +42,7 @@ function card(item, record, ctx) {
 
 function dimSection(dim, records, ctx) {
   const cards = gamesOfDim(dim.id).map((item) => card(item, records[item.id], ctx));
-  return el('section', { class: 'game-dim' }, [
+  return el('section', { class: 'game-dim', dataset: { dim: dim.id } }, [
     el('h2', { class: 'game-dim-title', text: dim.name }),
     el('div', { class: 'game-cards' }, cards),
   ]);

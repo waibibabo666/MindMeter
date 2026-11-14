@@ -20,6 +20,22 @@ export const TREND_COLORS = [
   '#a21caf',
 ];
 
+/** 每个维度有固定色相，折线与图例保持一致，跨页面也能对上。 */
+export const DIM_COLORS = {
+  vc: '#16a34a',
+  vf: '#0d9488',
+  nc: '#d97706',
+  ps: '#2563eb',
+  ir: '#7c3aed',
+  sv: '#0891b2',
+  am: '#e11d48',
+  ni: '#65a30d',
+};
+
+export function seriesColor(id, index) {
+  return DIM_COLORS[id] || TREND_COLORS[index % TREND_COLORS.length];
+}
+
 /**
  * @param {Array<{finishedAt:string, scores:Object}>} sessions 新的在前
  * @param {string[]} dimIds 维度顺序
@@ -83,7 +99,7 @@ export function trendChartMarkup(view) {
 
   const lines = series
     .map((item, itemIndex) => {
-      const color = TREND_COLORS[itemIndex % TREND_COLORS.length];
+      const color = seriesColor(item.id, itemIndex);
       const path = item.values
         .map((value, index) => `${index === 0 ? 'M' : 'L'}${x(index, labels.length)} ${y(value)}`)
         .join(' ');
