@@ -12,7 +12,7 @@ export const DIMS = [
   { id: 'ir', name: '归纳推理', short: '归纳' },
   { id: 'sv', name: '空间视觉化', short: '空间' },
   { id: 'am', name: '联想记忆', short: '记忆' },
-  { id: 'ni', name: '自然探索', short: '自然' },
+  { id: 'ni', name: '自然知识', short: '自然' },
 ];
 
 export const TIERS = [
@@ -64,7 +64,7 @@ export const TASK_META = {
   am: { id: 'am', name: '联想记忆', minutes: 3, desc: '先记 12 组词对，再做 16 题配对再认。' },
   nc: { id: 'nc', name: '数字运算', minutes: 2, desc: '连续几步运算，求最终结果。' },
   ir: { id: 'ir', name: '归纳推理', minutes: 2, desc: '数列找规律，推出下一项。' },
-  ni: { id: 'ni', name: '自然探索', minutes: 2, desc: '生物分类与自然现象判断。' },
+  ni: { id: 'ni', name: '自然知识', minutes: 2, desc: '生物分类与自然现象判断。' },
   vf: {
     id: 'vf',
     name: '言语流畅性',

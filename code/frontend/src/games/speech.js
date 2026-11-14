@@ -42,6 +42,9 @@ function createSpeechGame(config) {
       const Ctor = recognitionCtor();
       if (!Ctor) {
         notice(root, title);
+        const skip = el('button', { class: 'btn ghost', type: 'button', text: '继续（本维度记为未测）' });
+        skip.addEventListener('click', () => ctx.finish(0, { unavailable: true }));
+        root.querySelector('.card')?.appendChild(skip);
         return () => clear(root);
       }
 
@@ -73,6 +76,7 @@ function createSpeechGame(config) {
         closed = true;
         globalThis.clearInterval(timer);
         globalThis.clearInterval(topicTimer);
+        globalThis.clearTimeout(idleTimer);
         try {
           recognition.stop();
         } catch {
@@ -110,6 +114,18 @@ function createSpeechGame(config) {
         return () => clear(root);
       }
 
+      // 识别器存在但一直没结果（WebView2 常见）：给一个「记为未测」的出口
+      const idleTimer = globalThis.setTimeout(() => {
+        if (closed || said.size > 0) return;
+        const skip = el('button', {
+          class: 'btn ghost',
+          type: 'button',
+          text: '一直没识别到，跳过（记为未测）',
+        });
+        skip.addEventListener('click', () => ctx.finish(0, { unavailable: true }));
+        root.appendChild(skip);
+      }, 12000);
+
       const timer = globalThis.setInterval(() => {
         const left = Math.max(0, LIMIT_MS - (now() - startedAt));
         if (closed) return;
@@ -124,6 +140,7 @@ function createSpeechGame(config) {
         closed = true;
         globalThis.clearInterval(timer);
         globalThis.clearInterval(topicTimer);
+        globalThis.clearTimeout(idleTimer);
         try {
           recognition.stop();
         } catch {

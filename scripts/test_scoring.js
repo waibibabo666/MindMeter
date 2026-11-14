@@ -47,7 +47,7 @@ async function main() {
 
   test('金标准·全对（四个满分档）', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 6 } },
+      vc: { metrics: { total: 8, correct: 8 } },
       ps: { metrics: { correct: 24 } },
       sv: { metrics: { total: 8, correct: 8, correctRts: rts(8, 1500) } },
       am: { metrics: { hits: 8, falseAlarms: 0 }, answers: makeAnswers(8, 8) },
@@ -58,27 +58,27 @@ async function main() {
     eq(r.dimensions.am, 84, 'am'); // d' = 3.186
   });
 
-  test('金标准·中等（vc 4/6、ps 14、sv 6/8 2500ms、am 6命中2虚报）', () => {
+  test('金标准·中等（vc 5/8、ps 14、sv 6/8 2500ms、am 6命中2虚报）', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 4 } },
+      vc: { metrics: { total: 8, correct: 5 } },
       ps: { metrics: { correct: 14 } },
       sv: { metrics: { total: 8, correct: 6, correctRts: rts(6, 2500) } },
       am: { metrics: { hits: 6, falseAlarms: 2 }, answers: makeAnswers(8, 8) },
     });
-    eq(r.dimensions.vc, 67, 'vc');
+    eq(r.dimensions.vc, 50, 'vc');
     eq(r.dimensions.ps, 38, 'ps');
     eq(r.dimensions.sv, 71, 'sv');
     eq(r.dimensions.am, 44, 'am'); // d' = 1.179
   });
 
-  test('金标准·偏低（vc 2/6、ps 9、sv 4/8 3800ms、am 3命中5虚报）', () => {
+  test('金标准·偏低（vc 3/8、ps 9、sv 4/8 3800ms、am 3命中5虚报）', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 2 } },
+      vc: { metrics: { total: 8, correct: 3 } },
       ps: { metrics: { correct: 9 } },
       sv: { metrics: { total: 8, correct: 4, correctRts: rts(4, 3800) } },
       am: { metrics: { hits: 3, falseAlarms: 5 }, answers: makeAnswers(8, 8) },
     });
-    eq(r.dimensions.vc, 33, 'vc');
+    eq(r.dimensions.vc, 17, 'vc');
     eq(r.dimensions.ps, 6, 'ps');
     eq(r.dimensions.sv, 37, 'sv');
     eq(r.dimensions.am, 9, 'am'); // d' = -0.564
@@ -86,7 +86,7 @@ async function main() {
 
   test('金标准·最低边界（0 分不是 null）', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 0 } },
+      vc: { metrics: { total: 8, correct: 0 } },
       ps: { metrics: { correct: 8 } },
       am: { metrics: { hits: 0, falseAlarms: 8 }, answers: makeAnswers(8, 8) },
     });
@@ -151,7 +151,7 @@ async function main() {
 
   test('结构：返回值里没有总分字段', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 6 } },
+      vc: { metrics: { total: 8, correct: 8 } },
       ps: { metrics: { correct: 20 } },
     });
     ['total', 'mean', 'average', 'composite', 'score'].forEach((key) => {
@@ -231,7 +231,7 @@ async function main() {
 
   test('结构·八维齐全时 measured=8、missing=0', () => {
     const r = scoring.scoreSession({
-      vc: { metrics: { total: 6, correct: 6 } },
+      vc: { metrics: { total: 8, correct: 8 } },
       vf: { metrics: { validCount: 20 } },
       nc: { metrics: { total: 20, correct: 18 } },
       ps: { metrics: { correct: 24 } },

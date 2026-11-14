@@ -10,10 +10,12 @@ import { vcTask } from '../tasks/vc.js';
 import { psTask } from '../tasks/ps.js';
 import { svTask } from '../tasks/sv.js';
 import { amTask } from '../tasks/am.js';
-import { chainCalc, sequence, species } from '../games/quizzes.js';
+import { ncTask } from '../tasks/nc.js';
+import { irTask } from '../tasks/ir.js';
+import { species } from '../games/quizzes.js';
 import { naming } from '../games/speech.js';
 
-const TASK_RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask };
+const TASK_RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask, nc: ncTask, ir: irTask };
 
 /** 游戏接入测评：把游戏的 (score, detail) 换成统一的结果结构。 */
 function gameRunner(game, toMetrics) {
@@ -33,10 +35,12 @@ function gameRunner(game, toMetrics) {
 }
 
 const GAME_RUNNERS = {
-  nc: gameRunner(chainCalc, (score, d) => ({ total: d.total, correct: d.correct })),
-  ir: gameRunner(sequence, (score, d) => ({ total: d.total, correct: d.correct })),
   ni: gameRunner(species, (score, d) => ({ total: d.total, correct: d.correct })),
-  vf: gameRunner(naming, (score, d) => ({ validCount: d.valid, seconds: d.seconds })),
+  vf: gameRunner(naming, (score, d) => ({
+    validCount: d.valid,
+    seconds: d.seconds,
+    unavailable: d.unavailable,
+  })),
 };
 
 const RUNNERS = Object.assign({}, TASK_RUNNERS, GAME_RUNNERS);

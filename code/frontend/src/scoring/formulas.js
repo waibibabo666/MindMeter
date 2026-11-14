@@ -36,7 +36,14 @@ function scoreAccuracy(metrics, expected) {
 
 /** 言语理解 vc = round(100 × correct / total) */
 export function scoreVc(metrics, expected = CONFIG.vc.items) {
-  return scoreAccuracy(metrics, expected);
+  if (!metrics) return null;
+  const { total, correct } = metrics;
+  if (tooFew(total, expected)) return null;
+  if (!Number.isFinite(correct) || correct < 0) return null;
+  // 四选一猜测校正：全猜得 0 分，而不是 25 分
+  const accuracy = correct / total;
+  const corrected = (accuracy - 0.25) / 0.75;
+  return int100(clamp01(corrected));
 }
 
 /**
@@ -45,6 +52,21 @@ export function scoreVc(metrics, expected = CONFIG.vc.items) {
  */
 export function scorePs(metrics, seconds = 45) {
   if (!metrics) return null;
+  const { encCorrect, encWrong, catCorrect, catWrong } = metrics;
+
+  // 新版：编码 + 分类，错题扣 0.5
+  if (Number.isFinite(encCorrect) || Number.isFinite(catCorrect)) {
+    const low = 6;
+    const high = 30;
+    const scale = 45 / Math.max(1, seconds);
+    const netEnc = (Number(encCorrect) || 0) - 0.5 * (Number(encWrong) || 0);
+    const netCat = (Number(catCorrect) || 0) - 0.5 * (Number(catWrong) || 0);
+    const encScore = clamp01((netEnc * scale - low) / (high - low));
+    const catScore = clamp01((netCat * scale - low) / (high - low));
+    return int100(clamp01(0.7 * encScore + 0.3 * catScore));
+  }
+
+  // 旧口径：只有 correct，保留兼容
   const { correct } = metrics;
   if (!Number.isFinite(correct)) return null;
   const { low, high } = CONFIG.ps;
@@ -68,6 +90,14 @@ export function svMedianRt(metrics) {
  */
 export function scoreSv(metrics, expected = CONFIG.sv.items) {
   if (!metrics) return null;
+
+  // 新版：加权正确率（展开图按转动次数给权重）
+  if (Number.isFinite(metrics.weighted) && Number.isFinite(metrics.total)) {
+    if (tooFew(metrics.total, expected)) return null;
+    const p = metrics.weighted / metrics.total;
+    return int100(clamp01((p - 0.25) / 0.75));
+  }
+
   const { total, correct, correctRts } = metrics;
   if (tooFew(total, expected)) return null;
   if (!Number.isFinite(correct) || correct < CONFIG.sv.minCorrect) return null;
@@ -78,7 +108,7 @@ export function scoreSv(metrics, expected = CONFIG.sv.items) {
 
   const { rtBest, rtWorst, wAcc, wRt } = CONFIG.sv;
   const accScore = clamp01(correct / total);
-  const rtScore = clamp01((rtWorst - rt) / (rtWorst - rtBest));
+  const rtScore = clamp01((rtWorst - rt) / (rtBest ? rtWorst - rtBest : 1));
   return int100(clamp01(wAcc * accScore + wRt * rtScore));
 }
 
@@ -94,6 +124,14 @@ export function scoreSv(metrics, expected = CONFIG.sv.items) {
  */
 export function scoreAm(metrics, answers) {
   if (!metrics) return null;
+
+  // PAL 口径：一次点对数 / 目标数，六选一按 1/6 校正
+  if (Number.isFinite(metrics.targets) && Number.isFinite(metrics.firstTry)) {
+    const rate = metrics.firstTry / Math.max(1, metrics.targets);
+    const corrected = (rate - 1 / 6) / (1 - 1 / 6);
+    return int100(clamp01(corrected));
+  }
+
   const { hits, falseAlarms } = metrics;
   if (!Number.isFinite(hits) || !Number.isFinite(falseAlarms)) return null;
 
@@ -114,6 +152,7 @@ export function scoreAm(metrics, answers) {
 /** 言语流畅性 vf = round(100 × clamp01((validCount − 10) / 20)) */
 export function scoreVf(metrics, seconds = 60) {
   if (!metrics) return null;
+  if (metrics.unavailable) return null;
   const { validCount } = metrics;
   if (!Number.isFinite(validCount) || validCount < 0) return null;
   const { floor, span } = CONFIG.vf;
@@ -131,7 +170,7 @@ export function scoreIr(metrics, expected = CONFIG.ir.items) {
   return scoreAccuracy(metrics, expected);
 }
 
-/** 自然探索 ni = round(100 × correct / total) */
+/** 自然知识 ni = round(100 × correct / total) */
 export function scoreNi(metrics, expected = CONFIG.ni.items) {
   return scoreAccuracy(metrics, expected);
 }
