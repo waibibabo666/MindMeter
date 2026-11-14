@@ -1,4 +1,4 @@
-/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
+﻿/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
    布局：顶栏 56px ＋ 左侧栏 232px ＋ 主区 1fr（≤960）＋ 右上下文栏 340px；
    测评页切专注模式（760px 居中）；360px 为移动端回归底线（单栏）。
    配色：绿色系（品牌 #15803D），提醒用琥珀，不用红色做评判。 */
@@ -26,6 +26,15 @@
   --good: #15803d;
   --bad: #b42318;
   --radius: 12px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 10px;
@@ -92,7 +101,7 @@ body {
   position: absolute;
   left: -9999px;
   top: 0;
-  padding: 10px 14px;
+  padding: var(--space-10) var(--space-14);
   background: var(--accent);
   color: #fff;
   z-index: 100;
@@ -114,15 +123,15 @@ body {
   height: 56px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 24px;
+  gap: var(--space-14);
+  padding: 0 var(--space-24);
   background: var(--card);
   border-bottom: 1px solid var(--line);
 }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   color: var(--accent);
 }
 .brand-mark {
@@ -137,7 +146,7 @@ body {
   color: var(--text);
 }
 .brand-sub {
-  margin-left: 6px;
+  margin-left: var(--space-6);
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 2px;
@@ -149,7 +158,7 @@ body {
   background: var(--accent-soft);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-pill);
-  padding: 3px 12px;
+  padding: 3px var(--space-12);
   font-variant-numeric: tabular-nums;
 }
 .chip:empty {
@@ -159,7 +168,7 @@ body {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-16);
 }
 .toplink {
   font-size: 13px;
@@ -192,11 +201,11 @@ body {
   width: 100%;
   max-width: 1760px;
   margin: 0 auto;
-  padding: 20px 32px 40px;
+  padding: var(--space-20) 32px 40px;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr) 340px;
   grid-template-areas: 'side main rail';
-  gap: 20px;
+  gap: var(--space-20);
   align-items: start;
 }
 
@@ -204,16 +213,16 @@ body {
   grid-area: side;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
   position: sticky;
   top: 16px;
 }
 .navitem {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   min-height: 40px;
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   border-radius: var(--radius-sm);
   font-size: 14px;
   color: #374151;
@@ -245,7 +254,7 @@ body {
 .sidefoot {
   margin: auto 0 0;
   border-top: 1px dashed var(--line);
-  padding-top: 10px;
+  padding-top: var(--space-10);
   font-size: 12px;
   color: var(--dim);
   line-height: 1.7;
@@ -267,7 +276,7 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   position: sticky;
   top: 16px;
 }
@@ -324,7 +333,7 @@ body.focus #app {
   font-size: clamp(26px, 3.6vw, 36px);
   line-height: 1.24;
   letter-spacing: -0.5px;
-  margin: 14px 0 8px;
+  margin: var(--space-14) 0 var(--space-8);
 }
 .hero em {
   font-style: normal;
@@ -336,26 +345,26 @@ body.focus #app {
     rgba(34, 197, 94, 0.35) 92%,
     transparent 92%
   );
-  padding: 0 4px;
+  padding: 0 var(--space-4);
   border-radius: var(--radius-xs);
 }
 
 .page-title {
   font-size: 24px;
   letter-spacing: -0.01em;
-  margin: 16px 0 6px;
+  margin: var(--space-16) 0 var(--space-6);
 }
 .kicker {
   font-size: 12px;
   letter-spacing: 0.2em;
   color: var(--accent);
   text-transform: uppercase;
-  margin: 6px 0 0;
+  margin: var(--space-6) 0 0;
 }
 .lead {
   color: var(--muted);
   font-size: 14px;
-  margin: 8px 0;
+  margin: var(--space-8) 0;
 }
 .muted {
   color: var(--muted);
@@ -370,7 +379,7 @@ body.focus #app {
   color: var(--dim);
   font-size: 12px;
   line-height: 1.75;
-  margin-top: 14px;
+  margin-top: var(--space-14);
 }
 .center {
   text-align: center;
@@ -380,13 +389,13 @@ body.focus #app {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 16px;
-  margin: 12px 0;
+  padding: var(--space-16);
+  margin: var(--space-12) 0;
   box-shadow: var(--shadow-1);
 }
 .card-title {
   font-size: 16px;
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-6);
 }
 .main-entry {
   position: relative;
@@ -422,10 +431,10 @@ body.focus #app {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
   min-height: var(--tap);
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--card);
@@ -471,15 +480,15 @@ body.focus #app {
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0;
+  gap: var(--space-10);
+  margin: var(--space-12) 0;
 }
 .row .btn {
   flex: 1 1 140px;
 }
 
 .plain-list {
-  margin: 6px 0 0;
+  margin: var(--space-6) 0 0;
   padding-left: 18px;
   color: var(--muted);
   font-size: 13px;
@@ -489,14 +498,14 @@ body.focus #app {
 }
 
 .tier-list {
-  margin: 10px 0;
+  margin: var(--space-10) 0;
 }
 .tier-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 14px 16px;
-  margin: 10px 0;
+  padding: var(--space-14) var(--space-16);
+  margin: var(--space-10) 0;
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -518,7 +527,7 @@ body.focus #app {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10);
 }
 .tier-name {
   font-size: 16px;
@@ -533,21 +542,21 @@ body.focus #app {
   background: var(--warn-soft);
   border: 1px solid var(--warn-line);
   border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  margin: 10px 0;
+  padding: var(--space-12) var(--space-14);
+  margin: var(--space-10) 0;
   color: var(--warn);
   font-size: 12.5px;
 }
 .consent p {
-  margin: 6px 0;
+  margin: var(--space-6) 0;
 }
 
 .check {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-10);
   min-height: var(--tap);
-  padding: 8px 0;
+  padding: var(--space-8) 0;
   font-size: 13.5px;
   cursor: pointer;
 }
@@ -562,10 +571,10 @@ body.focus #app {
 .hud {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10);
   font-size: 12px;
   color: var(--muted);
-  margin: 6px 0;
+  margin: var(--space-6) 0;
 }
 .timer {
   font-variant-numeric: tabular-nums;
@@ -577,7 +586,7 @@ body.focus #app {
   background: var(--card-2);
   border-radius: var(--radius-pill);
   overflow: hidden;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-12);
 }
 .bar i {
   display: block;
@@ -590,25 +599,25 @@ body.focus #app {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin: 4px 0 10px;
+  gap: var(--space-10);
+  margin: var(--space-4) 0 var(--space-10);
 }
 .task-question {
   font-size: 18px;
   line-height: 1.5;
-  margin: 6px 0 14px;
+  margin: var(--space-6) 0 var(--space-14);
 }
 
 .options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 12px 0;
+  gap: var(--space-10);
+  margin: var(--space-12) 0;
 }
 .options-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .btn.option {
@@ -616,7 +625,7 @@ body.focus #app {
   text-align: left;
   font-weight: 500;
   min-height: 52px;
-  padding: 12px 14px;
+  padding: var(--space-12) var(--space-14);
 }
 .btn.symbol {
   justify-content: center;
@@ -628,7 +637,7 @@ body.focus #app {
 .grid-option {
   position: relative;
   justify-content: center;
-  padding: 10px;
+  padding: var(--space-10);
 }
 .btn.option.grid-option {
   justify-content: center;
@@ -658,7 +667,7 @@ body.focus #app {
 .sv-base {
   display: flex;
   justify-content: center;
-  margin: 6px 0 4px;
+  margin: var(--space-6) 0 var(--space-4);
 }
 .sv-base .grid3 {
   grid-template-columns: repeat(3, 26px);
@@ -669,9 +678,9 @@ body.focus #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: var(--space-14);
   padding: 18px;
-  margin: 8px 0 4px;
+  margin: var(--space-8) 0 var(--space-4);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -689,9 +698,9 @@ body.focus #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 26px 16px;
-  margin: 10px 0;
+  gap: var(--space-16);
+  padding: 26px var(--space-16);
+  margin: var(--space-10) 0;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -706,14 +715,14 @@ body.focus #app {
 .pair-list {
   list-style: none;
   padding: 0;
-  margin: 6px 0 14px;
+  margin: var(--space-6) 0 var(--space-14);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .pair-li {
   display: flex;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
   font-size: 13px;
   color: var(--muted);
@@ -722,13 +731,13 @@ body.focus #app {
 .report-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: var(--space-12) 0;
   font-size: 13px;
 }
 .report-table th,
 .report-table td {
   text-align: left;
-  padding: 9px 8px;
+  padding: 9px var(--space-8);
   border-bottom: 1px solid var(--line);
 }
 .report-table thead th {
@@ -748,18 +757,18 @@ body.focus #app {
 
 /* ---- L-04：BYOK 设置表单与状态 ---- */
 .field {
-  margin: 12px 0;
+  margin: var(--space-12) 0;
 }
 .field-label {
   display: block;
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 .input {
   width: 100%;
   min-height: var(--tap);
-  padding: 10px 12px;
+  padding: var(--space-10) var(--space-12);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -780,7 +789,7 @@ body.focus #app {
 
 .status {
   font-size: 12.5px;
-  margin: 10px 0 0;
+  margin: var(--space-10) 0 0;
   min-height: 18px;
   color: var(--muted);
 }
@@ -819,7 +828,7 @@ body.focus #app {
   white-space: pre-wrap;
   font-size: 13.5px;
   line-height: 1.7;
-  margin: 8px 0;
+  margin: var(--space-8) 0;
 }
 
 .toast {
@@ -828,7 +837,7 @@ body.focus #app {
   bottom: 24px;
   transform: translate(-50%, 12px);
   max-width: 90vw;
-  padding: 10px 14px;
+  padding: var(--space-10) var(--space-14);
   background: #1f2328;
   border: 1px solid #1f2328;
   border-radius: var(--radius-md);
@@ -906,8 +915,8 @@ body.focus #app {
   background: var(--warn-soft);
   border: 1px solid var(--warn-line);
   border-radius: var(--radius-lg);
-  padding: 10px 12px;
-  margin: 10px 0;
+  padding: var(--space-10) var(--space-12);
+  margin: var(--space-10) 0;
   color: var(--warn);
   font-size: 12.5px;
   line-height: 1.7;
@@ -940,7 +949,7 @@ body.focus #app {
 .chat-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 .chat-user {
   align-self: flex-end;
@@ -955,21 +964,21 @@ body.focus #app {
 }
 .chat-user p,
 .chat-ai p {
-  margin: 4px 0;
+  margin: var(--space-4) 0;
 }
 
 /* ---- 首页：最近一次测评 ---- */
 .score-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 2px;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 2px;
 }
 .score-chip {
   flex: 1 1 110px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding: var(--space-10) var(--space-14);
   background: linear-gradient(180deg, #fff, var(--card-2));
   font-size: 12px;
   color: var(--muted);
@@ -1159,7 +1168,7 @@ body.focus #app {
     position: static;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
+    gap: var(--space-12);
   }
   .rail .card {
     margin: 0;
@@ -1174,13 +1183,13 @@ body.focus #app {
       'side'
       'main'
       'rail';
-    padding: 14px 16px 32px;
+    padding: var(--space-14) var(--space-16) 32px;
   }
   .sidebar {
     position: static;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-6);
     overflow-x: auto;
     scrollbar-width: none;
     padding-bottom: 2px;
@@ -1210,14 +1219,14 @@ body.focus #app {
 @media (max-width: 599px) {
   .topbar {
     height: 52px;
-    padding: 0 14px;
-    gap: 8px;
+    padding: 0 var(--space-14);
+    gap: var(--space-8);
   }
   .brand-sub {
     display: none;
   }
   .wb {
-    padding: 12px 12px 28px;
+    padding: var(--space-12) var(--space-12) 28px;
   }
 }
 
@@ -1244,7 +1253,7 @@ body.focus #app {
     --tap: 40px;
   }
   .card {
-    padding: 20px;
+    padding: var(--space-20);
   }
   .radar {
     max-width: 460px;
@@ -1296,26 +1305,26 @@ body.focus #app {
 
 /* ---------- 游戏中心 ---------- */
 .game-dim {
-  margin: 22px 0 6px;
+  margin: 22px 0 var(--space-6);
 }
 .game-dim-title {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-10);
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  padding-left: 10px;
+  padding-left: var(--space-10);
   border-left: 3px solid var(--accent);
 }
 .game-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-10);
 }
 .game-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: var(--space-12) var(--space-14);
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -1341,7 +1350,7 @@ body.focus #app {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .game-card-title {
   font-weight: 600;
@@ -1349,7 +1358,7 @@ body.focus #app {
 }
 .game-badge {
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 2px var(--space-8);
   border-radius: var(--radius-pill);
   background: var(--card-2);
   color: var(--muted);
@@ -1362,12 +1371,12 @@ body.focus #app {
 }
 
 .game-stage {
-  margin-top: 14px;
+  margin-top: var(--space-14);
 }
 .game-status {
   color: var(--muted);
   font-size: 13px;
-  margin: 6px 0 12px;
+  margin: var(--space-6) 0 var(--space-12);
 }
 .game-question {
   font-size: 34px;
@@ -1379,7 +1388,7 @@ body.focus #app {
 .game-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-10);
   max-width: 520px;
   margin: 0 auto;
 }
@@ -1391,7 +1400,7 @@ body.focus #app {
 
 .game-grid {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   max-width: 460px;
 }
 .game-grid.schulte {
@@ -1444,7 +1453,7 @@ body.focus #app {
 }
 .game-input {
   min-height: var(--tap);
-  padding: 0 14px;
+  padding: 0 var(--space-14);
   font-size: 20px;
   letter-spacing: 6px;
   border: 1px solid var(--line);
@@ -1454,19 +1463,19 @@ body.focus #app {
   width: 180px;
 }
 .game-history {
-  margin-top: 14px;
+  margin-top: var(--space-14);
   font-size: 13px;
   color: var(--muted);
 }
 .game-history-item {
-  margin: 4px 0;
+  margin: var(--space-4) 0;
   font-variant-numeric: tabular-nums;
 }
 .game-score {
   font-size: 40px;
   font-weight: 800;
   color: var(--accent-deep);
-  margin: 8px 0;
+  margin: var(--space-8) 0;
 }
 .game-result {
   max-width: 520px;
@@ -1491,28 +1500,28 @@ body.focus #app {
   font-size: 20px;
   font-weight: 600;
   line-height: 1.6;
-  margin: 8px 0 18px;
+  margin: var(--space-8) 0 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   align-items: flex-start;
 }
 .quiz-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
   max-width: 620px;
 }
 .quiz-options .game-option {
   text-align: left;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   font-size: 15px;
   font-weight: 500;
 }
 .quiz-grid {
   display: grid;
   grid-template-columns: repeat(3, 22px);
-  gap: 4px;
+  gap: var(--space-4);
 }
 .quiz-cell {
   width: 22px;
@@ -1527,7 +1536,7 @@ body.focus #app {
 }
 .quiz-grid-option {
   display: inline-flex;
-  padding: 10px;
+  padding: var(--space-10);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--card);
@@ -1545,7 +1554,7 @@ body.focus #app {
   max-width: 420px;
 }
 .game-grid.link {
-  gap: 10px;
+  gap: var(--space-10);
 }
 .lcard {
   aspect-ratio: 1 / 1;
@@ -1572,7 +1581,7 @@ body.focus #app {
 .spot-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
 }
 .spot-label {
@@ -1585,7 +1594,7 @@ body.focus #app {
   grid-template-columns: repeat(5, 1fr);
   width: 260px;
   max-width: 100%;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .spot-cell {
   aspect-ratio: 1 / 1;
@@ -1612,11 +1621,11 @@ button.spot-cell {
 .pair-study {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-14);
 }
 .pair-chip {
-  padding: 6px 12px;
+  padding: var(--space-6) var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--card-2);
@@ -1625,17 +1634,17 @@ button.spot-cell {
 .pair-board {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-16);
   max-width: 560px;
 }
 .pair-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .pair-item {
   min-height: var(--tap);
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--card);
@@ -1659,10 +1668,10 @@ button.spot-cell {
 .shop-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .shop-chip {
-  padding: 8px 14px;
+  padding: var(--space-8) var(--space-14);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-pill);
   background: var(--accent-soft);
@@ -1671,12 +1680,12 @@ button.spot-cell {
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-8);
   max-width: 620px;
 }
 .shop-option {
   min-height: var(--tap);
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--card);
@@ -1692,15 +1701,15 @@ button.spot-cell {
 .speech-topic {
   font-size: 22px;
   font-weight: 700;
-  margin: 10px 0 16px;
+  margin: var(--space-10) 0 var(--space-16);
 }
 .speech-heard {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .speech-chip {
-  padding: 6px 12px;
+  padding: var(--space-6) var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--card-2);
@@ -1727,11 +1736,11 @@ button.spot-cell {
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
-  margin-left: 4px;
+  margin-left: var(--space-4);
 }
 .tier-note {
   display: inline-block;
-  margin-left: 6px;
+  margin-left: var(--space-6);
   font-size: 11px;
   color: var(--accent-deep);
 }
@@ -1754,13 +1763,13 @@ button.spot-cell {
 .form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-14);
   max-width: 560px;
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .field-label {
   font-size: 13px;
@@ -1772,7 +1781,7 @@ button.spot-cell {
 }
 .input {
   min-height: var(--tap);
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card);
@@ -1805,7 +1814,7 @@ button.spot-cell {
 }
 .tag {
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 2px var(--space-8);
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent-deep);
@@ -1813,8 +1822,8 @@ button.spot-cell {
 }
 .segbar {
   display: flex;
-  gap: 4px;
-  margin: 8px 0 16px;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 var(--space-16);
 }
 .segbar i {
   flex: 1;
@@ -1831,17 +1840,17 @@ button.spot-cell {
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: var(--space-14);
+  padding: var(--space-10) var(--space-14);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card-2);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-16);
 }
 .legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .link {
   color: var(--accent-deep);
@@ -1851,7 +1860,7 @@ button.spot-cell {
 
 /* ---- 趋势折线图 ---- */
 .trend-chart {
-  margin: 6px 0 2px;
+  margin: var(--space-6) 0 2px;
 }
 .trend-chart svg {
   display: block;
@@ -1881,15 +1890,15 @@ button.spot-cell {
 .trend-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin: 10px 0 2px;
+  gap: var(--space-14);
+  margin: var(--space-10) 0 2px;
   font-size: 12px;
   color: var(--muted);
 }
 .trend-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .legend-digit {
   font-weight: 700;
@@ -1905,16 +1914,16 @@ button.spot-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-10);
   min-height: 72px;
-  margin: 10px 0 6px;
+  margin: var(--space-10) 0 var(--space-6);
 }
 .ps-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-10);
   max-width: 520px;
-  margin: 12px auto 0;
+  margin: var(--space-12) auto 0;
 }
 
 /* 空间视觉化 */
@@ -1934,12 +1943,12 @@ button.spot-cell {
 }
 .grid9-options {
   display: flex;
-  gap: 12px;
+  gap: var(--space-12);
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: var(--space-14);
 }
 .grid9-option {
-  padding: 8px;
+  padding: var(--space-8);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card);
@@ -1951,13 +1960,13 @@ button.spot-cell {
 .rotate-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 12px 0;
+  gap: var(--space-14);
+  margin: var(--space-12) 0;
 }
 .cube-stage {
   width: 200px;
   height: 200px;
-  margin: 10px 0 4px;
+  margin: var(--space-10) 0 var(--space-4);
   perspective: 700px;
   touch-action: none;
   cursor: grab;
@@ -2000,7 +2009,7 @@ button.spot-cell {
 .net-grid {
   display: grid;
   grid-template-columns: repeat(4, 34px);
-  gap: 4px;
+  gap: var(--space-4);
 }
 .net-cell {
   width: 34px;
@@ -2017,15 +2026,15 @@ button.spot-cell {
   gap: 28px;
   align-items: flex-start;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: var(--space-8);
 }
 .cube-options {
   display: flex;
-  gap: 12px;
+  gap: var(--space-12);
   flex-wrap: wrap;
 }
 .cube-option {
-  padding: 4px;
+  padding: var(--space-4);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card);
@@ -2073,8 +2082,8 @@ button.spot-cell {
 .pal-board {
   display: grid;
   grid-template-columns: repeat(3, 96px);
-  gap: 12px;
-  margin: 12px 0;
+  gap: var(--space-12);
+  margin: var(--space-12) 0;
 }
 .pal-cell {
   width: 96px;
@@ -2097,8 +2106,8 @@ button.spot-cell {
 .pal-prompt {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 8px;
+  gap: var(--space-12);
+  margin-top: var(--space-8);
 }
 
 /* 数字运算 */
@@ -2118,7 +2127,7 @@ button.spot-cell {
 .mx-grid {
   display: grid;
   grid-template-columns: repeat(3, 84px);
-  gap: 8px;
+  gap: var(--space-8);
 }
 .mx-cell {
   width: 84px;
@@ -2142,12 +2151,12 @@ button.spot-cell {
 }
 .mx-options {
   display: flex;
-  gap: 10px;
+  gap: var(--space-10);
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: var(--space-16);
 }
 .mx-option {
-  padding: 6px;
+  padding: var(--space-6);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card);
@@ -2161,15 +2170,15 @@ button.spot-cell {
 .drag-pool {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0;
+  gap: var(--space-10);
+  margin: var(--space-12) 0;
 }
 .drag-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
+  gap: var(--space-4);
+  padding: var(--space-10) var(--space-14);
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--card);
@@ -2198,7 +2207,7 @@ button.spot-cell {
 .drag-bins {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: var(--space-12);
   max-width: 620px;
 }
 .drag-bin {
@@ -2207,10 +2216,10 @@ button.spot-cell {
   border-radius: 12px;
   background: var(--card-2);
   cursor: pointer;
-  padding: 8px;
+  padding: var(--space-8);
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   align-content: flex-start;
 }
 .drag-bin:hover {
@@ -2225,17 +2234,17 @@ button.spot-cell {
 .chain-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 44px;
-  margin: 12px 0;
+  margin: var(--space-12) 0;
 }
 .chain-pool {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .chain-chip {
-  padding: 8px 14px;
+  padding: var(--space-8) var(--space-14);
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--card);
@@ -2366,7 +2375,7 @@ button.spot-cell {
   line-height: 1.6;
   min-height: var(--tap);
   max-height: 132px;
-  padding: 10px 12px;
+  padding: var(--space-10) var(--space-12);
   overflow-y: auto;
 }
 .row > .chat-input {
@@ -2382,7 +2391,7 @@ button.spot-cell {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-10);
   padding: 18px;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
@@ -2399,7 +2408,7 @@ button.spot-cell {
 .empty-state .btn {
   width: auto;
   min-width: 128px;
-  padding: 8px 18px;
+  padding: var(--space-8) 18px;
 }
 
 /* ---- 视觉身份升级：大数字 / 分数条 / AI 语义色 / 空状态插画 / 右栏图标行 / 游戏维度色 ---- */
@@ -2444,7 +2453,7 @@ button.spot-cell {
 .ai-card .card-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .ai-icon {
   display: inline-flex;
@@ -2465,15 +2474,15 @@ button.spot-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 6px;
+  margin-top: var(--space-6);
 }
 .rail-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   width: 100%;
   min-height: 38px;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -2542,7 +2551,7 @@ button.spot-cell {
   height: 9px;
   border-radius: var(--radius-xs);
   background: var(--dimc, var(--accent));
-  margin-right: 8px;
+  margin-right: var(--space-8);
   vertical-align: 1px;
 }
 .game-card {
@@ -2562,4 +2571,110 @@ button.spot-cell {
 .btn.danger:hover {
   background: #fef2f2;
   border-color: #fca5a5;
+}
+
+/* 右栏一行式数据说明（替代重复的卡片） */
+.rail-note {
+  margin: var(--space-4) var(--space-2) 0;
+}
+
+/* ---- 首页：八维总览 ---- */
+.dim-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-10);
+  margin-top: var(--space-8);
+}
+@media (max-width: 640px) {
+  .dim-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.dim-cell {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card-2);
+}
+.dim-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-xs);
+}
+.dim-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.dim-cell .tiny {
+  margin: 0;
+}
+.dim-score {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+}
+.dim-badge {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* 顶栏「退出」：靠右的弱化文字按钮，窄屏隐藏（桌面窗口最小 960px） */
+.quit-app {
+  color: var(--muted);
+}
+.quit-app:hover {
+  color: var(--bad);
+}
+@media (max-width: 600px) {
+  .quit-app {
+    display: none;
+  }
+}
+
+/* 快捷操作卡头：标题 + 折叠按钮 */
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+.rail-head .card-title {
+  margin: 0;
+}
+.rail-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.rail-chevron svg {
+  transition: transform 0.2s ease;
+}
+.rail-chevron:hover {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.rail-chevron[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+body.rail-min .rail-actions {
+  display: none;
+}
+body.rail-min .rail .card {
+  padding-bottom: var(--space-10);
 }

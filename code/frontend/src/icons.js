@@ -37,6 +37,7 @@ export const ICONS = {
     '<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
   ),
   sparkle: wrap('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>', 14),
+  chevron: wrap('<path d="M6 9l6 6 6-6"/>', 14),
 };
 
 export function iconSvg(name) {

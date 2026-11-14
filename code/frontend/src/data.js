@@ -5,14 +5,14 @@
  */
 
 export const DIMS = [
-  { id: 'vc', name: '言语理解', short: '言语' },
-  { id: 'vf', name: '言语流畅性', short: '流畅' },
-  { id: 'nc', name: '数字运算', short: '运算' },
-  { id: 'ps', name: '知觉速度', short: '知觉' },
-  { id: 'ir', name: '归纳推理', short: '归纳' },
-  { id: 'sv', name: '空间视觉化', short: '空间' },
-  { id: 'am', name: '联想记忆', short: '记忆' },
-  { id: 'ni', name: '自然知识', short: '自然' },
+  { id: 'vc', name: '言语理解', short: '言语', desc: '词语关系与语义辨析' },
+  { id: 'vf', name: '言语流畅性', short: '流畅', desc: '限时说词，看提取速度' },
+  { id: 'nc', name: '数字运算', short: '运算', desc: '心算与数量关系' },
+  { id: 'ps', name: '知觉速度', short: '知觉', desc: '快速辨认与反应' },
+  { id: 'ir', name: '归纳推理', short: '归纳', desc: '从例子里找规律' },
+  { id: 'sv', name: '空间视觉化', short: '空间', desc: '旋转、拼接与定位' },
+  { id: 'am', name: '联想记忆', short: '记忆', desc: '配对记忆与再认' },
+  { id: 'ni', name: '自然知识', short: '自然', desc: '常识与自然世界' },
 ];
 
 export const TIERS = [
