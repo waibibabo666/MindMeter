@@ -53,6 +53,12 @@ async function main() {
   const quickmath = await import(href(path.join(SRC, 'games', 'quickmath.js')));
   const flip = await import(href(path.join(SRC, 'games', 'flip.js')));
   const guess = await import(href(path.join(SRC, 'games', 'guess.js')));
+  const quiz = await import(href(path.join(SRC, 'games', 'quiz.js')));
+  const quizzes = await import(href(path.join(SRC, 'games', 'quizzes.js')));
+  const svGames = await import(href(path.join(SRC, 'games', 'svGames.js')));
+  const visual = await import(href(path.join(SRC, 'games', 'visual.js')));
+  const speech = await import(href(path.join(SRC, 'games', 'speech.js')));
+  const { svRotate, svMirror } = svGames;
   const data = await import(href(path.join(SRC, 'data.js')));
   const storage = await import(href(path.join(SRC, 'storage.js')));
 
@@ -191,6 +197,85 @@ async function main() {
 
     eq(storage.readSessions().sessions.length, 0, '不应写入 sessions');
     storage.__setStorageForTests(null);
+  });
+
+  // ---------- 纯逻辑（题库 / 视觉 / 语音） ----------
+
+  test('题库引擎：计分与边界', () => {
+    eq(quiz.scoreQuiz(0, 10), 0, '全错');
+    eq(quiz.scoreQuiz(10, 10), 100, '全对');
+    eq(quiz.scoreQuiz(5, 0), 0, '题数为 0 不除零');
+    eq(quiz.scoreQuiz(99, 10), 100, '超额按满分');
+  });
+
+  test('题库：四个选项、答案下标有效、选项不重复', () => {
+    const banks = {
+      cloze: quizzes.cloze,
+      sequence: quizzes.sequence,
+      species: quizzes.species,
+      idiom: quizzes.idiom,
+      twentyFour: quizzes.twentyFour,
+    };
+    for (const [name, game] of Object.entries(banks)) {
+      assert(game.bank.length >= 6, `${name} 题量不足`);
+      for (const item of game.bank) {
+        assert(item.options.length >= 3, `${name} 选项太少`);
+        eq(new Set(item.options).size, item.options.length, `${name} 选项重复`);
+        assert(item.options[item.answer], `${name} 答案下标越界`);
+      }
+    }
+  });
+
+  test('成语接龙：正确答案接得上，干扰项接不上', () => {
+    for (const item of quizzes.idiom.bank) {
+      const current = item.prompt.split('「')[1].split('」')[0];
+      const last = current.slice(-1);
+      const right = item.options[item.answer];
+      eq(right[0], last, `${current} 的接龙`);
+      const wrongs = item.options.filter((_, i) => i !== item.answer);
+      for (const wrong of wrongs) {
+        assert(wrong[0] !== last, `${current} 的干扰项「${wrong}」也能接上`);
+      }
+    }
+  });
+
+  test('空间视觉化：旋转 / 镜像题目结构', () => {
+    for (const [name, game] of [['rotate', svRotate], ['mirror', svMirror]]) {
+      assert(game.bank.length >= 6, `${name} 题量不足`);
+      for (const item of game.bank) {
+        eq(item.options.length, 4, `${name} 选项数`);
+        assert(Array.isArray(item.grid), `${name} 题干缺原图`);
+        const keys = item.options.map((o) => o.grid.join(''));
+        eq(new Set(keys).size, 4, `${name} 选项应互不相同`);
+      }
+    }
+  });
+
+  test('视觉类计分函数边界', () => {
+    eq(visual.scorePairs(8), 100, '消除满');
+    eq(visual.scorePairs(0), 0, '没消');
+    eq(visual.scoreSpot(4, 0), 100, '全找到');
+    eq(visual.scoreSpot(4, 4), 80, '点错扣分');
+    eq(visual.scoreSpot(0, 9), 0, '扣到 0');
+    eq(visual.scorePairLink(8), 100, '全连对');
+    eq(visual.scoreShopping(10, 0), 100, '全对');
+    eq(visual.scoreShopping(5, 5), 0, '对错相抵');
+    eq(visual.scoreShopping(0, 3), 0, '不出现负分');
+  });
+
+  test('语音类计分：20 个有效词封顶', () => {
+    eq(speech.scoreSpeech(0), 0, '0 个');
+    eq(speech.scoreSpeech(10), 50, '10 个');
+    eq(speech.scoreSpeech(20), 100, '20 个');
+    eq(speech.scoreSpeech(99), 100, '超额封顶');
+  });
+
+  test('找不同：两幅图恰有 4 处不同', () => {
+    const { base, target, diffs } = visual.buildSpotBoards(seeded(9));
+    eq(diffs.length, 4, '差异数');
+    let changed = 0;
+    for (let i = 0; i < base.length; i += 1) if (base[i] !== target[i]) changed += 1;
+    eq(changed, 4, '实际不同的格子数');
   });
 
   // ---------- 静态约定 ----------
