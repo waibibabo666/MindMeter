@@ -1,7 +1,7 @@
 /**
  * L-07 记忆页：画像 / 摘要 / 建议记录 / 对话条数。
  *
- * 只读写本机 localStorage，不联网；删除后不再被引用。
+ * 只读写本机数据库（通过 API），不联网；删除后不再被引用。
  */
 
 import { button, el } from '../ui.js';
@@ -169,7 +169,7 @@ export function renderMemory(root, ctx) {
 
   const page = el('section', { class: 'page', 'aria-labelledby': 'memory-title' }, [
     el('h1', { id: 'memory-title', class: 'page-title', text: '我的记忆' }),
-    el('p', { class: 'muted', text: '这些信息只存在本机浏览器；删除后 AI 不会再引用。' }),
+    el('p', { class: 'muted', text: '这些信息只存在本机数据库；删除后 AI 不会再引用。' }),
     profileCard(view, rerender),
     summaryCard(view, ctx, rerender),
     adviceCard(view, rerender),
@@ -193,7 +193,7 @@ export function renderMemory(root, ctx) {
       ),
       button('返回', () => ctx.go('/report'), { variant: 'ghost' }),
     ]),
-    el('p', { class: 'disclaimer', text: '记忆只用于本机对话；清除浏览器数据会一并丢失。' }),
+    el('p', { class: 'disclaimer', text: '记忆只用于本机对话；清除本机数据会一并删除。' }),
   ]);
 
   root.appendChild(page);

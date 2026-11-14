@@ -96,7 +96,14 @@ function trendNotes(skipped) {
 }
 
 export function renderTrend(root, ctx) {
-  const sessions = readSessions().sessions || [];
+  let sessions = [];
+  try {
+    sessions = readSessions().sessions || [];
+  } catch (error) {
+    // 存储读不出来时按「还没有记录」处理，不把整页拖垮
+    if (typeof ctx.log === 'function')
+      ctx.log('error', 'trend read failed', error && error.message);
+  }
   if (sessions.length < 2) {
     root.appendChild(emptyTrend(ctx, sessions.length));
     return;
@@ -104,7 +111,15 @@ export function renderTrend(root, ctx) {
 
   const next = sessions[0];
   const prev = sessions[1];
-  const trend = buildTrend(prev, next, DIM_NAME);
+  let trend;
+  try {
+    trend = buildTrend(prev, next, DIM_NAME);
+  } catch (error) {
+    if (typeof ctx.log === 'function')
+      ctx.log('error', 'trend build failed', error && error.message);
+    root.appendChild(emptyTrend(ctx, 0));
+    return;
+  }
   const rows = trendRows(trend);
   const hint = repeatHint(trend.days);
   const daysText = typeof trend.days === 'number' ? ` · 间隔 ${trend.days} 天` : '';

@@ -1,23 +1,24 @@
 /**
- * L-03 本地存储层。
+ * API-backed repository facade (local PostgreSQL; no localStorage business data).
  *
- * 四类业务数据各自一个 key，每条记录都带 schemaVersion：
- *   - mindmeter.sessions.v1  已完成测评（原始指标/可选分数）
- *   - mindmeter.draft.v1     进行中的测评（24h 过期）
- *   - mindmeter.settings.v1  LLM API 配置（Key 只在本机）
- *   - mindmeter.memory.v1    画像/摘要/建议/最近 20 条消息
- *
- * 设计约束：
- *   - localStorage 不可用（隐私模式/配额满）时退化为内存 Map，页面仍能走；
- *   - 损坏 JSON / 版本不匹配 → 删除该 key，回退默认值，不抛错；
- *   - exportData() 永远不会带出 LLM Key；
- *   - clearAllData() 连同 L-01 的 app shell 状态一起清掉。
+ * Reads come from the in-memory cache loaded by boot.js; writes go to the
+ * local FastAPI service. The LLM key is never stored here: settings only
+ * expose endpoint/model/enabled/hasKey/keyHint.
  */
 
-export const SCHEMA_VERSION = 1;
+import { api } from './api.js';
+import {
+  MAX_MESSAGES,
+  MAX_SESSIONS,
+  SCHEMA_VERSION,
+  cache,
+  defaultMemory,
+  defaultSettings,
+  enqueue,
+} from './cache.js';
+
+export { MAX_MESSAGES, MAX_SESSIONS, SCHEMA_VERSION };
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
-export const MAX_MESSAGES = 20;
-export const MAX_SESSIONS = 50;
 
 export const KEYS = Object.freeze({
   app: 'mindmeter.app.shell.v1',
@@ -26,7 +27,6 @@ export const KEYS = Object.freeze({
   settings: 'mindmeter.settings.v1',
   memory: 'mindmeter.memory.v1',
 });
-
 export const ALL_KEYS = Object.freeze(Object.values(KEYS));
 
 export function defaultSessions() {
@@ -45,185 +45,91 @@ export function defaultDraft() {
   };
 }
 
-export function defaultSettings() {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    endpoint: '',
-    model: '',
-    apiKey: '',
-    enabled: false,
-  };
-}
-
-export function defaultMemory() {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    profile: {},
-    summaries: [],
-    advice: [],
-    messages: [],
-  };
-}
-
-let injectedStorage = null;
-let resolvedStorage;
-const memoryFallback = new Map();
-
-function detectStorage() {
-  try {
-    const store = globalThis.localStorage;
-    if (!store) return null;
-    const probe = '__mm_storage_probe__';
-    store.setItem(probe, '1');
-    store.removeItem(probe);
-    return store;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
-    return null;
-  }
-}
-
-function storage() {
-  if (injectedStorage) return injectedStorage;
-  if (resolvedStorage === undefined) resolvedStorage = detectStorage();
-  return resolvedStorage;
-}
-
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-function rawRead(key) {
-  const store = storage();
-  if (!store) return memoryFallback.has(key) ? memoryFallback.get(key) : null;
-  try {
-    return store.getItem(key);
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
-    return null;
-  }
-}
-
-function rawWrite(key, value) {
-  const store = storage();
-  if (!store) {
-    memoryFallback.set(key, value);
-    return true;
-  }
-  try {
-    store.setItem(key, value);
-    return true;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
-    return false;
-  }
-}
-
-function rawRemove(key) {
-  memoryFallback.delete(key);
-  const store = storage();
-  if (!store) return;
-  try {
-    store.removeItem(key);
-  } catch {
-    // 清除失败时至少内存已清，不抛给调用方
-  }
-}
-
-function readRecord(key, fallback) {
-  const raw = rawRead(key);
-  if (!raw) return clone(fallback);
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.schemaVersion !== SCHEMA_VERSION) {
-      rawRemove(key);
-      return clone(fallback);
-    }
-    return parsed;
-  } catch {
-    // localStorage 不可用（隐私模式/配额满）时静默降级
-    rawRemove(key);
-    return clone(fallback);
-  }
-}
-
-function writeRecord(key, value) {
-  const record = Object.assign({}, value, { schemaVersion: SCHEMA_VERSION });
-  return rawWrite(key, JSON.stringify(record));
-}
+export { defaultMemory, defaultSettings };
 
 export function readSessions() {
-  const record = readRecord(KEYS.sessions, defaultSessions());
-  if (!Array.isArray(record.sessions)) return defaultSessions();
-  return record;
+  return { schemaVersion: SCHEMA_VERSION, sessions: cache.sessions.slice() };
 }
 
-export function addSession(session) {
-  const record = readSessions();
-  const next = {
-    schemaVersion: SCHEMA_VERSION,
-    sessions: [session, ...record.sessions].slice(0, MAX_SESSIONS),
-  };
-  return writeRecord(KEYS.sessions, next);
+/** Persist a completed assessment server-side (server is the scoring authority). */
+export async function addSession(session) {
+  const result = await api.post('/assessments', { session });
+  const saved = result && result.session ? result.session : result;
+  if (saved && saved.id) {
+    cache.sessions = [saved, ...cache.sessions.filter((item) => item.id !== saved.id)].slice(
+      0,
+      MAX_SESSIONS,
+    );
+  }
+  return saved;
 }
 
 export function clearSessions() {
-  rawRemove(KEYS.sessions);
+  cache.sessions = [];
 }
 
 export function readDraft() {
-  const draft = readRecord(KEYS.draft, defaultDraft());
-  if (!draft.updatedAt) return null;
-  if (Date.now() - draft.updatedAt > DRAFT_TTL_MS) {
-    rawRemove(KEYS.draft);
-    return null;
-  }
-  return draft;
+  return null;
 }
 
-export function saveDraft(draft) {
-  const next = Object.assign(defaultDraft(), draft, {
-    schemaVersion: SCHEMA_VERSION,
-    updatedAt: Date.now(),
-  });
-  return writeRecord(KEYS.draft, next);
+export function saveDraft() {
+  return false;
 }
 
 export function clearDraft() {
-  rawRemove(KEYS.draft);
+  return undefined;
 }
 
 export function readSettings() {
-  return readRecord(KEYS.settings, defaultSettings());
+  return Object.assign(defaultSettings(), cache.settings || {});
 }
 
-export function writeSettings(patch) {
-  const current = readSettings();
-  const next = Object.assign({}, current, patch, { schemaVersion: SCHEMA_VERSION });
-  return writeRecord(KEYS.settings, next);
+/**
+ * Save non-secret config and, optionally, a transiently supplied key.
+ * The returned object never contains the key.
+ */
+export async function writeSettings(patch) {
+  const payload = {
+    endpoint: String(patch.endpoint ?? cache.settings.endpoint ?? ''),
+    model: String(patch.model ?? cache.settings.model ?? ''),
+    enabled: Boolean(patch.enabled ?? cache.settings.enabled),
+  };
+  if (patch.apiKey) payload.apiKey = String(patch.apiKey);
+  const saved = await api.put('/settings/ai', payload);
+  cache.settings = Object.assign(defaultSettings(), saved);
+  return readSettings();
 }
 
-export function clearSettings() {
-  rawRemove(KEYS.settings);
+export async function clearSettings() {
+  await api.del('/settings/ai/key');
+  cache.settings = Object.assign(defaultSettings(), cache.settings, {
+    enabled: false,
+    hasKey: false,
+    keyHint: '',
+  });
+  return readSettings();
 }
 
 export function readMemory() {
-  const memory = readRecord(KEYS.memory, defaultMemory());
-  return Object.assign(defaultMemory(), memory, {
+  const memory = Object.assign(defaultMemory(), cache.memory || {});
+  return {
+    schemaVersion: SCHEMA_VERSION,
     profile: memory.profile && typeof memory.profile === 'object' ? memory.profile : {},
     summaries: Array.isArray(memory.summaries) ? memory.summaries : [],
     advice: Array.isArray(memory.advice) ? memory.advice : [],
-    messages: Array.isArray(memory.messages) ? memory.messages : [],
-  });
+    messages: Array.isArray(memory.messages) ? memory.messages.slice(-MAX_MESSAGES) : [],
+  };
 }
 
+/** Update cache immediately, then replace the server copy (small local dataset). */
 export function writeMemory(patch) {
-  const current = readMemory();
-  const next = Object.assign({}, current, patch, { schemaVersion: SCHEMA_VERSION });
-  if (Array.isArray(next.messages)) {
-    next.messages = next.messages.slice(-MAX_MESSAGES);
+  cache.memory = Object.assign(readMemory(), patch, { schemaVersion: SCHEMA_VERSION });
+  if (cache.memory.messages.length > MAX_MESSAGES) {
+    cache.memory.messages = cache.memory.messages.slice(-MAX_MESSAGES);
   }
-  return writeRecord(KEYS.memory, next);
+  const snapshot = JSON.parse(JSON.stringify(cache.memory));
+  enqueue(() => api.put('/memory', snapshot));
+  return cache.memory;
 }
 
 export function addMessage(message) {
@@ -242,10 +148,11 @@ export function addAdvice(advice) {
 }
 
 export function clearMemory() {
-  rawRemove(KEYS.memory);
+  cache.memory = defaultMemory();
+  enqueue(() => api.del('/memory'));
 }
 
-function safeSettings(settings) {
+export function safeSettings(settings) {
   return {
     endpoint: settings.endpoint || '',
     model: settings.model || '',
@@ -253,40 +160,25 @@ function safeSettings(settings) {
   };
 }
 
-/**
- * 导出本机全部数据；Key 永不出现。
- * app 是 L-01 的进度快照，保留它便于恢复进行中的测评。
- */
-export function exportData() {
-  const appRaw = rawRead(KEYS.app);
-  let app = null;
-  if (appRaw) {
+/** Export is generated by the backend and never includes the key. */
+export async function exportData() {
+  return api.get('/export');
+}
+
+export async function clearAllData() {
+  await api.del('/data');
+  cache.sessions = [];
+  cache.memory = defaultMemory();
+  cache.settings = defaultSettings();
+  for (const key of ALL_KEYS) {
     try {
-      app = JSON.parse(appRaw);
-    } catch {
-      // 读取失败按无数据处理，导出不因此中断
-      app = null;
+      globalThis.localStorage?.removeItem(key);
+    } catch (error) {
+      // localStorage may be unavailable; the server data is already cleared.
     }
   }
-
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    sessions: readSessions().sessions,
-    draft: readDraft(),
-    settings: safeSettings(readSettings()),
-    memory: readMemory(),
-    app,
-  };
 }
 
-export function clearAllData() {
-  for (const key of ALL_KEYS) rawRemove(key);
-  memoryFallback.clear();
-}
-
-export function __setStorageForTests(fake) {
-  injectedStorage = fake;
-  resolvedStorage = undefined;
-  memoryFallback.clear();
+export function __setStorageForTests() {
+  // Kept as a no-op for older tests; the repository no longer uses localStorage.
 }

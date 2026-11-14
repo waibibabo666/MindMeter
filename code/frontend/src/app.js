@@ -2,14 +2,17 @@
  * 静态 App 壳（L-01）入口。
  *
  * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report → #/trend
- * 状态全部落在 localStorage，刷新或浏览器返回都不丢进度。
+ * 状态由 boot 预取到内存缓存，写回本地 FastAPI；刷新/返回不丢进度。
  */
 import { createRouter } from './router.js';
+import { createShell } from './shell.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
+import { bootstrap, installFlushHook } from './boot.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
+import { log } from './log.js';
 import { STANDARD_ORDER } from './data.js';
-import { clear } from './ui.js';
+import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
 import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
@@ -18,6 +21,35 @@ import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
+import { renderChat } from './pages/chat.js';
+
+/**
+ * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
+ * 只给一句人话和两个出口，不暴露堆栈。
+ */
+function showRenderError(error) {
+  log('error', 'render failed', error && error.message);
+  clear(root);
+  root.appendChild(
+    el('section', { class: 'page' }, [
+      el('h1', { class: 'page-title', text: '页面没能正常显示' }),
+      el('p', {
+        class: 'lead',
+        text: '可能是本地数据异常。可以先返回首页重试；如果反复出现，请在设置里清除本地数据。',
+      }),
+      el('div', { class: 'row' }, [
+        button(
+          '返回首页',
+          () => {
+            globalThis.location.hash = '#/';
+          },
+          { variant: 'primary' },
+        ),
+        button('重试', () => globalThis.location.reload()),
+      ]),
+    ]),
+  );
+}
 
 const PAGES = {
   '/': renderHome,
@@ -28,6 +60,7 @@ const PAGES = {
   '/settings': renderSettings,
   '/trend': renderTrend,
   '/memory': renderMemory,
+  '/chat': renderChat,
 };
 
 const root = document.getElementById('app');
@@ -48,7 +81,17 @@ function setState(mutator) {
   });
 }
 
-function finishTask(taskId, payload) {
+/** 计分失败不能阻断交卷：分数留空，原始作答照常保存。 */
+function safeScores(results) {
+  try {
+    return scoreSession(results).scores;
+  } catch (error) {
+    log('error', 'scoring failed', error && error.message);
+    return null;
+  }
+}
+
+async function finishTask(taskId, payload) {
   setState((draft) => {
     const results = Object.assign({}, draft.results, { [taskId]: payload });
     const drafts = Object.assign({}, draft.drafts);
@@ -67,19 +110,33 @@ function finishTask(taskId, payload) {
   const index = state.order.indexOf(taskId);
   const next = state.order[index + 1];
 
-  if (!next) {
-    addSession({
+  log('info', '完成一项', taskId, next ? `下一项 ${next}` : '全部完成，结算中');
+
+  if (next) {
+    router.go(`/task/${next}`);
+    return;
+  }
+
+  const localScores = safeScores(state.results);
+  try {
+    const saved = await addSession({
       id: `s_${Date.now().toString(36)}`,
       mode: state.tier || 'standard',
       finishedAt: new Date().toISOString(),
       dims: state.order.slice(),
       results: state.results,
-      scores: scoreSession(state.results).scores,
       scoringVersion: SCORING_VERSION,
     });
+    setState(() => ({
+      scores: (saved && saved.scores) || localScores,
+      assessmentId: saved && saved.id,
+    }));
+  } catch (error) {
+    log('error', '保存测评失败', error && error.message);
+    toast('保存失败：结果只保留在当前页面，请重启后重测');
+    setState(() => ({ scores: localScores, assessmentId: null }));
   }
-
-  router.go(next ? `/task/${next}` : '/report');
+  router.go('/report');
 }
 
 const ctx = {
@@ -88,11 +145,13 @@ const ctx = {
   },
   go: (path, options) => router.go(path, options),
   toast,
+  log,
   pickTier: (tier) => {
     setState(() => ({ tier }));
     router.go('/consent');
   },
   startAssessment: () => {
+    log('info', '开始测评', 'standard', STANDARD_ORDER.join('→'));
     setState(() => ({
       tier: 'standard',
       consented: true,
@@ -102,6 +161,8 @@ const ctx = {
       cursor: 0,
       results: {},
       drafts: {},
+      scores: null,
+      assessmentId: null,
       route: '/task/vc',
     }));
     router.go('/task/vc');
@@ -112,37 +173,68 @@ const ctx = {
     }));
   },
   finishTask,
-  exportData: () => {
-    const data = exportData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `mindmeter-export-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    toast('已导出本地数据（不含 LLM Key）');
+  exportData: async () => {
+    try {
+      const data = await exportData();
+      log(
+        'info',
+        '导出本地数据',
+        `sessions=${Array.isArray(data.sessions) ? data.sessions.length : 0}`,
+      );
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `mindmeter-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast('已导出本地数据（不含 LLM Key）');
+    } catch (error) {
+      log('error', 'export failed', error && error.message);
+      toast('导出失败：本地服务不可用或下载被拦截');
+    }
   },
-  clearAll: () => {
+  clearAll: async () => {
     if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
-    clearAllData();
-    resetState();
-    toast('已清除本地数据');
-    router.go('/');
+    log('info', '清除本地数据');
+    try {
+      await clearAllData();
+      resetState();
+      toast('已清除本地数据');
+      router.go('/');
+    } catch (error) {
+      log('error', 'clear failed', error && error.message);
+      toast('清除失败：请刷新页面后重试');
+    }
+  },
+  clearDraft: (taskId) => {
+    setState((state) => {
+      const drafts = Object.assign({}, state.drafts);
+      delete drafts[taskId];
+      return { drafts };
+    });
   },
 };
 
 const router = createRouter((route) => {
+  log('info', '路由', route.full);
   dispose();
   dispose = () => {};
   clear(root);
 
   setState(() => ({ route: route.full }));
+  shell.updateShell(route);
+  shell.renderRail();
 
   const handler = PAGES[route.path] || renderHome;
-  const result = handler(root, ctx, route.param);
+  let result = () => {};
+  try {
+    result = handler(root, ctx, route.param);
+  } catch (error) {
+    showRenderError(error);
+  }
   dispose = typeof result === 'function' ? result : () => {};
 
   const heading = root.querySelector('h1');
@@ -150,11 +242,53 @@ const router = createRouter((route) => {
   root.focus({ preventScroll: true });
 });
 
-if (!window.location.hash) {
-  const saved = readState().route;
-  if (saved && saved !== '/') {
-    window.history.replaceState(null, '', `#${saved}`);
-  }
+const shell = createShell({ ctx, router });
+
+function showBootError(error) {
+  log('error', 'boot failed', error && error.message);
+  clear(root);
+  root.appendChild(
+    el('section', { class: 'page' }, [
+      el('h1', { class: 'page-title', text: '本地服务没有启动' }),
+      el('p', {
+        class: 'lead',
+        text: 'MindMeter 的本地数据库或解读服务没有就绪。请关闭窗口后重新打开；如果反复出现，请查看启动日志。',
+      }),
+      el('div', { class: 'row' }, [
+        button(
+          '重试',
+          () => {
+            globalThis.location.reload();
+          },
+          { variant: 'primary' },
+        ),
+      ]),
+    ]),
+  );
 }
 
-router.start();
+/* 全局兜底：未捕获的异常与 Promise 拒绝都不该让页面白屏。 */
+window.addEventListener('error', (event) => {
+  log('error', 'window.error', event.message || '');
+  toast('页面出现异常，已切到安全状态；如无法操作请刷新');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  log('error', 'unhandledrejection', event.reason && event.reason.message);
+  toast('有一次请求没有完成，可稍后重试');
+});
+
+async function startApp() {
+  await bootstrap();
+  installFlushHook();
+  if (!window.location.hash) {
+    const saved = readState().route;
+    if (saved && saved !== '/') {
+      window.history.replaceState(null, '', `#${saved}`);
+    }
+  }
+  log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
+  router.start();
+}
+
+startApp().catch(showBootError);

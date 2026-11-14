@@ -15,6 +15,7 @@ export const ROUTES = [
   '/settings',
   '/trend',
   '/memory',
+  '/chat',
 ];
 
 export function parseHash(hash) {

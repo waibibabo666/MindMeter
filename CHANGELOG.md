@@ -3,6 +3,36 @@
 本文件记录 MindMeter 所有值得说明的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-11-14 — 桌面本地架构
+
+架构从“浏览器 UI + localStorage + 浏览器直连 LLM”迁移为
+“pywebview + FastAPI + 便携 PostgreSQL + Alembic + pgvector + LangGraph + keyring”。
+
+### 新增
+
+- **桌面 launcher**：单实例锁、随机端口、首次 initdb、二次复用、**pg_dump 后迁移**、Job Object 退出清理；双击 `MindMeter.cmd` / `MindMeter.vbs`。
+- **FastAPI 本地后端**：`/api/v1/*` 全部要求 `X-MM-Token`；只监听 `127.0.0.1`；拒绝非 loopback Host/跨源 Origin；CSP。
+- **PostgreSQL 17.12 + pgvector 0.8.6**：12 张表；Alembic `0001_initial` + `0002_seed_kb`；30 条知识块。
+- **服务端计分**：`scoring-v3.1` Python 唯一权威；22 项 JS 金标准平移到 pytest。
+- **pgvector RAG**：`BAAI/bge-small-zh-v1.5`（512 维）+ BM25 混合；模型不可用时 `keyword` 降级。
+- **LangGraph Agent**：classify → retrieve → generate → validate；无 Key/失败回退模板。
+- **Keyring only**：LLM Key 只在 Windows Credential Manager；`ai_settings` 只存 `key_ref`/`key_hint`。
+- **旧数据导入**：设置页选择旧版导出 JSON；导入前自动 `pg_dump`；忽略 `apiKey`。
+- **测试**：`npm run check`、`pytest tests/backend`、`npm run test:e2e`（真实 PostgreSQL）。
+
+### 变更
+
+- 前端 `storage.js` / `store.js` 改为内存缓存 + 本地 API；页面仍同步读取。
+- 报告/对话/设置不再直连模型；`llm/client.js` 与 `agent/run.js` 成为未引用的 legacy。
+- `tests/backend/test_openapi_contract.py` 的 auth/JWT 路径替换为本地无账号 API。
+- `m1_scope.md` 的“无后端”范围被 ADR-0001 取代。
+
+### 删除
+
+- localStorage 业务数据持久化（Key 尤其）。
+- 浏览器直连 LLM 的生产路径。
+- SQLite 过渡方案（未引入）。
+
 ## [未发布]
 
 ### 已知缺口
@@ -32,6 +62,12 @@
 - **本地记忆**（L-07）：画像、摘要、建议记录，上限 20 条，删除后不再被引用。
 - **本地知识库**（L-06）：30 条知识块 + BM25 / 中文 bigram 检索（top3，零依赖），只索引已审条目。
 - **十二屏线框**（P-08）：360×780，含空状态，用于 UI 对齐。
+- **关键路径内存日志**：`storage` / `store` / `llm` / `agent` / `app` 在失败点与关键流程写入环形缓冲 `__MM_LOG__`（上限 200 条）。
+  刻意**不写 console**——项目有一条硬性测试禁止前端任何 `console.*`，防止 Key 意外落日志；排查时在控制台执行 `__MM_LOG__` 即可。
+- **错误兜底（内联，不新增文件）**：路由渲染包 `try/catch`，失败时用内联错误块替换整页；
+  注册 `window.error` 与 `unhandledrejection`；计分失败不阻断交卷，模型失败回退模板。
+- **页面级兜底**：任务草稿损坏时自动丢弃并重开一次；报告页计分失败退回「全部未测」；
+  趋势页读不到历史按「还没有记录」处理；导出/清除失败给出明确提示，不再静默无反应。
 
 ### 变更
 
@@ -48,6 +84,9 @@
   - 「算不算有病」被判成「指代不明」→ `BOUNDARY_WORDS` 收敛为「有病」，覆盖两种问法；
   - 「未测是什么意思」被判成「指代不明」→ `DOMAIN_WORDS` 增加「未测」，避免短句走 too-short 规则。
 - **计分舍入偏差**：`0.7×0.75 + 0.3×0.6` 手算 70.5，浮点算成 70.4999 后向下取整，改用 `+1e-9` 容差。
+- **页面抛错即白屏**：页面渲染没有兜底，任一页面抛错整页空白。改为在 `app.js` 里包 `try/catch`，失败时渲染内联错误块。
+- **计分失败会阻断交卷**：`finishTask` 里裸调 `scoreSession()`，一旦抛错整次测评丢失。改为 `safeScores()` 兜底，分数留空、作答照常保存。
+- **计分实现未统一**：`app.js` 仍引用临时的 `scoring/local.js`，与 `report.js` 的实现不一致，已统一到 `scoring/index.js`。
 
 ### 文档
 
@@ -59,12 +98,12 @@
 
 ### 测试
 
-12 个套件、165 项检查，全部纳入 `npm test`：
+12 个套件、168 项检查，全部纳入 `npm test`：
 
 | 套件 | 项数 | 覆盖 |
 | --- | --- | --- |
 | `test_prototype.js` | 7 | 原型 smoke、页面存在性 |
-| `test_app_shell.js` | 12 | 路由、状态、360px、任务纯逻辑 |
+| `test_app_shell.js` | 14 | 路由、状态、360px、任务纯逻辑、异常兜底 |
 | `test_storage.js` | 8 | 刷新恢复、导出、清除 |
 | `test_llm_client.js` | 16 | BYOK、超时、降级、Key 不落日志 |
 | `test_report_trend.js` | 11 | 4+4 未测、无总分、共同维度 |

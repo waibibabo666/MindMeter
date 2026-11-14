@@ -1,32 +1,23 @@
-# Backend contract tests
+# Backend tests
 
-These tests are **contract scaffolding** for the L2 FastAPI backend. They are
-skipped while `code/backend/app/` does not exist, so the repository can stay
-green during the design phase; once the backend is scaffolded they become the
-first guardrails.
+Use a disposable PostgreSQL/pgvector database; never SQLite.
 
-## Run
+```powershell
+# 终端 1：启动测试用本地数据库/后端（窗口可以不打开）
+python -m desktop.launcher --no-window --backend-port 8767 --pg-port 55435
 
-```bash
-pip install pytest httpx fastapi
+# 终端 2：从 keyring 取本机 DB 口令牌并跑测试
+$pw = python -c "import keyring; print(keyring.get_password('MindMeter','pg-app'))"
+$env:MM_TEST_DATABASE_URL = "postgresql+psycopg://mm_app:$pw@127.0.0.1:55435/mindmeter"
 pytest -q tests/backend -rs
 ```
 
-CI runs this job only when `code/backend/pyproject.toml` exists.
+Covered:
 
-## What is covered now
+- `/api/v1/health` token requirement + DB/migration/pgvector status;
+- loopback Host / Origin guards;
+- OpenAPI surface (no auth/JWT endpoints);
+- scoring-v3.1 golden cases ported from JS;
+- assessment roundtrip, export without key, memory replace, chat template fallback.
 
-- `GET /api/v1/health` returns 200 and a healthy status.
-- The OpenAPI document exposes the core L2 paths (auth, assessments, reports,
-  threads, memory, trends).
-
-## What to add next
-
-- Auth: register/login/refresh/logout; token rotation; 401/403.
-- Assessment: submit idempotency; server-side scoring; no total/norm fields.
-- Memory: delete then no longer referenced by Agent.
-- Export/delete: no password/BYOK key in export; 30-day deletion flow.
-- Agent contract: no key in request; citations; degraded fallback.
-- RAG: hit@3 / retrieval contract.
-
-Use synthetic data only. Never commit real user answers or conversations.
+For CI, start `pgvector/pgvector:pg17` and set `MM_TEST_DATABASE_URL`.

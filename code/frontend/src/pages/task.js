@@ -65,7 +65,27 @@ export function renderTask(root, ctx, taskId) {
 
   const id = el('h2', { id: 'task-title', class: 'sr-only', text: meta.name });
   section.insertBefore(id, host);
-  cleanup = runner.mount(host, taskCtx) || (() => {});
+
+  try {
+    cleanup = runner.mount(host, taskCtx) || (() => {});
+  } catch (error) {
+    // 草稿损坏（结构不对、题目为 undefined）时，丢掉草稿重开一次，别让整页挂掉。
+    ctx.toast('这一项的进度读取失败，已重开');
+    ctx.clearDraft(taskId);
+    taskCtx.draft = null;
+    clear(host);
+    try {
+      cleanup = runner.mount(host, taskCtx) || (() => {});
+    } catch (retryError) {
+      clear(host);
+      host.appendChild(
+        el('div', { class: 'card' }, [
+          el('h2', { class: 'card-title', text: '这一项打不开' }),
+          el('p', { class: 'muted', text: '本地保存的进度可能已损坏，可以重开这一项后再试。' }),
+        ]),
+      );
+    }
+  }
   section.dataset.taskId = taskId;
 
   return () => {

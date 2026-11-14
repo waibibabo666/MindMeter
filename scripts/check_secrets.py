@@ -20,7 +20,7 @@ TEXT_SUFFIXES = {
     ".yml", ".yaml", ".py", ".json", ".toml", ".ini", ".cfg",
     ".txt", ".sql", ".env", ".example",
 }
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "coverage", ".pytest_cache"}
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "coverage", ".pytest_cache", "vendor", "runtime", "pgdata", "models"}
 
 PATTERNS = [
     ("OpenAI-style API key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),

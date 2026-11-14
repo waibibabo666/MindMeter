@@ -1,0 +1,17 @@
+# Runtime dependencies for the MindMeter desktop local backend.
+# Python 3.12+ (tested on 3.13, Windows x64).
+fastapi==0.162.7
+uvicorn==0.54.0
+sqlalchemy==2.1.8
+alembic==1.20.1
+psycopg[binary]==3.3.9
+pgvector==0.5.1
+pydantic-settings==2.16.3
+keyring==25.7.0
+httpx==0.28.1
+langgraph==1.2.21
+langchain-core==1.8.0
+python-multipart==0.0.33
+pywebview==6.2.1
+# Optional: local pgvector embeddings. Without it RAG falls back to BM25.
+fastembed==0.9.1

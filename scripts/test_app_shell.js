@@ -58,6 +58,7 @@ async function main() {
       'src/router.js',
       'src/store.js',
       'src/storage.js',
+      'src/log.js',
       'src/data.js',
       'src/ui.js',
       'src/pages/home.js',
@@ -88,13 +89,17 @@ async function main() {
     assert(/skip-link/.test(html), 'skip link missing');
   });
 
-  test('静态壳不发起任何网络请求', () => {
+  test('只有本地 API 客户端可以发起网络请求', () => {
     for (const file of listSrc()) {
+      const relative = path.relative(APP_DIR, file).replaceAll('\\', '/');
+      if (relative === 'src/api.js' || relative === 'src/llm/client.js') continue;
       const text = fs.readFileSync(file, 'utf8');
-      assert(!/\bfetch\s*\(/.test(text), `${path.relative(ROOT, file)} uses fetch()`);
-      assert(!/XMLHttpRequest/.test(text), `${path.relative(ROOT, file)} uses XMLHttpRequest`);
-      assert(!/['"]\/api\//.test(text), `${path.relative(ROOT, file)} references /api`);
+      assert(!/\bfetch\s*\(/.test(text), `${relative} uses fetch()`);
+      assert(!/XMLHttpRequest/.test(text), `${relative} uses XMLHttpRequest`);
     }
+    const api = read('src/api.js');
+    assert(api.includes("'X-MM-Token'"), 'api.js must attach the local token');
+    assert(!api.includes('apiKey'), 'api.js must not know about LLM keys');
   });
 
   test('标准档 4 项且顺序固定', () => {
@@ -197,6 +202,33 @@ async function main() {
     assert(summary.accuracy === 0.5, 'accuracy wrong');
   });
 
+  test('入口：计分统一、渲染有兜底、不写 console', () => {
+    const app = read('src/app.js');
+    const logModule = read('src/log.js');
+    assert(app.includes("from './scoring/index.js'"), 'app.js 未使用统一计分');
+    assert(!app.includes('scoring/local.js'), 'app.js 仍引用临时计分模块');
+    assert(app.includes('showRenderError'), 'app.js 缺少渲染兜底');
+    assert(app.includes("from './log.js'"), 'app.js 未接入统一日志模块');
+    assert(logModule.includes('__MM_LOG__'), 'log.js 未使用内存缓冲');
+    assert(!/console\.(log|info|warn|error|debug)\s*\(/.test(app), 'app.js 不应写 console');
+  });
+
+  test('异常处理：关键路径有本地兜底', () => {
+    const task = read('src/pages/task.js');
+    assert(task.includes('clearDraft'), 'task.js 缺少「草稿损坏重开」兜底');
+
+    const report = read('src/pages/report.js');
+    assert(report.includes('safeScore'), 'report.js 缺少计分失败兜底');
+
+    const trend = read('src/pages/trend.js');
+    assert(trend.includes('catch'), 'trend.js 缺少读取失败兜底');
+
+    const app = read('src/app.js');
+    assert(app.includes('导出失败'), 'app.js 导出失败未提示用户');
+    assert(app.includes('清除失败'), 'app.js 清除失败未提示用户');
+    assert(app.includes('safeScores'), 'app.js 计分失败未兜底');
+  });
+
   test('路由解析与未知路径回退', () => {
     assert(router.parseHash('#/').path === '/', 'root parse failed');
     assert(router.parseHash('#/task/vc').param === 'vc', 'param parse failed');
@@ -207,34 +239,16 @@ async function main() {
     assert(!router.isKnown(router.parseHash('#/nope')), 'unknown path must be rejected');
   });
 
-  test('状态读写与损坏数据回退', () => {
-    const fake = {
-      data: new Map(),
-      getItem(k) {
-        return this.data.has(k) ? this.data.get(k) : null;
-      },
-      setItem(k, v) {
-        this.data.set(k, String(v));
-      },
-      removeItem(k) {
-        this.data.delete(k);
-      },
-    };
-    store.__setStorageForTests(fake);
+  test('状态缓存读写与重置', () => {
+    store.resetState();
     const fresh = store.readState();
     assert(fresh.tier === null && Array.isArray(fresh.order), 'default state wrong');
 
     store.writeState(Object.assign({}, fresh, { tier: 'standard', order: ['vc'] }));
     assert(store.readState().tier === 'standard', 'roundtrip failed');
 
-    fake.setItem(store.STORAGE_KEY, '{not json');
-    store.__setStorageForTests(fake);
-    assert(store.readState().tier === null, 'corrupted state must fall back to defaults');
-
-    fake.setItem(store.STORAGE_KEY, JSON.stringify({ version: 999, tier: 'standard' }));
-    store.__setStorageForTests(fake);
-    assert(store.readState().tier === null, 'version mismatch must fall back to defaults');
-    store.__setStorageForTests(null);
+    store.resetState();
+    assert(store.readState().tier === null, 'reset must clear the cache');
   });
 
   test('样式：360px 适配、44px 触控区、减少动效', () => {

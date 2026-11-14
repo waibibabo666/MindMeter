@@ -1,12 +1,17 @@
-# Frontend（M1 本地壳 + BYOK）
+# Frontend（桌面本地版）
 
-原生 HTML/CSS/JS（ES Module），**无构建、无依赖、无后端**。
+原生 HTML/CSS/JS（ES Module），**无构建步骤**；由本地 FastAPI 同源托管。
 
-- **L-01**：路由、页面骨架、标准档 4 项任务、本地进度恢复；
-- **L-03**：版本化本地存储（sessions / draft / settings / memory），导出与清除；
-- **L-04**：BYOK 设置、OpenAI 兼容客户端、超时与降级。
+数据层已经改为本地 API：
 
-计分（L-02）与 Agent 状态机不在这一层。
+- `api.js`：`X-MM-Token` + 本地 API 请求；
+- `boot.js`：从 pywebview bridge 取得 token，预取 state/sessions/memory/settings；
+- `storage.js` / `store.js`：内存缓存 + API 写入（页面仍可同步读取）；
+- Key 不再进入 localStorage；设置页只显示 `hasKey` / `keyHint`；
+- 报告/对话调用本地后端，不直连模型；
+- 旧版导出的 JSON 可在设置页导入。
+
+计分公式在服务端 `code/backend/app/scoring/`；前端只保留用于对照的旧实现。
 
 ## 路由
 
@@ -32,6 +37,7 @@ frontend/
    ├─ router.js          # hash 路由解析与导航
    ├─ store.js           # L-01 app shell 状态（版本与降级）
    ├─ storage.js         # L-03 版本化本地存储（四类 key + 导出/清除）
+   ├─ log.js             # 诊断日志：200 条环形缓冲、脱敏、导出/清除
    ├─ data.js            # 维度、档位、题库、词对、图案
    ├─ scoring/           # scoring-v3.1：config / formulas / stats / index
    ├─ charts/radar.js    # 八维雷达几何与 SVG
@@ -44,20 +50,33 @@ frontend/
    └─ styles/app.css     # 360px 起、44px 触控区、减少动效
 ```
 
-## 本地存储（L-03）
+## 数据层（桌面本地版）
 
-| key | 内容 | 说明 |
+业务数据在 PostgreSQL，不再写 localStorage。前端只在内存缓存：
+
+| 缓存 | 服务端来源 | 说明 |
 | --- | --- | --- |
-| `mindmeter.app.shell.v1` | 当前路由、档位、进度、结果 | L-01 app shell |
-| `mindmeter.sessions.v1` | 已完成测评 | 最多 50 条；含原始指标/可选分数 |
-| `mindmeter.draft.v1` | 进行中测评 | 24h 过期；刷新恢复 |
-| `mindmeter.settings.v1` | LLM endpoint/model/key/enabled | Key 只存本机 |
-| `mindmeter.memory.v1` | 画像/摘要/建议/消息 | 最近 20 条 |
+| `cache.state` | `GET/PUT /api/v1/state` | 路由、档位、进度、草稿 |
+| `cache.sessions` | `GET/POST /api/v1/assessments` | 最多 50 条 |
+| `cache.memory` | `GET/PUT /api/v1/memory` | 画像/摘要/建议/最近 20 条消息 |
+| `cache.settings` | `GET/PUT /api/v1/settings/ai` | endpoint/model/enabled/hasKey/keyHint，**无 Key** |
 
-- 每条记录带 `schemaVersion`；损坏或版本不符自动回退默认值；
-- `exportData()` 导出 JSON，**永远剥离 `apiKey`**；
-- `clearAllData()` 连同 app shell 状态一起清除；
-- localStorage 不可用时退化为内存 Map，页面仍可用。
+- `storage.js` 提供同步读取的 facade；写入进入队列，由 `api.js` 发送；
+- `exportData()` 由后端生成，**永远不含 Key**；
+- 旧 `mindmeter.*` localStorage 只在“导入旧数据”时读取用户选择的 JSON，不自动解析浏览器旧数据；
+- 设置页的 Key 输入只在提交瞬间存在，保存后清空。
+
+## 诊断日志
+
+`src/log.js` 提供统一日志：
+
+- 只写 `globalThis.__MM_LOG__` 内存环形缓冲，最多 200 条；
+- **不写 `console`**，避免 Key 被浏览器日志/扩展采集；
+- 入库前脱敏 `apiKey` / `Authorization` / `Bearer` / `sk-*` / `ghp_*`；
+- 设置页可「导出诊断日志 / 清除日志」；导出 JSON 已脱敏；
+- 刷新页面后清空，不落盘。
+
+排查时可在控制台查看 `__MM_LOG__`，或从设置页导出。
 
 ## L-04：BYOK 与降级
 
@@ -109,6 +128,7 @@ python -m http.server 8000 --directory code/frontend
 node scripts/test_app_shell.js     # 12 项：结构、路由、题库、状态
 node scripts/test_storage.js       # 本地存储：四类 key、24h 过期、20 条、导出不含 Key
 node scripts/test_llm_client.js    # 16 项：错误码、Key 位置、超时、降级
+node scripts/test_log.js           # 5 项：日志上限、脱敏、导出、清除
 node scripts/test_prototype.js     # 7 项：L1 原型未受影响
 # 或根目录 npm test
 ```

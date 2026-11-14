@@ -1,6 +1,6 @@
-import { el, button } from '../ui.js';
-import { explain } from '../llm/degrade.js';
-import { readSettings } from '../storage.js';
+﻿import { el, button } from '../ui.js';
+import { api } from '../api.js';
+import { readSessions } from '../storage.js';
 import { DIMS, LIMITS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
 import { buildRadar, radarMarkup } from '../charts/radar.js';
@@ -48,6 +48,16 @@ function reportRows(scored, results) {
   });
 }
 
+function reportScores(ctx, latest, results) {
+  if (ctx.state.scores && Object.keys(ctx.state.scores).length > 0) {
+    return { version: SCORING_VERSION, scores: ctx.state.scores };
+  }
+  if (latest && latest.scores) {
+    return { version: SCORING_VERSION, scores: latest.scores };
+  }
+  return safeScore(results, ctx);
+}
+
 function emptyReport(ctx) {
   return [
     el('div', { class: 'card' }, [
@@ -86,7 +96,7 @@ function scoreNote() {
     el('h2', { class: 'card-title', text: '分数怎么来的' }),
     el('p', {
       class: 'muted',
-      text: `当前分数由本机按 ${SCORING_VERSION} 临时折算（0–100），题量按本壳实际题数缩放；正式分数以 scoring-v3 统一口径为准。`,
+      text: `当前分数由本机服务端按 ${SCORING_VERSION} 折算（0–100），题量按本壳实际题数缩放；分数只代表本次任务表现。`,
     }),
     el('p', {
       class: 'tiny',
@@ -97,12 +107,13 @@ function scoreNote() {
 
 function reportActions(ctx) {
   return el('div', { class: 'row' }, [
-    button('查看趋势', () => ctx.go('/trend'), { variant: 'primary' }),
+    button('问问 AI', () => ctx.go('/chat'), { variant: 'primary' }),
+    button('查看趋势', () => ctx.go('/trend'), { variant: 'ghost' }),
     button('再测一次', () => ctx.go('/tier'), { variant: 'ghost' }),
   ]);
 }
 
-function fullReport(ctx, results, scored, radar) {
+function fullReport(ctx, results, scored, radar, assessmentId) {
   return [
     el('p', {
       class: 'lead',
@@ -110,21 +121,42 @@ function fullReport(ctx, results, scored, radar) {
     }),
     radarCard(radar),
     scoreTable(reportRows(scored, results)),
-    renderAiCard(ctx, metricsOf(results)),
+    renderAiCard(ctx, assessmentId),
     scoreNote(),
     reportActions(ctx),
   ];
 }
 
+/** 计分或雷达失败时退回「全部未测」的报告，而不是整页报错。 */
+function safeScore(results, ctx) {
+  try {
+    return scoreSession(results);
+  } catch (error) {
+    if (ctx && typeof ctx.log === 'function')
+      ctx.log('error', 'score failed', error && error.message);
+    const scores = {};
+    for (const dim of DIMS) scores[dim.id] = null;
+    return { version: SCORING_VERSION, scores, measured: [], missing: DIMS.map((d) => d.id) };
+  }
+}
+
 export function renderReport(root, ctx) {
-  const results = ctx.state.results || {};
+  const latest = (readSessions().sessions || [])[0];
+  const results =
+    Object.keys(ctx.state.results || {}).length > 0
+      ? ctx.state.results
+      : (latest && latest.results) || {};
   const measured = Object.keys(results);
-  const scored = scoreSession(results);
-  const radar = buildRadar(DIMS, scored.scores);
-  const body = measured.length === 0 ? emptyReport(ctx) : fullReport(ctx, results, scored, radar);
+  const scored = reportScores(ctx, latest, results);
+  const radar = buildRadar(DIMS, scored.scores || {});
+  const assessmentId = ctx.state.assessmentId || (latest && latest.id) || null;
+  const body =
+    measured.length === 0
+      ? emptyReport(ctx)
+      : fullReport(ctx, results, scored, radar, assessmentId);
 
   root.appendChild(
-    el('section', { class: 'page', 'aria-labelledby': 'report-title' }, [
+    el('section', { class: 'page page-report', 'aria-labelledby': 'report-title' }, [
       el('p', { class: 'kicker', text: '你的结果' }),
       el('h1', { id: 'report-title', class: 'page-title', text: '本次测评' }),
       ...body,
@@ -141,16 +173,8 @@ export function renderReport(root, ctx) {
   );
 }
 
-function metricsOf(results) {
-  const out = {};
-  for (const [id, payload] of Object.entries(results || {})) {
-    if (payload?.metrics) out[id] = payload.metrics;
-  }
-  return out;
-}
-
-/** AI 解读卡片：模型可用则用模型，任何异常都落回模板（L-04）。 */
-function renderAiCard(ctx, metrics) {
+/** AI 解读卡片：后端调用模型；任何异常都显示模板结果。 */
+function renderAiCard(ctx, assessmentId) {
   const badge = el('span', { class: 'pill', text: '未生成' });
   const reason = el('p', {
     class: 'tiny',
@@ -161,17 +185,30 @@ function renderAiCard(ctx, metrics) {
   const run = button(
     '生成解读',
     async () => {
+      if (!assessmentId) {
+        reason.textContent = '请先完成并保存一次测评。';
+        return;
+      }
       run.disabled = true;
       badge.textContent = '生成中';
       reason.textContent = '';
-      const result = await explain({ metrics, settings: readSettings() });
-      output.textContent = result.text;
-      badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
-      badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
-      reason.textContent =
-        result.source === 'llm' ? '由你配置的模型生成，内容仅供参考。' : result.reason;
-      run.disabled = false;
-      run.textContent = '重新生成';
+      try {
+        const result = await api.post(`/reports/${encodeURIComponent(assessmentId)}/explain`);
+        output.textContent = result.text;
+        badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
+        badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
+        reason.textContent =
+          result.source === 'llm'
+            ? '由你配置的模型生成，内容仅供参考。'
+            : '未配置 AI 或模型不可用，已用模板解读';
+        // eslint-disable-next-line sonarjs/no-ignored-exceptions
+      } catch (error) {
+        // The card remains usable; retry is the user's next action.
+        reason.textContent = '本地服务不可用，暂时无法生成解读。';
+      } finally {
+        run.disabled = false;
+        run.textContent = '重新生成';
+      }
     },
     { variant: 'ghost' },
   );

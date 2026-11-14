@@ -1,54 +1,43 @@
-# Backend（L2）
+# Backend（本地 FastAPI）
 
-FastAPI + PostgreSQL/pgvector + LangGraph。当前为 L2 目标结构；M0 先定 API/数据模型，M1 再落代码。
-
-## 计划目录
+当前是桌面本地版的 FastAPI 服务：
 
 ```text
-backend/
+code/backend/
 ├─ app/
-│  ├─ main.py
-│  ├─ api/              # auth, assessments, reports, threads, memory, settings, health
-│  ├─ core/             # config, security, db, crypto, logging
-│  ├─ models/           # SQLAlchemy
-│  ├─ schemas/          # Pydantic
-│  ├─ scoring/          # config.py, formulas.py, engine.py
-│  ├─ agent/            # graph.py, state.py, nodes/, prompts.py, validation.py
-│  ├─ rag/              # embed.py, retrieve.py, ingest.py
-│  └─ memory/           # service.py
-├─ alembic/
-├─ tests/
-├─ Dockerfile
-└─ pyproject.toml
+│  ├─ main.py              # FastAPI + 静态前端 + 本地 token 中间件
+│  ├─ api/                 # health/state/assessments/memory/chat/settings/data
+│  ├─ models.py            # SQLAlchemy 模型
+│  ├─ scoring/             # scoring-v3.1 Python（唯一权威）
+│  ├─ rag/                 # pgvector + BM25 + embedding ingest
+│  ├─ agent/               # LangGraph 小图
+│  ├─ llm.py               # OpenAI 兼容客户端（Key 只在 keyring）
+│  ├─ keyring_store.py     # Windows Credential Manager
+│  ├─ security.py          # loopback/token/Origin/Host/CSP
+│  └─ logging_setup.py     # 脱敏日志
+├─ alembic/                # 0001_initial + 0002_seed_kb
+├─ pyproject.toml
+└─ alembic.ini
 ```
 
-## 职责
+## 运行
 
-| 模块 | 职责 |
-| --- | --- |
-| `api/auth` | 邮箱+密码、JWT、refresh、限流 |
-| `api/assessments` | 创建/提交/历史/报告/趋势 |
-| `api/threads` | 对话创建/消息 |
-| `api/memory` | 画像/摘要/建议/删除 |
-| `scoring` | 8 维服务端计分（唯一权威） |
-| `agent` | LangGraph 图、节点、prompt、校验 |
-| `rag` | 知识库 ingest、embedding、检索、引用 |
-| `core/crypto` | BYOK Key 加密/解密 |
-| `core/db` | SQLAlchemy/Alembic |
+由 `code/desktop/launcher.py` 启动；不要单独 `uvicorn` 启动生产环境，因为 launcher 负责
+PostgreSQL、`CREATE EXTENSION vector`、`pg_dump` 和 `alembic upgrade head`。
 
-## 运行（M1 落地后）
-
-```bash
-docker compose up -d db
-uvicorn app.main:app --reload
+```powershell
+$env:MM_API_TOKEN = "dev-token"
+$env:MM_DATABASE_URL = "postgresql+psycopg://mm_app:<pw>@127.0.0.1:55432/mindmeter"
+$env:MM_DATA_DIR = "$PWD\runtime\dev-data"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --no-access-log
 ```
-
-具体命令以 M0 的 `pyproject.toml`/Dockerfile 为准。
 
 ## 约定
 
-- 服务端计分为唯一权威；前端只提交原始指标；
-- BYOK Key 加密存库，不写日志/导出；
-- 对话只留最近 20 条 + 摘要；
+- 服务端计分唯一权威；前端只提交原始指标；
+- 无账号/JWT；所有 `/api/v1/*` 需要 `X-MM-Token`；
+- Key 只存 keyring，`ai_settings` 只存 `key_ref`/`key_hint`；
+- 对话只留最近 20 条；
 - AI 失败回退模板；
-- 不接 K8s/Redis/Milvus。
+- 日志不记录 prompt/回答/Key；
+- 测试使用 PostgreSQL，不用 SQLite。

@@ -1,4 +1,9 @@
 /**
+ * LEGACY (not imported by the desktop app). The production LLM call is
+ * code/backend/app/llm.py, which reads the key from Windows Credential Manager.
+ * Kept only for the old test:legacy oracle.
+ */
+/**
  * OpenAI 兼容接口的最小客户端（BYOK）。
  *
  * 设计约束（L-04）：
@@ -7,6 +12,8 @@
  *   - 错误信息里不得出现 Key 原文；
  *   - 超时用 AbortController，避免请求悬挂。
  */
+
+import { log } from '../log.js';
 
 export const DEFAULT_TIMEOUT_MS = 20000;
 
@@ -81,6 +88,7 @@ async function fetchWithTimeout(doFetch, request, controller, timeoutMs) {
   try {
     return await doFetch(url, init);
   } catch (error) {
+    log('warn', '模型调用失败', error && error.name, error && error.message);
     if (error && error.name === 'AbortError') {
       throw new LlmError('timeout', `请求超过 ${timeoutMs}ms 未返回`);
     }
@@ -104,7 +112,8 @@ function assertResponse(response) {
 async function readJson(response) {
   try {
     return await response.json();
-  } catch {
+  } catch (error) {
+    log('warn', '模型响应不是合法 JSON', error && error.message);
     throw new LlmError('bad_response', '响应不是合法 JSON');
   }
 }
@@ -136,6 +145,7 @@ export async function callLlm(options = {}) {
     assertResponse(response);
     const data = await readJson(response);
     const text = extractContent(data);
+    log('info', '模型调用成功', data.model || settings.model);
     return { text, model: data.model || settings.model };
   } finally {
     if (timer) clearTimeout(timer);

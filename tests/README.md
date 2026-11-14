@@ -1,4 +1,4 @@
-# Tests（M1 本地 + L2 目标）
+# Tests（桌面本地版）
 
 ## 分层
 
@@ -6,21 +6,27 @@
 | --- | --- | --- |
 | `npm run lint` / `npm run format:check` | ESLint + Prettier（scripts + frontend） | 可运行 |
 | `npm run complexity` | 圈复杂度/函数长度/嵌套/参数报告 | 可运行（warn） |
-| `scripts/check_docs.py` | 必需文件/目录、冲突标记、相对链接、重复文件、提交文件 | 可运行 |
+| `scripts/check_docs.py` | 必需文件/目录、冲突标记、相对链接、重复文件 | 可运行 |
 | `scripts/check_secrets.py` | 疑似 Key/token/私钥/带密码 DB URL | 可运行 |
-| `scripts/test_prototype.js` | L1 原型 JS 语法、DOM id、三档流程、无 ASR 分支、清除数据 | 可运行 |
-| `scripts/test_storage.js` | L-03 本地存储：四类 key、schemaVersion、draft 过期、导出不含 Key、降级 | 可运行 |
-| `tests/backend/` | FastAPI 健康检查 + OpenAPI 核心路径契约 | L2 目标；后端未搭建时 skip |
-| `tests/unit/` | M1 本地计分/校验；L2 服务端公式 | M1 起补充 |
-| `tests/integration/` | 本地：打开→4 项→报告→对话→趋势；L2：注册→… | M1 起补充 |
-| `tests/e2e/` | 浏览器关键路径（Playwright） | M1 L-09 起 |
-| `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | M1 起补充 |
+| `scripts/test_prototype.js` | L1 原型 JS 语法、DOM id、三档流程 | 可运行 |
+| `scripts/test_app_shell.js` | 入口、路由、任务逻辑、API client 边界 | 可运行 |
+| `scripts/test_memory.js` | 摘要/画像/建议/消息业务规则 | 可运行 |
+| `scripts/test_log.js` | 前端日志脱敏/导出 | 可运行 |
+| `tests/backend/` | FastAPI 健康、OpenAPI、计分金标准、API smoke | 需要 PostgreSQL/pgvector |
+| `tests/e2e/` | Playwright：真实 FastAPI + PostgreSQL 主链路 | 可运行；`npm run test:e2e` |
+| `tests/unit/` / `tests/integration/` | 预留 | 后续补充 |
+| `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | 后续补充 |
+
+**说明**：`scripts/test_storage.js`、`scripts/test_llm_client.js`、`scripts/test_agent_run.js`、
+`scripts/test_eval.js` 是旧浏览器直连/localStorage 实现的历史文件，已从 npm scripts 移除；
+不要用它们判断当前实现。新实现对应的测试在 `tests/backend/` 与 `tests/e2e/`。
 
 ## 本地命令
 
 ```bash
 npm ci
 npm run check          # ESLint + Prettier + 5 套测试
+npm run test:e2e       # Playwright Chromium 浏览器 E2E
 
 python scripts/check_docs.py
 python scripts/check_secrets.py

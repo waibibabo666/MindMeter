@@ -1,13 +1,14 @@
 import { el, button, clear } from '../ui.js';
-import { readSettings, writeSettings } from '../storage.js';
-import { callLlm, isConfigured, maskKey } from '../llm/client.js';
+import { api } from '../api.js';
+import { readSettings, writeSettings, clearSettings } from '../storage.js';
+import { clearLogs, exportLogs, getLogs, log } from '../log.js';
 
 const ENDPOINT_HINT = '例如 https://api.deepseek.com/v1 或完整的 /chat/completions 地址';
 
 const RISKS = [
-  'Key 只保存在本机浏览器（mindmeter.settings.v1），不上传、不写入日志、导出时会被剥离。',
-  '公用电脑或共享浏览器不要保存 Key；用完点「清除 Key」。',
-  '浏览器直连需要模型服务允许当前来源的 CORS（含 Authorization 头），否则请求会被拦截。',
+  'Key 只保存在 Windows 凭据管理器（Credential Manager），不进入前端存储、数据库、日志或导出 JSON。',
+  '公用电脑不要保存 Key；用完点「清除 Key」。',
+  '模型请求由本机 FastAPI 转发，不再需要模型服务放行浏览器 CORS。',
   '未配置、超时、限流、鉴权失败都会自动回退模板解读，页面不会空白。',
 ];
 
@@ -16,7 +17,7 @@ function initialForm(saved) {
     enabled: Boolean(saved.enabled),
     endpoint: saved.endpoint || '',
     model: saved.model || '',
-    apiKey: saved.apiKey || '',
+    apiKey: '',
   };
 }
 
@@ -60,9 +61,9 @@ function buildInputs(form, saved) {
     type: 'password',
     autocomplete: 'off',
     spellcheck: 'false',
-    placeholder: form.apiKey ? '已保存，留空则保持不变' : 'sk-...',
+    placeholder: saved.hasKey ? '已保存，留空则保持不变' : 'sk-...',
     oninput: (event) => {
-      form.apiKey = event.target.value || saved.apiKey || '';
+      form.apiKey = event.target.value;
     },
   });
 
@@ -78,32 +79,47 @@ function buildInputs(form, saved) {
   return { endpoint, model, key, enabled };
 }
 
-function saveConfig(form, ctx, status, keyNote) {
+function configPayload(form) {
   const payload = {
     enabled: form.enabled,
     endpoint: form.endpoint.trim(),
     model: form.model.trim(),
-    apiKey: (form.apiKey || '').trim(),
   };
-  writeSettings(payload);
-  const configured = isConfigured(payload);
-  ctx.toast('已保存到本机');
-  status.textContent = configured ? '已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
-  status.className = `status ${configured ? 'ok' : 'warn'}`;
-  keyNote.textContent = payload.apiKey ? `已保存：${maskKey(payload.apiKey)}` : '尚未保存 Key';
+  if (form.apiKey.trim()) payload.apiKey = form.apiKey.trim();
+  return payload;
 }
 
-function clearKey(form, ctx, draw) {
-  writeSettings({
-    enabled: false,
-    endpoint: form.endpoint.trim(),
-    model: form.model.trim(),
-    apiKey: '',
-  });
-  form.apiKey = '';
-  form.enabled = false;
-  ctx.toast('已清除本机 Key');
-  draw();
+async function saveConfig(form, ctx, status, keyNote, silent = false) {
+  status.className = 'status';
+  status.textContent = '正在保存…';
+  try {
+    const saved = await writeSettings(configPayload(form));
+    form.apiKey = '';
+    const configured = Boolean(saved.enabled && saved.endpoint && saved.model && saved.hasKey);
+    if (!silent) ctx.toast('已保存到本机');
+    status.textContent = configured ? '已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
+    status.className = `status ${configured ? 'ok' : 'warn'}`;
+    keyNote.textContent = saved.hasKey ? `已保存：${saved.keyHint}` : '尚未保存 Key';
+    return { saved, configured };
+  } catch (error) {
+    ctx.log('warn', 'settings save failed', error && error.message);
+    status.className = 'status bad';
+    status.textContent = '保存失败：本地服务或 Windows 凭据管理器不可用';
+    return { saved: null, configured: false };
+  }
+}
+
+async function clearKey(form, ctx, draw) {
+  try {
+    await clearSettings();
+    form.apiKey = '';
+    form.enabled = false;
+    ctx.toast('已清除本机 Key');
+    draw();
+  } catch (error) {
+    ctx.log('warn', 'settings clear failed', error && error.message);
+    ctx.toast('清除失败：本地服务或 Windows 凭据管理器不可用');
+  }
 }
 
 async function testConnection(form, status, test) {
@@ -111,24 +127,98 @@ async function testConnection(form, status, test) {
   status.textContent = '正在请求…';
   test.disabled = true;
   try {
-    await callLlm({
-      settings: { endpoint: form.endpoint, model: form.model, apiKey: form.apiKey },
-      messages: [{ role: 'user', content: '只回复 OK' }],
-      maxTokens: 8,
-      timeoutMs: 15000,
-    });
+    if (form.apiKey.trim() || form.endpoint.trim() || form.model.trim()) {
+      await writeSettings(configPayload(form));
+      form.apiKey = '';
+    }
+    const result = await api.post('/settings/ai/test');
     status.className = 'status ok';
-    status.textContent = '连接成功：服务端允许浏览器直连，鉴权有效';
+    status.textContent = `连接成功：${result.model || '模型可用'}`;
   } catch (error) {
     status.className = 'status bad';
-    status.textContent = `${error.code || 'unknown'}：${error.message}`;
+    status.textContent = `${error.code || 'unknown'}：本地服务或模型不可用`;
   } finally {
     test.disabled = false;
   }
 }
 
+function downloadLogs(ctx) {
+  log('info', '导出诊断日志', `count=${getLogs().length}`);
+  try {
+    const data = exportLogs();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mindmeter-logs-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    ctx.toast('已导出诊断日志（已脱敏，仅前端内存日志）');
+  } catch (error) {
+    log('error', '导出诊断日志失败', error && error.message);
+    ctx.toast('导出失败：浏览器可能禁止了下载');
+  }
+}
+
+function importLegacy(ctx, rerender) {
+  const picker = el('input', {
+    type: 'file',
+    accept: 'application/json,.json',
+    style: 'display:none',
+  });
+  picker.addEventListener('change', async () => {
+    const file = picker.files && picker.files[0];
+    if (!file) return;
+    if (!window.confirm('导入旧版导出的 JSON？导入前会自动备份当前本机数据库。')) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const result = await api.post('/import', data);
+      const counts = result.imported || {};
+      ctx.toast(
+        `导入完成：${counts.sessions || 0} 次测评、${counts.messages || 0} 条消息；Key 未导入`,
+      );
+      setTimeout(() => globalThis.location.reload(), 900);
+    } catch (error) {
+      ctx.toast(`导入失败：${error.code || 'unknown'}`);
+      rerender();
+    }
+  });
+  picker.click();
+}
+
+function buildLogCard(ctx, rerender) {
+  const logs = getLogs();
+  const latest = logs[logs.length - 1];
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '诊断日志' }),
+    el('p', {
+      class: 'muted',
+      text: `前端日志只存在本机内存，最多 200 条；导出前会脱敏，不包含 LLM Key。当前 ${logs.length} 条。`,
+    }),
+    latest
+      ? el('p', { class: 'tiny', text: `最近：${latest.level} · ${latest.event}` })
+      : el('p', { class: 'tiny', text: '还没有日志。' }),
+    el('div', { class: 'row' }, [
+      button('导出诊断日志', () => downloadLogs(ctx), { variant: 'ghost' }),
+      button(
+        '清除日志',
+        () => {
+          if (!window.confirm('清除本机诊断日志？')) return;
+          clearLogs();
+          log('info', '日志已清除');
+          ctx.toast('已清除诊断日志');
+          rerender();
+        },
+        { variant: 'ghost' },
+      ),
+    ]),
+  ]);
+}
+
 function buildPage(ctx, view) {
-  const { fields, actions, status, keyNote } = view;
+  const { fields, actions, status, keyNote, diagnostics, migration } = view;
   return el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
     el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
     el('p', {
@@ -152,6 +242,15 @@ function buildPage(ctx, view) {
       ),
       actions.clearKey,
     ]),
+    el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title', text: '旧数据迁移' }),
+      el('p', {
+        class: 'muted',
+        text: '从旧版静态应用导出的 JSON 可导入本机数据库；导入前自动 pg_dump 备份。LLM Key 不会导入，需要重新填写。',
+      }),
+      migration,
+    ]),
+    diagnostics,
     button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
   ]);
 }
@@ -162,7 +261,7 @@ export function renderSettings(root, ctx) {
   const status = el('p', { class: 'status', role: 'status', text: '' });
   const keyNote = el('p', {
     class: 'tiny',
-    text: form.apiKey ? `已保存：${maskKey(form.apiKey)}` : '尚未保存 Key',
+    text: saved.hasKey ? `已保存：${saved.keyHint}` : '尚未保存 Key',
   });
 
   const draw = () => {
@@ -177,6 +276,9 @@ export function renderSettings(root, ctx) {
     const clearButton = button('清除 Key', () => clearKey(form, ctx, draw), {
       variant: 'ghost',
     });
+    const importButton = button('导入旧数据', () => importLegacy(ctx, draw), {
+      variant: 'ghost',
+    });
 
     root.appendChild(
       buildPage(ctx, {
@@ -184,6 +286,8 @@ export function renderSettings(root, ctx) {
         actions: { test, save, clearKey: clearButton },
         status,
         keyNote,
+        migration: importButton,
+        diagnostics: buildLogCard(ctx, draw),
       }),
     );
   };
