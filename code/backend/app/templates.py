@@ -46,6 +46,17 @@ SUGGESTIONS = {
 }
 GENERAL_SUGGESTION = "把练习分散到不同日子，比一次性长时间重复更稳（参考：kb-plan-01）。"
 
+TREND_OPENINGS = [
+    "这两次都测过的维度，变化如下。",
+    "只看两次都测过的维度，逐维对比。",
+    "两次对比的共同维度及分数差值：",
+]
+TREND_CLOSINGS = [
+    "差值只描述两次分数的距离，不等于训练效果；睡眠、情绪、设备与练习效应都会影响单次结果。",
+    "分数只与自己的上一次比较才有意义——这里没有常模，也不与人群比较，单次波动是常态。",
+    "想看稳定趋势，请保持 7 天以上的间隔多测几次；单次差值只能当作线索，不等于训练效果。",
+]
+
 
 def _rt(metrics: dict) -> str:
     ms = metrics.get("meanRtMs")
@@ -163,4 +174,45 @@ def template_narrative(facts: dict | None) -> str:
         parts.append(f"另有 {len(missing)} 个维度（{names}）本档未测，报告里留空，不按 0 分计算。")
     parts.append("")
     parts.append(rng.choice(CLOSINGS))
+    return "\n".join(parts)
+
+
+def template_trend(payload: dict | None) -> str:
+    """趋势解释的确定性兜底（scene="trend" 无模型/校验失败时输出）。"""
+    data = payload if isinstance(payload, dict) else {}
+    rows = data.get("rows") or []
+    if not rows:
+        return (
+            "本机还没有两次可比的测评，或者两次测评没有共同测过的维度。"
+            "完成一次标准测评后，这里才能解释变化。"
+        )
+
+    def fmt_delta(delta: int) -> str:
+        if delta > 0:
+            return f"+{delta}"
+        if delta < 0:
+            return str(delta)
+        return "持平"
+
+    lines = [f"· {row.get('name') or DIM_NAMES.get(row.get('id'), row.get('id'))} "
+             f"{row['prev']} → {row['next']}（{fmt_delta(row['delta'])}）" for row in rows]
+
+    skipped = [dim for dim in dict.fromkeys([*(data.get("onlyPrev") or []), *(data.get("onlyNext") or [])])]
+    days = data.get("days")
+
+    rng = random.Random()
+    parts = [rng.choice(TREND_OPENINGS), *lines]
+    notes = []
+    if days is not None:
+        if data.get("repeatRisk"):
+            notes.append(f"两次间隔 {days} 天，少于 7 天，练习效应可能抬高本次结果")
+        else:
+            notes.append(f"两次间隔 {days} 天")
+    if skipped:
+        names = "、".join(DIM_NAMES.get(dim, str(dim)) for dim in skipped)
+        notes.append(f"{names} 两次没有都测到，不参与对比")
+    if notes:
+        parts.append("；".join(notes) + "。")
+    parts.append("")
+    parts.append(rng.choice(TREND_CLOSINGS))
     return "\n".join(parts)

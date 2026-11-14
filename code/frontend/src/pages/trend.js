@@ -3,6 +3,14 @@ import { DIMS, LIMITS } from '../data.js';
 import { readSessions } from '../storage.js';
 import { buildTrend, repeatHint, REPEAT_MIN_DAYS } from '../trend.js';
 import { buildTrendSeries, trendChartMarkup, TREND_COLORS } from '../charts/trend.js';
+import { setPendingQuestion } from '../chat.js';
+
+const TREND_QUESTION = '帮我解释这两次测评的变化';
+
+function askAgent(ctx) {
+  setPendingQuestion(TREND_QUESTION);
+  ctx.go('/chat');
+}
 
 const DIM_NAME = Object.fromEntries(DIMS.map((d) => [d.id, d.name]));
 
@@ -174,7 +182,8 @@ export function renderTrend(root, ctx) {
       trendTable(trend, rows),
       trendNotes(skippedNames(trend)),
       el('div', { class: 'row' }, [
-        button('再测一次', () => ctx.go('/tier'), { variant: 'primary' }),
+        button('让 Agent 解释这两次的变化', () => askAgent(ctx), { variant: 'primary' }),
+        button('再测一次', () => ctx.go('/tier'), { variant: 'ghost' }),
         button('看本次报告', () => ctx.go('/report'), { variant: 'ghost' }),
       ]),
       el('p', { class: 'disclaimer', text: LIMITS[3] }),

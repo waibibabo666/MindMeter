@@ -10,7 +10,7 @@ import { button, el, emptyState } from '../ui.js';
 import { api } from '../api.js';
 import { cache } from '../cache.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
-import { buildFacts } from '../chat.js';
+import { buildFacts, takePendingQuestion } from '../chat.js';
 
 function fmtTime(at) {
   const date = new Date(at);
@@ -150,5 +150,17 @@ export function renderChat(root, ctx, options = {}) {
     if (restored && hasFacts) input.focus();
     const lastMessage = root.querySelector('.chat-list > :last-child');
     if (lastMessage) lastMessage.scrollIntoView({ block: 'nearest' });
+  }
+
+  // 趋势页等入口带过来的预置问题：进入页面自动发送一次（一次性消费）。
+  const pending = takePendingQuestion();
+  if (pending) {
+    if (!input.disabled) {
+      input.value = pending;
+      autoGrow();
+      onSend();
+    } else {
+      ctx.toast('完成一次测评后，Agent 才能针对结果回答');
+    }
   }
 }
