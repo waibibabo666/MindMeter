@@ -157,7 +157,7 @@ jobs:
           else
             python -m pip install -r code/backend/requirements.txt
           fi
-          python -m pip install pytest httpx
+          python -m pip install pytest pytest-asyncio httpx
 
       - name: Migrate test database
         if: steps.detect.outputs.ready == 'true'

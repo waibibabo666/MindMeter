@@ -19,7 +19,10 @@ def test_health_reports_db(client, needs_db):
     assert body["status"] == "ok"
     assert body["db"]["connected"] is True
     assert body["db"]["migration"] == "0002_seed_kb"
-    assert body["db"]["pgvector"] == "0.8.6"
+    # CI uses pgvector/pgvector:pg17 (currently 0.8.7); local vendor is 0.8.6.
+    version = str(body["db"]["pgvector"] or "")
+    parts = tuple(int(part) for part in version.split(".")[:3])
+    assert parts >= (0, 8, 6), f"unexpected pgvector version: {version}"
     assert body["rag"]["chunks"] == 30
 
 
