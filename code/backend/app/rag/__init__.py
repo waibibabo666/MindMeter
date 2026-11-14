@@ -22,8 +22,30 @@ from ..models import KBChunk
 
 BM25_K1 = 1.2
 BM25_B = 0.75
+MIN_BM25_SCORE = 2.5
+MIN_VECTOR_SCORE = 0.45
+MIN_VECTOR_ONLY_SCORE = 0.6
 EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 NOISE = set("的了是 吗呢啊我你会 有在和与就都".replace(" ", ""))
+QUERY_STOP_PHRASES = (
+    "为什么",
+    "怎么",
+    "如何",
+    "怎样",
+    "提高",
+    "提升",
+    "建议",
+    "练习",
+    "解释",
+    "原因",
+    "哪项",
+    "哪一项",
+    "什么意思",
+    "怎么看",
+    "一下",
+    "可以",
+    "是否",
+)
 
 _model = None
 _model_failed = False
@@ -58,6 +80,13 @@ def _get_model():
     return _model
 
 
+def _query_text(value: str) -> str:
+    text = str(value or "")
+    for phrase in QUERY_STOP_PHRASES:
+        text = text.replace(phrase, " ")
+    return text
+
+
 def tokenize(value: str) -> list[str]:
     src = str(value or "").lower()
     tokens = re.findall(r"[a-z0-9]+", src)
@@ -89,7 +118,7 @@ def _bm25(rows: list[KBChunk], query: str, limit: int) -> list[dict]:
     if not docs:
         return []
     avgdl = total_len / len(docs)
-    terms = list(dict.fromkeys(tokenize(query)))
+    terms = list(dict.fromkeys(tokenize(_query_text(query))))
     if not terms:
         return []
 
@@ -100,21 +129,29 @@ def _bm25(rows: list[KBChunk], query: str, limit: int) -> list[dict]:
     scored = []
     for chunk, tf, length in docs:
         score = 0.0
+        matched = 0
         for term in terms:
             freq = tf.get(term, 0)
             if not freq:
                 continue
+            matched += 1
             denom = freq + BM25_K1 * (1 - BM25_B + BM25_B * length / (avgdl or 1))
             score += idf(term) * (freq * (BM25_K1 + 1) / denom)
-        if score > 0:
-            scored.append(
-                {
-                    "id": chunk.id,
-                    "title": chunk.title,
-                    "text": chunk.text,
-                    "score": round(score, 6),
-                }
-            )
+        # One common term (e.g. "能力") is not enough evidence; a single rare
+        # term (e.g. "睡眠") can still be a strong hit.
+        if matched == 0:
+            continue
+        if matched < 2 and score < MIN_BM25_SCORE:
+            continue
+        scored.append(
+            {
+                "id": chunk.id,
+                "title": chunk.title,
+                "text": chunk.text,
+                "source": chunk.source or {},
+                "score": round(score, 6),
+            }
+        )
     scored.sort(key=lambda item: item["score"], reverse=True)
     return scored[:limit]
 
@@ -130,7 +167,7 @@ def _vector_search(db: Session, query: str, limit: int) -> list[dict]:
 
     sql = text(
         """
-        SELECT id, title, text, 1 - (embedding <=> CAST(:q AS vector)) AS score
+        SELECT id, title, text, source, 1 - (embedding <=> CAST(:q AS vector)) AS score
         FROM kb_chunks
         WHERE review_status = 'reviewed' AND embedding IS NOT NULL
         ORDER BY embedding <=> CAST(:q AS vector)
@@ -142,8 +179,15 @@ def _vector_search(db: Session, query: str, limit: int) -> list[dict]:
         {"q": "[" + ",".join(f"{float(v):.8f}" for v in vector) + "]", "limit": max(limit, 20)},
     ).all()
     return [
-        {"id": row.id, "title": row.title, "text": row.text, "score": float(row.score or 0)}
+        {
+            "id": row.id,
+            "title": row.title,
+            "text": row.text,
+            "source": row.source or {},
+            "score": float(row.score or 0),
+        }
         for row in rows
+        if float(row.score or 0) >= MIN_VECTOR_SCORE
     ]
 
 
@@ -179,9 +223,18 @@ def retrieve(db: Session, query: str, limit: int = 3) -> list[dict]:
     if mode == "keyword":
         return lexical[:limit]
     semantic = _vector_search(db, query, max(limit, 20))
+    if not semantic and not lexical:
+        return []
     if not semantic:
         return lexical[:limit]
+    if not lexical:
+        return semantic[:limit] if semantic[0]["score"] >= MIN_VECTOR_ONLY_SCORE else []
     return _rrf(semantic, lexical, limit=limit)
+
+
+def warmup() -> None:
+    """Load the optional embedding model before the first user question."""
+    _get_model()
 
 
 def content_hash(chunk: dict) -> str:

@@ -158,6 +158,7 @@ def memory_payload(db: Session, message_limit: int = 20) -> dict:
             **({"source": row.source} if row.source else {}),
             **({"citations": row.citations} if row.citations else {}),
             **({"code": row.code} if row.code else {}),
+            **({"risk": row.risk} if row.risk else {}),
         }
         for row in db.scalars(
             select(ChatMessage).order_by(ChatMessage.seq.desc()).limit(message_limit)

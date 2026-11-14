@@ -18,7 +18,7 @@ def test_health_reports_db(client, needs_db):
     body = response.json()
     assert body["status"] == "ok"
     assert body["db"]["connected"] is True
-    assert body["db"]["migration"] == "0002_seed_kb"
+    assert body["db"]["migration"] in {"0002_seed_kb", "0003_chat_risk"}
     # CI uses pgvector/pgvector:pg17 (currently 0.8.7); local vendor is 0.8.6.
     version = str(body["db"]["pgvector"] or "")
     parts = tuple(int(part) for part in version.split(".")[:3])

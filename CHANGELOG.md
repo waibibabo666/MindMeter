@@ -19,6 +19,7 @@
 - **Keyring only**：LLM Key 只在 Windows Credential Manager；`ai_settings` 只存 `key_ref`/`key_hint`。
 - **旧数据导入**：设置页选择旧版导出 JSON；导入前自动 `pg_dump`；忽略 `apiKey`。
 - **测试**：`npm run check`、`pytest tests/backend`、`npm run test:e2e`（真实 PostgreSQL）。
+- **Agent 安全与可信度**：移除跨轮状态泄漏；风险分级（crisis/boundary/high-domain/support）；手机号/身份证/邮箱拦截与脱敏；引用改为可展开来源卡片；无依据不再伪造引用；等待状态与慢响应提示；新增“我的认知怎么样”总览意图与问候意图；总览与报告 AI 解读改为 facts + 知识库 + 具体建议并带来源；清理 NO_PROXY 中的 `[::1]` 以避免 httpx 0.28 在模型调用前崩溃。
 
 ### 变更
 

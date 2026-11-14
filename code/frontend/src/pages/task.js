@@ -104,8 +104,32 @@ export function renderTask(root, ctx, taskId) {
       current = Object.assign({}, current, patch);
       ctx.patchDraft(taskId, current);
     },
-    finish: (payload) => {
+    finish: (payload, detail) => {
       cleanup();
+      // New task modules call finish(null, metrics); older vc calls finish(payload).
+      if (detail && typeof detail === 'object') {
+        const metrics = Object.assign({}, detail);
+        if (taskId === 'ps') {
+          metrics.trials =
+            (detail.encCorrect || 0) +
+            (detail.encWrong || 0) +
+            (detail.catCorrect || 0) +
+            (detail.catWrong || 0);
+          metrics.correct = (detail.encCorrect || 0) + (detail.catCorrect || 0);
+          metrics.wrong = metrics.trials - metrics.correct;
+        }
+        if (taskId === 'am') {
+          metrics.hits = detail.firstTry || 0;
+          metrics.falseAlarms = detail.errors || 0;
+          metrics.trials = detail.targets || 0;
+        }
+        ctx.finishTask(taskId, {
+          taskId,
+          metrics,
+          answers: Array.isArray(detail.answers) ? detail.answers : [],
+        });
+        return;
+      }
       ctx.finishTask(taskId, payload);
     },
     toast: ctx.toast,

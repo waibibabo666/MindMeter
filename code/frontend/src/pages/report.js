@@ -62,14 +62,14 @@ function reportRows(scored, results, level) {
   });
 }
 
-function reportScores(ctx, latest, results) {
+function reportScores(ctx, latest, results, level) {
   if (ctx.state.scores && Object.keys(ctx.state.scores).length > 0) {
     return { version: SCORING_VERSION, scores: ctx.state.scores };
   }
   if (latest && latest.scores) {
     return { version: SCORING_VERSION, scores: latest.scores };
   }
-  return safeScore(results, ctx);
+  return safeScore(results, ctx, level);
 }
 
 function emptyReport(ctx) {
@@ -165,9 +165,9 @@ function fullReport(ctx, results, scored, radar, assessmentId, level) {
 }
 
 /** 计分或雷达失败时退回「全部未测」的报告，而不是整页报错。 */
-function safeScore(results, ctx) {
+function safeScore(results, ctx, level = 'standard') {
   try {
-    return scoreSession(results);
+    return scoreSession(results, level);
   } catch (error) {
     if (ctx && typeof ctx.log === 'function')
       ctx.log('error', 'score failed', error && error.message);
@@ -185,7 +185,7 @@ export function renderReport(root, ctx) {
       : (latest && latest.results) || {};
   const measured = Object.keys(results);
   const level = ctx.state.level || (latest && latest.level) || 'standard';
-  const scored = reportScores(ctx, latest, results);
+  const scored = reportScores(ctx, latest, results, level);
   const radar = buildRadar(DIMS, scored.scores || {});
   const assessmentId = ctx.state.assessmentId || (latest && latest.id) || null;
   const body =
@@ -222,6 +222,7 @@ function renderAiCard(ctx, assessmentId) {
     text: '默认用模板解读；在设置里配置自己的模型服务后可切换。',
   });
   const output = el('p', { class: 'ai-text', text: '' });
+  const citations = el('p', { class: 'tiny', text: '' });
 
   const runExplain = async () => {
     if (!assessmentId) {
@@ -234,6 +235,10 @@ function renderAiCard(ctx, assessmentId) {
     try {
       const result = await api.post(`/reports/${encodeURIComponent(assessmentId)}/explain`);
       output.textContent = result.text;
+      citations.textContent =
+        Array.isArray(result.citations) && result.citations.length > 0
+          ? `引用：${result.citations.join(' · ')}`
+          : '';
       badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
       badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
       reason.textContent =
@@ -257,6 +262,7 @@ function renderAiCard(ctx, assessmentId) {
     el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
     reason,
     output,
+    citations,
     el('div', { class: 'row' }, [
       run,
       button('去设置', () => ctx.go('/settings'), { variant: 'ghost' }),

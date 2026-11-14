@@ -958,6 +958,24 @@ body.focus #app {
   margin: 4px 0;
 }
 
+.citations {
+  margin-top: 8px;
+}
+
+.citations summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.citation-item {
+  border-top: 1px solid var(--line);
+  padding: 6px 0;
+}
+
+.citation-item p {
+  margin: 2px 0;
+}
+
 /* ---- 首页：最近一次测评 ---- */
 .score-chips {
   display: flex;

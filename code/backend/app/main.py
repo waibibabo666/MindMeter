@@ -5,6 +5,7 @@ migrations. The desktop launcher owns both.
 """
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from .api import api_router
 from .config import settings
 from .logging_setup import setup_logging
+from .rag import warmup
 from .security import enforce_local_request
 
 setup_logging(settings.data_dir)
@@ -27,6 +29,13 @@ app = FastAPI(
 )
 app.middleware("http")(enforce_local_request)
 app.include_router(api_router)
+
+
+@app.on_event("startup")
+def _warm_embedding_model() -> None:
+    """Load the optional local model off the request path (never starts DB)."""
+    if settings.rag_mode.lower() != "keyword":
+        threading.Thread(target=warmup, daemon=True).start()
 
 
 @app.get("/favicon.ico", include_in_schema=False)

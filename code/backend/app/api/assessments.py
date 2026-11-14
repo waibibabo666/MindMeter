@@ -7,7 +7,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .. import keyring_store
-from ..templates import template_narrative
+from ..analysis import build_messages as build_analysis_messages
+from ..analysis import retrieve_context, template_analysis
 from ..db import get_db
 from ..llm import LLMError, call_llm, is_configured
 from ..models import (
@@ -160,40 +161,36 @@ def report(assessment_id: str, db: Session = Depends(get_db)):
     return assessment_to_session(db, row)
 
 
-def _explain_messages(metrics: dict) -> list[dict]:
-    facts = "\n".join(f"{key}: {value}" for key, value in metrics.items())
-    return [
-        {
-            "role": "system",
-            "content": (
-                "你是 MindMeter 的解读助手。只解释给出的原始指标，不推断能力高低，不下诊断，"
-                "不与人群比较，不提“总分”“百分位”。语气平实，不超过 120 字。"
-            ),
-        },
-        {
-            "role": "user",
-            "content": f"原始指标：\n{facts or '（无）'}\n请用两句话解释这些指标的含义。",
-        },
-    ]
-
-
 @router.post("/reports/{assessment_id}/explain")
 def explain_report(assessment_id: str, db: Session = Depends(get_db)):
     row = db.get(Assessment, assessment_id)
     if row is None:
         raise HTTPException(404, "assessment_not_found")
     session = assessment_to_session(db, row)
-    metrics = {dim: value.get("metrics", {}) for dim, value in session["results"].items()}
+    facts = _facts(session)
+    chunks = retrieve_context(db, facts)
+    citations = [chunk["id"] for chunk in chunks]
+    sources = [
+        {
+            "id": chunk["id"],
+            "title": chunk["title"],
+            "text": chunk.get("text", ""),
+            "source": chunk.get("source") or {},
+        }
+        for chunk in chunks
+    ]
     settings_row = db.get(AISettings, 1)
     key = keyring_store.get_llm_key()
     if settings_row is None or not is_configured(
         settings_row.endpoint, settings_row.model, key, settings_row.enabled
     ):
         return {
-            "text": template_narrative(metrics),
+            "text": template_analysis(facts, chunks),
             "source": "template",
             "code": "not_configured",
             "reason": "未配置 AI，用模板解读",
+            "citations": citations,
+            "sources": sources,
         }
     started = datetime.now(timezone.utc)
     try:
@@ -201,8 +198,8 @@ def explain_report(assessment_id: str, db: Session = Depends(get_db)):
             endpoint=settings_row.endpoint,
             model=settings_row.model,
             key=key or "",
-            messages=_explain_messages(metrics),
-            max_tokens=300,
+            messages=build_analysis_messages(facts, chunks, "请解读本次测评结果，并给具体建议。"),
+            max_tokens=3000,
         )
         db.add(
             AIRun(
@@ -215,7 +212,14 @@ def explain_report(assessment_id: str, db: Session = Depends(get_db)):
             )
         )
         db.commit()
-        return {"text": reply.text, "source": "llm", "code": None, "reason": ""}
+        return {
+            "text": reply.text,
+            "source": "llm",
+            "code": None,
+            "reason": "",
+            "citations": citations,
+            "sources": sources,
+        }
     except LLMError as exc:
         db.add(
             AIRun(
@@ -229,8 +233,10 @@ def explain_report(assessment_id: str, db: Session = Depends(get_db)):
         )
         db.commit()
         return {
-            "text": template_narrative(metrics),
+            "text": template_analysis(facts, chunks),
             "source": "template",
             "code": exc.code,
             "reason": exc.code,
+            "citations": citations,
+            "sources": sources,
         }

@@ -1,12 +1,31 @@
 """OpenAI-compatible chat client used only by the local backend."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 import httpx
 
 from .config import settings
 from .logging_setup import redact_text
+
+
+def _clean_no_proxy_env() -> None:
+    """httpx 0.28 cannot parse bracketed IPv6 entries in NO_PROXY.
+
+    If the backend is started outside the desktop launcher (dev shell, tests),
+    a polluted NO_PROXY like `::1,[::1]` makes every request raise
+    InvalidURL before the connection is attempted — which previously showed up
+    to users as "key configured but every answer falls back to template".
+    """
+    for name in ("NO_PROXY", "no_proxy"):
+        value = os.environ.get(name, "")
+        if value:
+            os.environ[name] = ",".join(
+                part
+                for part in value.split(",")
+                if part.strip() not in {"[::1]", "::1", ""}
+            )
 
 
 class LLMError(RuntimeError):
@@ -34,6 +53,7 @@ def is_configured(endpoint: str, model: str, key: str | None, enabled: bool) -> 
 class LLMReply:
     text: str
     model: str
+    finish_reason: str | None = None
 
 
 def call_llm(
@@ -60,6 +80,7 @@ def call_llm(
         "stream": False,
     }
     timeout = timeout_s or settings.llm_timeout_s
+    _clean_no_proxy_env()
     try:
         with httpx.Client(timeout=httpx.Timeout(timeout, connect=10.0), follow_redirects=False) as client:
             response = client.post(
@@ -92,6 +113,15 @@ def call_llm(
         raise LLMError("bad_response", "响应缺少 choices[0].message.content")
     message = choices[0].get("message") if isinstance(choices[0], dict) else None
     content = message.get("content") if isinstance(message, dict) else None
+    finish_reason = choices[0].get("finish_reason")
     if not isinstance(content, str) or not content.strip():
+        if finish_reason == "length":
+            raise LLMError("truncated", "模型输出达到 token 上限，已截断")
         raise LLMError("bad_response", "响应缺少 choices[0].message.content")
-    return LLMReply(text=content.strip(), model=str(data.get("model") or model))
+    if finish_reason == "length":
+        raise LLMError("truncated", "模型输出达到 token 上限，已截断")
+    return LLMReply(
+        text=content.strip(),
+        model=str(data.get("model") or model),
+        finish_reason=finish_reason,
+    )
