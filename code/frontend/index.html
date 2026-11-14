@@ -3,28 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light" />
     <meta
       name="description"
-      content="MindMeter 静态 App 壳：首页、档位、知情同意、标准 4 项任务与结果页。"
+      content="MindMeter 心智镜：本机认知测评。8 个维度、三档时长、分维度参考，不设总分，数据不出这台设备。"
     />
-    <title>MindMeter · 静态 App 壳</title>
+    <title>MindMeter · 心智镜</title>
     <link rel="stylesheet" href="./src/styles/app.css" />
   </head>
   <body>
     <a class="skip-link" href="#app">跳到主要内容</a>
 
-    <div class="shell">
+    <div class="app-shell">
       <header class="topbar">
-        <span class="brand">MINDMETER</span>
-        <span class="build">静态壳 · L-01/L-04</span>
+        <span class="brand">
+          <svg class="brand-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="3" opacity=".55" />
+            <polygon
+              points="32,14 50,32 32,50 14,32"
+              fill="currentColor"
+              fill-opacity=".18"
+              stroke="currentColor"
+              stroke-width="2.4"
+            />
+          </svg>
+          <span class="brand-name">MindMeter<span class="brand-sub">心智镜</span></span>
+        </span>
+        <span class="chip" id="chip" role="status"></span>
+        <span class="topbar-right">
+          <a class="toplink" href="#/settings">设置</a>
+        </span>
       </header>
 
-      <main id="app" tabindex="-1" aria-live="polite"></main>
+      <div class="wb">
+        <nav class="sidebar" id="sidebar" aria-label="主导航">
+          <a class="navitem" href="#/tier" data-nav="测评"><i aria-hidden="true"></i>测评</a>
+          <a class="navitem" href="#/report" data-nav="报告"><i aria-hidden="true"></i>报告</a>
+          <a class="navitem" href="#/chat" data-nav="对话"><i aria-hidden="true"></i>对话</a>
+          <a class="navitem" href="#/memory" data-nav="记忆"><i aria-hidden="true"></i>记忆</a>
+          <a class="navitem" href="#/trend" data-nav="趋势"><i aria-hidden="true"></i>趋势</a>
+          <a class="navitem" href="#/settings" data-nav="设置"><i aria-hidden="true"></i>设置</a>
+          <p class="sidefoot">本机运行 · 数据不出这台电脑<br />课程演示版 · 非临床诊断</p>
+        </nav>
 
-      <footer class="footer">
-        <p>课程演示 · 非临床诊断 · 数据只存本机</p>
-      </footer>
+        <main id="app" tabindex="-1" aria-live="polite"></main>
+
+        <aside class="rail" id="rail" aria-label="快捷操作与说明"></aside>
+      </div>
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>

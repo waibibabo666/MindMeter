@@ -138,7 +138,7 @@ export function renderReport(root, ctx) {
   const body = measured.length === 0 ? emptyReport(ctx) : fullReport(ctx, results, scored, radar);
 
   root.appendChild(
-    el('section', { class: 'page', 'aria-labelledby': 'report-title' }, [
+    el('section', { class: 'page page-report', 'aria-labelledby': 'report-title' }, [
       el('p', { class: 'kicker', text: '你的结果' }),
       el('h1', { id: 'report-title', class: 'page-title', text: '本次测评' }),
       ...body,
