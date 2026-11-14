@@ -6,6 +6,8 @@
  */
 import { createRouter } from './router.js';
 import { createShell } from './shell.js';
+import { animateNumbers } from './motion.js';
+import { attachClickSounds } from './sound.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
 import { bootstrap, installFlushHook } from './boot.js';
@@ -240,6 +242,7 @@ const router = createRouter((route) => {
   const heading = root.querySelector('h1');
   if (heading) heading.setAttribute('tabindex', '-1');
   root.focus({ preventScroll: true });
+  animateNumbers(root);
 });
 
 const shell = createShell({ ctx, router });
@@ -288,6 +291,7 @@ async function startApp() {
     }
   }
   log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
+  attachClickSounds();
   router.start();
 }
 

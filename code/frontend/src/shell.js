@@ -7,6 +7,7 @@
 import { readState } from './store.js';
 import { STANDARD_ORDER } from './data.js';
 import { button, clear, el } from './ui.js';
+import { flashChip } from './motion.js';
 
 const NAV_GROUP = {
   '/': '测评',
@@ -45,10 +46,19 @@ export function createShell({ ctx, router }) {
   const sidebar = document.getElementById('sidebar');
   const railNode = document.getElementById('rail');
   const chipNode = document.getElementById('chip');
+  const quitNode = document.getElementById('quit-task');
+
+  if (quitNode) {
+    quitNode.addEventListener('click', () => {
+      router.go('/');
+      ctx.toast('已退出测评，进度已保留');
+    });
+  }
 
   function updateShell(route) {
     const group = NAV_GROUP[route.path] || '';
     document.body.classList.toggle('focus', route.path === '/task');
+    if (quitNode) quitNode.hidden = route.path !== '/task';
 
     if (sidebar) {
       for (const item of sidebar.querySelectorAll('.navitem')) {
@@ -56,8 +66,11 @@ export function createShell({ ctx, router }) {
       }
     }
     if (chipNode) {
-      chipNode.textContent =
-        route.path === '/task' ? taskChipText(route) : (PAGE_LABEL[route.path] ?? '');
+      const next = route.path === '/task' ? taskChipText(route) : (PAGE_LABEL[route.path] ?? '');
+      if (chipNode.textContent !== next) {
+        chipNode.textContent = next;
+        flashChip(chipNode);
+      }
     }
   }
 

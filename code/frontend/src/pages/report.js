@@ -1,9 +1,9 @@
-﻿import { el, button } from '../ui.js';
+import { el, button } from '../ui.js';
 import { api } from '../api.js';
-import { readSessions } from '../storage.js';
+import { readSessions, readSettings } from '../storage.js';
 import { DIMS, LIMITS } from '../data.js';
 import { scoreSession, SCORING_VERSION } from '../scoring/index.js';
-import { buildRadar, radarMarkup } from '../charts/radar.js';
+import { buildRadar, radarMarkup, animateRadar } from '../charts/radar.js';
 
 const STATUS = {
   vc: (m) => `正确 ${m.correct} / ${m.total}`,
@@ -72,8 +72,10 @@ function emptyReport(ctx) {
 }
 
 function radarCard(radar) {
+  const holder = el('div', { class: 'radar', html: radarMarkup(radar) });
+  animateRadar(holder.querySelector('svg'), radar);
   return el('div', { class: 'card radar-card' }, [
-    el('div', { class: 'radar', html: radarMarkup(radar) }),
+    holder,
     el('p', { class: 'tiny center', text: '雷达只连已测维度；未测维度留空，不按 0 计。' }),
   ]);
 }
@@ -182,36 +184,35 @@ function renderAiCard(ctx, assessmentId) {
   });
   const output = el('p', { class: 'ai-text', text: '' });
 
-  const run = button(
-    '生成解读',
-    async () => {
-      if (!assessmentId) {
-        reason.textContent = '请先完成并保存一次测评。';
-        return;
-      }
-      run.disabled = true;
-      badge.textContent = '生成中';
-      reason.textContent = '';
-      try {
-        const result = await api.post(`/reports/${encodeURIComponent(assessmentId)}/explain`);
-        output.textContent = result.text;
-        badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
-        badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
-        reason.textContent =
-          result.source === 'llm'
-            ? '由你配置的模型生成，内容仅供参考。'
-            : '未配置 AI 或模型不可用，已用模板解读';
-        // eslint-disable-next-line sonarjs/no-ignored-exceptions
-      } catch (error) {
-        // The card remains usable; retry is the user's next action.
-        reason.textContent = '本地服务不可用，暂时无法生成解读。';
-      } finally {
-        run.disabled = false;
-        run.textContent = '重新生成';
-      }
-    },
-    { variant: 'ghost' },
-  );
+  const runExplain = async () => {
+    if (!assessmentId) {
+      reason.textContent = '请先完成并保存一次测评。';
+      return;
+    }
+    run.disabled = true;
+    badge.textContent = '生成中';
+    reason.textContent = '';
+    try {
+      const result = await api.post(`/reports/${encodeURIComponent(assessmentId)}/explain`);
+      output.textContent = result.text;
+      badge.textContent = result.source === 'llm' ? 'LLM' : '模板';
+      badge.className = `pill ${result.source === 'llm' ? 'hi' : 'mid'}`;
+      reason.textContent =
+        result.source === 'llm'
+          ? '由你配置的模型生成，内容仅供参考。'
+          : '未配置 AI 或模型不可用，已用模板解读';
+    } catch {
+      // 本地服务不可用也保留卡片，重试是用户的下一步动作。
+      reason.textContent = '本地服务不可用，暂时无法生成解读。';
+    } finally {
+      run.disabled = false;
+    }
+  };
+
+  const run = button('生成解读', () => runExplain(), { variant: 'ghost' });
+
+  // 没配 Key 时模板解读是本机即时返回的，直接显示，别让用户面对空白卡片。
+  if (!readSettings().hasKey) runExplain();
 
   return el('div', { class: 'card' }, [
     el('h2', { class: 'card-title' }, ['AI 解读 ', badge]),
