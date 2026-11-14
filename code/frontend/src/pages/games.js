@@ -48,6 +48,10 @@ export function renderGames(root, ctx) {
   const { records } = readGames();
   const ready = GAMES.filter((item) => item.ready).length;
 
+  const total = GAMES.length;
+  const note =
+    ready === total ? `共 ${total} 个游戏，全部可玩。` : `已开放 ${ready} 个，其余标注「即将开放」。`;
+
   root.appendChild(
     el('section', { class: 'page', 'aria-labelledby': 'games-title' }, [
       el('h1', { id: 'games-title', class: 'page-title', text: '游戏中心' }),
@@ -55,7 +59,7 @@ export function renderGames(root, ctx) {
         class: 'lead',
         text: '自由练习、即时反馈，随时可退出。成绩只记本机最佳，不计入测评报告，也不改变维度分数。',
       }),
-      el('p', { class: 'tiny', text: `已开放 ${ready} 个，其余标注「即将开放」。` }),
+      el('p', { class: 'tiny', text: note }),
       ...DIMS.map((dim) => dimSection(dim, records, ctx)),
     ]),
   );
