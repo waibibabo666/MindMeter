@@ -128,6 +128,23 @@ body {
 .toplink:hover {
   color: var(--accent-deep);
 }
+.toplink-btn {
+  font: inherit;
+  font-size: 13px;
+  color: #374151;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.toplink-btn:hover {
+  color: var(--accent-deep);
+}
+.toplink-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 .wb {
   flex: 1;
@@ -226,7 +243,26 @@ body.focus #app {
 
 /* ---- 页面通用 ---- */
 .page {
-  animation: rise 0.18s ease;
+  animation: none;
+}
+/* 页面内元素依次淡入，让切换有层次而不生硬 */
+.page > * {
+  animation: rise 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.page > *:nth-child(2) {
+  animation-delay: 0.03s;
+}
+.page > *:nth-child(3) {
+  animation-delay: 0.06s;
+}
+.page > *:nth-child(4) {
+  animation-delay: 0.09s;
+}
+.page > *:nth-child(5) {
+  animation-delay: 0.12s;
+}
+.page > *:nth-child(n + 6) {
+  animation-delay: 0.15s;
 }
 @keyframes rise {
   from {
@@ -862,6 +898,170 @@ body.focus #app {
   font-size: 17px;
   color: var(--accent-deep);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- 动效：让页面更生动（全部尊重 prefers-reduced-motion） ---- */
+.card {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+.btn {
+  transition:
+    filter 0.15s,
+    border-color 0.15s,
+    transform 0.12s ease,
+    box-shadow 0.18s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(16, 24, 40, 0.08);
+}
+.btn:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: none;
+}
+.btn.primary:hover {
+  box-shadow: 0 5px 16px rgba(21, 128, 61, 0.22);
+}
+
+.navitem {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tier-card {
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.18s ease;
+}
+.tier-card:hover {
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+.score-chip {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.score-chip:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.report-table tbody tr,
+.trend-table tbody tr {
+  transition: background 0.15s ease;
+}
+.report-table tbody tr:hover,
+.trend-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.chat-user,
+.chat-ai {
+  animation: bubble-in 0.24s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.radar-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 0.45s ease 0.1s both;
+}
+.radar-ring,
+.radar-spoke {
+  animation: fade-in 0.5s ease both;
+}
+.radar-label,
+.radar-value {
+  animation: fade-in 0.5s ease 0.15s both;
+}
+@keyframes dot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.brand-mark {
+  animation: mark-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+/* 菱形标记缓慢自转：外圈保持不动，只转里面的菱形 */
+.brand-mark polygon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mark-spin 18s linear infinite;
+}
+@keyframes mark-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mark-in {
+  from {
+    opacity: 0.15;
+    transform: rotate(-14deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.chip.flash {
+  animation: chip-pop 0.4s ease;
+}
+@keyframes chip-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.check {
+  transition: color 0.15s ease;
+}
+.check:hover {
+  color: var(--accent-deep);
 }
 
 /* ---- 断点：900–1199 两栏，右栏折叠到主区下方 ---- */

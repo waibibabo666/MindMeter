@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .. import keyring_store
-from ..agent import template_explanation
+from ..templates import template_narrative
 from ..db import get_db
 from ..llm import LLMError, call_llm, is_configured
 from ..models import (
@@ -190,7 +190,7 @@ def explain_report(assessment_id: str, db: Session = Depends(get_db)):
         settings_row.endpoint, settings_row.model, key, settings_row.enabled
     ):
         return {
-            "text": template_explanation(metrics),
+            "text": template_narrative(metrics),
             "source": "template",
             "code": "not_configured",
             "reason": "未配置 AI，用模板解读",
@@ -229,7 +229,7 @@ def explain_report(assessment_id: str, db: Session = Depends(get_db)):
         )
         db.commit()
         return {
-            "text": template_explanation(metrics),
+            "text": template_narrative(metrics),
             "source": "template",
             "code": exc.code,
             "reason": exc.code,

@@ -86,7 +86,10 @@ export function radarMarkup(radar) {
 
   const dots = axes
     .filter((axis) => axis.measured)
-    .map((axis) => `<circle cx="${axis.point.x}" cy="${axis.point.y}" r="4" class="radar-dot" />`)
+    .map(
+      (axis) =>
+        `<circle cx="${axis.point.x}" cy="${axis.point.y}" r="4" class="radar-dot"><title>${axis.name}：${axis.score}</title></circle>`,
+    )
     .join('');
 
   const labels = axes
@@ -105,4 +108,55 @@ export function radarMarkup(radar) {
     ${polygon ? `<polygon points="${polygon}" class="radar-area" />` : ''}
     ${dots}${labels}
   </svg>`;
+}
+
+/** 按进度（0–1）算出各已测轴当前的点，拼成 polygon 的 points 字符串。 */
+function pointsAt(radar, measured, progress) {
+  const eased = 1 - Math.pow(1 - progress, 3);
+  return measured
+    .map((axis) => {
+      const point = pointFor(axis.index, radar.axes.length, (axis.ratio || 0) * eased);
+      return `${point.x},${point.y}`;
+    })
+    .join(' ');
+}
+
+/** 取出可绘制多边形的元素；结构不全时返回 null。 */
+function areaOf(svg, radar) {
+  if (!svg) return null;
+  if (!radar || !radar.polygon) return null;
+  return svg.querySelector('.radar-area');
+}
+
+/**
+ * 让雷达图「长出来」：多边形从中心按各轴比例扩张到目标形状。
+ * 返回取消函数；减少动态效果时直接落到最终形状。
+ */
+export function animateRadar(svg, radar, options = {}) {
+  const area = areaOf(svg, radar);
+  if (!area) return () => {};
+
+  const measured = radar.axes.filter((axis) => axis.measured);
+  const reduce = Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+  if (reduce || typeof globalThis.requestAnimationFrame !== 'function') {
+    area.setAttribute('points', radar.polygon);
+    return () => {};
+  }
+
+  const duration = options.duration || 720;
+  const startAt = globalThis.performance.now();
+  let frame = 0;
+
+  const draw = (now) => {
+    const progress = Math.min(1, (now - startAt) / duration);
+    area.setAttribute('points', pointsAt(radar, measured, progress));
+    if (progress < 1) {
+      frame = globalThis.requestAnimationFrame(draw);
+    } else {
+      area.setAttribute('points', radar.polygon);
+    }
+  };
+
+  frame = globalThis.requestAnimationFrame(draw);
+  return () => globalThis.cancelAnimationFrame(frame);
 }

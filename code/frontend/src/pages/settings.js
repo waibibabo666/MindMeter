@@ -2,6 +2,7 @@ import { el, button, clear } from '../ui.js';
 import { api } from '../api.js';
 import { readSettings, writeSettings, clearSettings } from '../storage.js';
 import { clearLogs, exportLogs, getLogs, log } from '../log.js';
+import { isSoundOn, setSoundOn, playClick } from '../sound.js';
 
 const ENDPOINT_HINT = '例如 https://api.deepseek.com/v1 或完整的 /chat/completions 地址';
 
@@ -217,6 +218,18 @@ function buildLogCard(ctx, rerender) {
   ]);
 }
 
+function buildSoundToggle() {
+  return el('input', {
+    id: 'set-sound',
+    type: 'checkbox',
+    checked: isSoundOn() ? 'checked' : null,
+    onchange: (event) => {
+      setSoundOn(event.target.checked);
+      if (event.target.checked) playClick();
+    },
+  });
+}
+
 function buildPage(ctx, view) {
   const { fields, actions, status, keyNote, diagnostics, migration } = view;
   return el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
@@ -232,6 +245,14 @@ function buildPage(ctx, view) {
       field('API Key', 'set-key', fields.key, keyNote),
       el('div', { class: 'row' }, [actions.test, actions.save]),
       status,
+    ]),
+    el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title', text: '体验' }),
+      el('label', { class: 'check' }, [buildSoundToggle(), el('span', { text: '点击音效' })]),
+      el('p', {
+        class: 'muted',
+        text: '按钮和选项点击时播放一声轻微提示音；只在本机实时合成，不加载音频文件、不联网。',
+      }),
     ]),
     el('div', { class: 'card' }, [
       el('h2', { class: 'card-title', text: '风险与限制' }),
