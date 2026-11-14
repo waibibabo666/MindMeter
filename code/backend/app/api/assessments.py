@@ -6,14 +6,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import keyring_store
-from ..analysis import build_messages as build_analysis_messages
-from ..analysis import retrieve_context, template_analysis
+from ..agent import answer
+from ..analysis import retrieve_context
 from ..db import get_db
-from ..llm import LLMError, call_llm, is_configured
 from ..models import (
     AIRun,
-    AISettings,
     Assessment,
     AssessmentScore,
     AssessmentTask,
@@ -21,19 +18,9 @@ from ..models import (
 from ..scoring import DIMENSION_IDS, SCORING_VERSION, score_session
 from ..serializers import assessment_to_session, sessions_payload
 from ..timeutil import parse_dt
+from ..trend import build_trend_payload
 
 router = APIRouter()
-
-
-def _facts(session: dict) -> dict:
-    facts = {}
-    for dim, payload in (session.get("results") or {}).items():
-        if isinstance(payload, dict) and isinstance(payload.get("metrics"), dict):
-            facts[dim] = dict(payload["metrics"])
-            score = (session.get("scores") or {}).get(dim)
-            if isinstance(score, int):
-                facts[dim]["score"] = score
-    return facts
 
 
 @router.post("/assessments")
@@ -121,36 +108,10 @@ def get_assessment(assessment_id: str, db: Session = Depends(get_db)):
 @router.get("/trends")
 def trends(db: Session = Depends(get_db)):
     sessions = sessions_payload(db, limit=2)["sessions"]
-    if len(sessions) < 2:
+    payload = build_trend_payload(sessions)
+    if payload is None:
         return {"rows": [], "onlyPrev": [], "onlyNext": [], "days": None, "sessions": sessions}
-    prev, nxt = sessions[1], sessions[0]
-    common = [
-        dim
-        for dim in DIMENSION_IDS
-        if isinstance((prev.get("scores") or {}).get(dim), int)
-        and isinstance((nxt.get("scores") or {}).get(dim), int)
-    ]
-    rows = [
-        {
-            "id": dim,
-            "prev": prev["scores"][dim],
-            "next": nxt["scores"][dim],
-            "delta": nxt["scores"][dim] - prev["scores"][dim],
-        }
-        for dim in common
-    ]
-    prev_at = parse_dt(prev.get("finishedAt"))
-    next_at = parse_dt(nxt.get("finishedAt"))
-    days = None
-    if prev_at and next_at:
-        days = int(abs((next_at - prev_at).total_seconds()) // 86400)
-    return {
-        "rows": rows,
-        "onlyPrev": [d for d in DIMENSION_IDS if isinstance((prev.get("scores") or {}).get(d), int) and d not in common],
-        "onlyNext": [d for d in DIMENSION_IDS if isinstance((nxt.get("scores") or {}).get(d), int) and d not in common],
-        "days": days,
-        "sessions": sessions,
-    }
+    return {**payload, "sessions": sessions}
 
 
 @router.get("/reports/{assessment_id}")
@@ -161,82 +122,46 @@ def report(assessment_id: str, db: Session = Depends(get_db)):
     return assessment_to_session(db, row)
 
 
+REPORT_EXPLAIN_QUESTION = "请用两到三句平实的话，解释这些原始指标各自测量了什么、这组数字怎么读。"
+
+
 @router.post("/reports/{assessment_id}/explain")
 def explain_report(assessment_id: str, db: Session = Depends(get_db)):
+    """报告解读卡：与对话共用同一张图、同一套校验与兜底（P0 统一出口）。"""
     row = db.get(Assessment, assessment_id)
     if row is None:
         raise HTTPException(404, "assessment_not_found")
     session = assessment_to_session(db, row)
-    facts = _facts(session)
+    facts = {
+        dim: (payload.get("metrics") or {})
+        for dim, payload in (session.get("results") or {}).items()
+        if isinstance(payload, dict)
+    }
+    for dim in list(facts):
+        score = (session.get("scores") or {}).get(dim)
+        if isinstance(score, int):
+            facts[dim]["score"] = score
     chunks = retrieve_context(db, facts)
-    citations = [chunk["id"] for chunk in chunks]
-    sources = [
-        {
-            "id": chunk["id"],
-            "title": chunk["title"],
-            "text": chunk.get("text", ""),
-            "source": chunk.get("source") or {},
-        }
-        for chunk in chunks
-    ]
-    settings_row = db.get(AISettings, 1)
-    key = keyring_store.get_llm_key()
-    if settings_row is None or not is_configured(
-        settings_row.endpoint, settings_row.model, key, settings_row.enabled
-    ):
-        return {
-            "text": template_analysis(facts, chunks),
-            "source": "template",
-            "code": "not_configured",
-            "reason": "未配置 AI，用模板解读",
-            "citations": citations,
-            "sources": sources,
-        }
-    started = datetime.now(timezone.utc)
-    try:
-        reply = call_llm(
-            endpoint=settings_row.endpoint,
-            model=settings_row.model,
-            key=key or "",
-            messages=build_analysis_messages(facts, chunks, "请解读本次测评结果，并给具体建议。"),
-            max_tokens=3000,
+    result = answer(db, REPORT_EXPLAIN_QUESTION, facts, [], None, scene="report", chunks=chunks)
+    code = result.get("code")
+    code = None if code in (None, "ok") else str(code)
+    db.add(
+        AIRun(
+            assessment_id=assessment_id,
+            model=result.get("model"),
+            intent="explain_report",
+            latency_ms=result.get("latency_ms"),
+            degraded=result.get("source") != "llm",
+            error_code=code,
+            validation=result.get("validation") or None,
         )
-        db.add(
-            AIRun(
-                assessment_id=assessment_id,
-                model=reply.model,
-                intent="explain_report",
-                latency_ms=int((datetime.now(timezone.utc) - started).total_seconds() * 1000),
-                degraded=False,
-                error_code=None,
-            )
-        )
-        db.commit()
-        return {
-            "text": reply.text,
-            "source": "llm",
-            "code": None,
-            "reason": "",
-            "citations": citations,
-            "sources": sources,
-        }
-    except LLMError as exc:
-        db.add(
-            AIRun(
-                assessment_id=assessment_id,
-                model=settings_row.model,
-                intent="explain_report",
-                latency_ms=int((datetime.now(timezone.utc) - started).total_seconds() * 1000),
-                degraded=True,
-                error_code=exc.code,
-            )
-        )
-        db.commit()
-        return {
-            "text": template_analysis(facts, chunks),
-            "source": "template",
-            "code": exc.code,
-            "reason": exc.code,
-            "citations": citations,
-            "sources": sources,
-        }
+    )
+    db.commit()
+    return {
+        "text": result.get("text", ""),
+        "source": result.get("source", "template"),
+        "code": code,
+        "reason": code or "",
+        "citations": result.get("citations") or [],
+        "sources": result.get("sources") or [],
+    }
