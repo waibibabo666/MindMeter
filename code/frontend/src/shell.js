@@ -17,6 +17,8 @@ const NAV_GROUP = {
   '/chat': '对话',
   '/memory': '记忆',
   '/trend': '趋势',
+  '/games': '游戏',
+  '/game': '游戏',
   '/settings': '设置',
 };
 
@@ -28,6 +30,8 @@ const PAGE_LABEL = {
   '/chat': '对话',
   '/memory': '我的记忆',
   '/trend': '趋势',
+  '/games': '游戏中心',
+  '/game': '游戏中',
   '/settings': '设置',
 };
 

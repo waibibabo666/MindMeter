@@ -16,6 +16,8 @@ export const ROUTES = [
   '/trend',
   '/memory',
   '/chat',
+  '/games',
+  '/game',
 ];
 
 export function parseHash(hash) {
@@ -30,7 +32,7 @@ export function parseHash(hash) {
 
 export function isKnown(route) {
   if (!ROUTES.includes(route.path)) return false;
-  if (route.path === '/task') return Boolean(route.param);
+  if (route.path === '/task' || route.path === '/game') return Boolean(route.param);
   return true;
 }
 
