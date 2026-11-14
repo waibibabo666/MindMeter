@@ -133,13 +133,34 @@ export function createShell({ ctx, router }) {
     return node;
   }
 
+  /** 快捷操作卡头：标题 + 折叠按钮（记住偏好，聊天页太占地方时能收起来）。 */
+  function railHead() {
+    const chevron = el('button', {
+      class: 'rail-chevron',
+      type: 'button',
+      'aria-expanded': String(!prefs.railMin),
+      title: prefs.railMin ? '展开快捷操作' : '收起快捷操作',
+      onclick: () => {
+        prefs.railMin = !prefs.railMin;
+        applyUiPrefs(prefs);
+        writeUiPrefs(prefs);
+        renderRail();
+      },
+    });
+    chevron.innerHTML = iconSvg('chevron');
+    return el('div', { class: 'rail-head' }, [
+      el('h2', { class: 'card-title', text: '快捷操作' }),
+      chevron,
+    ]);
+  }
+
   /** 右侧上下文栏：快捷操作 + 数据说明（测评专注模式下由 CSS 隐藏）。 */
   function renderRail() {
     if (!railNode) return;
     clear(railNode);
     railNode.appendChild(
       el('div', { class: 'card' }, [
-        el('h2', { class: 'card-title', text: '快捷操作' }),
+        railHead(),
         el('div', { class: 'rail-actions' }, [
           railButton('查看报告', 'file', () => router.go('/report')),
           railButton('趋势', 'trending', () => router.go('/trend')),

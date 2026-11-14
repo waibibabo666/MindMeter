@@ -2636,3 +2636,45 @@ button.spot-cell {
     display: none;
   }
 }
+
+/* 快捷操作卡头：标题 + 折叠按钮 */
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+.rail-head .card-title {
+  margin: 0;
+}
+.rail-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.rail-chevron svg {
+  transition: transform 0.2s ease;
+}
+.rail-chevron:hover {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.rail-chevron[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+body.rail-min .rail-actions {
+  display: none;
+}
+body.rail-min .rail .card {
+  padding-bottom: var(--space-10);
+}
