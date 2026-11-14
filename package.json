@@ -20,7 +20,7 @@
     "test:chat": "node scripts/test_chat.js",
     "test:e2e": "playwright test",
     "test:log": "node scripts/test_log.js",
-    "test": "npm run test:prototype && npm run test:app-shell && npm run test:storage && npm run test:llm && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:agent-run && npm run test:memory && npm run test:kb && npm run test:units && npm run test:eval && npm run test:log",
+    "test": "npm run test:prototype && npm run test:app-shell && npm run test:storage && npm run test:llm && npm run test:report && npm run test:scoring && npm run test:agent && npm run test:agent-run && npm run test:memory && npm run test:kb && npm run test:units && npm run test:eval && npm run test:log && npm run test:chat",
     "lint": "eslint scripts code/frontend/src",
     "lint:frontend": "eslint code/frontend/src",
     "format": "prettier --write \"scripts/**/*.js\" \"code/frontend/**/*.{js,html,css}\" \"tests/e2e/**/*.js\" \"*.{json,mjs}\"",
