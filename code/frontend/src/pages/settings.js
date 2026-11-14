@@ -295,7 +295,7 @@ export function renderSettings(root, ctx) {
       variant: 'primary',
     });
     const clearButton = button('清除 Key', () => clearKey(form, ctx, draw), {
-      variant: 'ghost',
+      variant: 'danger',
     });
     const importButton = button('导入旧数据', () => importLegacy(ctx, draw), {
       variant: 'ghost',

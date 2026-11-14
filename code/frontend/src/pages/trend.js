@@ -106,7 +106,7 @@ function trendChartCard(sessions) {
     { class: 'trend-legend' },
     view.dims.map((id, index) =>
       el('span', { class: 'trend-legend-item' }, [
-        el('i', { style: `background:${TREND_COLORS[index % TREND_COLORS.length]}` }),
+        el('i', { style: `background:${seriesColor(id, index)}` }),
         DIM_NAME[id] || id,
       ]),
     ),
