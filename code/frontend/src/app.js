@@ -6,6 +6,8 @@
  */
 import { createRouter } from './router.js';
 import { createShell } from './shell.js';
+import { animateNumbers } from './motion.js';
+import { attachClickSounds } from './sound.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
 import { bootstrap, installFlushHook } from './boot.js';
@@ -22,6 +24,8 @@ import { renderSettings } from './pages/settings.js';
 import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
 import { renderChat } from './pages/chat.js';
+import { renderGames } from './pages/games.js';
+import { renderGame } from './pages/game.js';
 
 /**
  * 渲染兜底：某个页面抛错时用一段内联内容替换整页，避免白屏。
@@ -61,6 +65,8 @@ const PAGES = {
   '/trend': renderTrend,
   '/memory': renderMemory,
   '/chat': renderChat,
+  '/games': renderGames,
+  '/game': renderGame,
 };
 
 const root = document.getElementById('app');
@@ -240,6 +246,7 @@ const router = createRouter((route) => {
   const heading = root.querySelector('h1');
   if (heading) heading.setAttribute('tabindex', '-1');
   root.focus({ preventScroll: true });
+  animateNumbers(root);
 });
 
 const shell = createShell({ ctx, router });
@@ -288,6 +295,7 @@ async function startApp() {
     }
   }
   log('info', '应用启动', globalThis.location ? globalThis.location.pathname : '/');
+  attachClickSounds();
   router.start();
 }
 

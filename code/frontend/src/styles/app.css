@@ -128,6 +128,23 @@ body {
 .toplink:hover {
   color: var(--accent-deep);
 }
+.toplink-btn {
+  font: inherit;
+  font-size: 13px;
+  color: #374151;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.toplink-btn:hover {
+  color: var(--accent-deep);
+}
+.toplink-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 .wb {
   flex: 1;
@@ -226,7 +243,26 @@ body.focus #app {
 
 /* ---- 页面通用 ---- */
 .page {
-  animation: rise 0.18s ease;
+  animation: none;
+}
+/* 页面内元素依次淡入，让切换有层次而不生硬 */
+.page > * {
+  animation: rise 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.page > *:nth-child(2) {
+  animation-delay: 0.03s;
+}
+.page > *:nth-child(3) {
+  animation-delay: 0.06s;
+}
+.page > *:nth-child(4) {
+  animation-delay: 0.09s;
+}
+.page > *:nth-child(5) {
+  animation-delay: 0.12s;
+}
+.page > *:nth-child(n + 6) {
+  animation-delay: 0.15s;
 }
 @keyframes rise {
   from {
@@ -864,6 +900,170 @@ body.focus #app {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- 动效：让页面更生动（全部尊重 prefers-reduced-motion） ---- */
+.card {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+.btn {
+  transition:
+    filter 0.15s,
+    border-color 0.15s,
+    transform 0.12s ease,
+    box-shadow 0.18s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(16, 24, 40, 0.08);
+}
+.btn:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: none;
+}
+.btn.primary:hover {
+  box-shadow: 0 5px 16px rgba(21, 128, 61, 0.22);
+}
+
+.navitem {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tier-card {
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.18s ease;
+}
+.tier-card:hover {
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+.score-chip {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.score-chip:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.report-table tbody tr,
+.trend-table tbody tr {
+  transition: background 0.15s ease;
+}
+.report-table tbody tr:hover,
+.trend-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.chat-user,
+.chat-ai {
+  animation: bubble-in 0.24s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.radar-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 0.45s ease 0.1s both;
+}
+.radar-ring,
+.radar-spoke {
+  animation: fade-in 0.5s ease both;
+}
+.radar-label,
+.radar-value {
+  animation: fade-in 0.5s ease 0.15s both;
+}
+@keyframes dot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.brand-mark {
+  animation: mark-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+/* 菱形标记缓慢自转：外圈保持不动，只转里面的菱形 */
+.brand-mark polygon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mark-spin 18s linear infinite;
+}
+@keyframes mark-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mark-in {
+  from {
+    opacity: 0.15;
+    transform: rotate(-14deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.chip.flash {
+  animation: chip-pop 0.4s ease;
+}
+@keyframes chip-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.check {
+  transition: color 0.15s ease;
+}
+.check:hover {
+  color: var(--accent-deep);
+}
+
 /* ---- 断点：900–1199 两栏，右栏折叠到主区下方 ---- */
 @media (max-width: 1199px) {
   .wb {
@@ -990,5 +1190,419 @@ body.focus #app {
   * {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---------- 游戏中心 ---------- */
+.game-dim {
+  margin: 22px 0 6px;
+}
+.game-dim-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+}
+.game-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.game-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.game-card:hover {
+  border-color: var(--accent-line);
+  box-shadow: 0 2px 10px rgba(21, 128, 61, 0.08);
+}
+.game-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.game-card.disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.game-card.disabled:hover {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.game-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.game-card-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.game-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.game-badge.ok {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-line);
+}
+
+.game-stage {
+  margin-top: 14px;
+}
+.game-status {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 6px 0 12px;
+}
+.game-question {
+  font-size: 34px;
+  font-weight: 700;
+  text-align: center;
+  margin: 18px 0 22px;
+  letter-spacing: 2px;
+}
+.game-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.game-option {
+  min-height: var(--tap);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.game-grid {
+  display: grid;
+  gap: 8px;
+  max-width: 460px;
+}
+.game-grid.schulte {
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0 auto;
+}
+.game-grid.flip {
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 auto;
+}
+.scell {
+  aspect-ratio: 1 / 1;
+  font-size: 20px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.scell:hover {
+  border-color: var(--accent-line);
+}
+.scell.done {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-deep);
+}
+.scell.miss {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.fcard {
+  aspect-ratio: 1 / 1;
+  font-size: 26px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+.fcard.open {
+  background: var(--card);
+  color: var(--text);
+}
+.fcard.matched {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-deep);
+}
+.game-input {
+  min-height: var(--tap);
+  padding: 0 14px;
+  font-size: 20px;
+  letter-spacing: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  width: 180px;
+}
+.game-history {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.game-history-item {
+  margin: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+.game-score {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--accent-deep);
+  margin: 8px 0;
+}
+.game-result {
+  max-width: 520px;
+}
+
+@media (max-width: 900px) {
+  .game-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .game-cards {
+    grid-template-columns: 1fr;
+  }
+  .game-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 游戏：题库 / 视觉 / 语音 ---------- */
+.quiz-prompt {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 8px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 620px;
+}
+.quiz-options .game-option {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.quiz-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  gap: 4px;
+}
+.quiz-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+}
+.quiz-cell.on {
+  background: var(--accent);
+  border-color: var(--accent-deep);
+}
+.quiz-grid-option {
+  display: inline-flex;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: pointer;
+}
+.quiz-grid-option:hover {
+  border-color: var(--accent-line);
+}
+
+.game-grid.link {
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 auto;
+}
+.game-grid.link {
+  max-width: 420px;
+}
+.game-grid.link {
+  gap: 10px;
+}
+.lcard {
+  aspect-ratio: 1 / 1;
+  font-size: 26px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.lcard.sel {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.lcard.gone {
+  visibility: hidden;
+}
+
+.spot-wrap {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.game-grid.spot {
+  grid-template-columns: repeat(5, 1fr);
+  max-width: 260px;
+  gap: 6px;
+}
+.spot-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+button.spot-cell {
+  cursor: pointer;
+}
+.spot-cell.hit {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.spot-cell.miss {
+  border-color: var(--bad);
+}
+
+.pair-study {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.pair-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card-2);
+  font-size: 13px;
+}
+.pair-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 560px;
+}
+.pair-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pair-item {
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+.pair-item.sel {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.pair-item.done {
+  border-color: var(--accent-line);
+  color: var(--accent-deep);
+  opacity: 0.7;
+}
+.pair-item.miss {
+  border-color: var(--bad);
+}
+
+.shop-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shop-chip {
+  padding: 8px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 15px;
+}
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 620px;
+}
+.shop-option {
+  min-height: var(--tap);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+.shop-option.sel {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.speech-topic {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 10px 0 16px;
+}
+.speech-heard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.speech-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card-2);
+  font-size: 14px;
+  color: var(--muted);
+}
+.speech-chip.ok {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+@media (max-width: 560px) {
+  .shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pair-board {
+    grid-template-columns: 1fr;
   }
 }
