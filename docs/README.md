@@ -1,6 +1,6 @@
 # MindMeter 文档索引
 
-> 当前口径：**桌面本地版 = pywebview + FastAPI + 便携 PostgreSQL + pgvector + LangGraph + keyring；单用户、无账号/JWT**。旧 L1/L2 文档保留为历史；架构以 [ADR-0001](adr/0001-local-desktop-runtime.md) 为准。
+> 当前口径：**Web 托管版 = FastAPI + PostgreSQL/pgvector + LangGraph，账号登录（用户名+密码、HttpOnly Cookie 会话）、按账号隔离数据、模型由站点环境变量提供**。架构以 [ADR-0003](adr/0003-web-accounts-and-hosted-deployment.md) 为准；桌面本地形态（ADR-0001）与旧 L1/L2 文档保留为历史。
 
 ## 核心文档
 
@@ -11,10 +11,12 @@
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | 当前 v3.0 | 性能、可靠、安全、隐私、AI 质量 |
 | `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
-| `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前桌面版见本地运行时 |
-| `software/` | [本地运行时](software/local-runtime.md) | 当前 | 双击入口、便携 PostgreSQL、启停、日志、排障 |
+| `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
+| `software/` | [Render 部署指南](software/deploy-render.md) | 当前 | Blueprint 一键部署、环境变量、LLM 选型、验收、排障 |
+| `software/` | [本地运行时](software/local-runtime.md) | 历史 | 桌面版双击入口、便携 PostgreSQL、启停、日志 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
-| `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 已接受 | 取代 m1_scope 的“无后端”范围 |
+| `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 部分被取代 | 桌面壳、loopback token、单用户与 keyring 条款由 ADR-0003 取代 |
+| `adr/` | [ADR-0003 Web 账号与托管部署](adr/0003-web-accounts-and-hosted-deployment.md) | 已接受 | 账号/会话/CSRF、多租户主键、站点 LLM 配置、RAG 与探活口径 |
 | `adr/` | [ADR-0002 非临床定位与 Agent 语言契约](adr/0002-agent-positioning-language-contract.md) | 提议 | MoCA 参考三分法、不借临床权威、Agent 措辞/校验约束 |
 | `software/` | [Agent P0 改造包设计](software/agent-trend-workflow.md) | 评审稿 v0.2 | 统一出口 + 趋势联动 + 定位落地（受 ADR-0002 约束） |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |

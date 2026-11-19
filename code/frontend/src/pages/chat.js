@@ -1,7 +1,7 @@
 /**
  * L-05 对话页（/chat）。
  *
- * 只做三件事：渲染消息、把问题交给本地 /api/v1/chat、用返回的消息刷新。
+ * 只做三件事：渲染消息、把问题交给 /api/v1/chat、用返回的消息刷新。
  * 所有安全规则（意图分类、禁用词、数字溯源、引用、回退模板）都在后端
  * LangGraph Agent 里，这里不重复实现。
  */
@@ -57,7 +57,7 @@ const LLM_FALLBACK_REASON = {
   auth: 'Key 无效或没有该模型权限',
   rate_limit: '触发限流',
   http: '模型服务返回错误',
-  network: '本机无法连接模型服务',
+  network: '无法连接模型服务',
   bad_response: '模型响应格式异常',
   truncated: '模型输出被截断',
   unknown: '模型服务异常',
@@ -121,8 +121,8 @@ function messageNode(message) {
 function configBanner(ctx, settings) {
   if (settings.enabled && settings.hasKey && settings.endpoint && settings.model) return null;
   const text = settings.hasKey
-    ? '已保存 Key，但 AI 解读未启用或缺少 endpoint / 模型名；当前回答来自本地模板。'
-    : '未配置模型密钥：对话仍可用，但回答来自本地模板（只复述原始指标）。';
+    ? '站点尚未完成模型配置；当前回答来自模板。'
+    : '站点未配置模型：对话仍可用，但回答来自模板（只复述原始指标）。';
   return el('div', { class: 'card' }, [
     el('p', { class: 'tiny', text }),
     button('去设置', () => ctx.go('/settings'), { variant: 'ghost' }),
@@ -132,7 +132,7 @@ function configBanner(ctx, settings) {
 function emptyChat() {
   return emptyState({
     title: '还没有对话',
-    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。回答只依据本次结果和本地知识库，并标注来源。',
+    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。回答只依据本次结果和知识库，并标注来源。',
     hint: 'Enter 发送，Shift+Enter 换行；对话只保留最近 20 条。',
   });
 }
@@ -182,9 +182,9 @@ export function renderChat(root, ctx, options = {}) {
     autoGrow();
     send.disabled = true;
     send.textContent = '…';
-    status.textContent = '正在检索本地知识库并组织回答…';
+    status.textContent = '正在检索知识库并组织回答…';
     slowTimer = setTimeout(() => {
-      status.textContent = '仍在处理中：本地检索或模型响应较慢，请稍等…';
+      status.textContent = '仍在处理中：检索或模型响应较慢，请稍等…';
     }, 5000);
 
     try {
@@ -193,7 +193,7 @@ export function renderChat(root, ctx, options = {}) {
       // eslint-disable-next-line sonarjs/no-ignored-exceptions
     } catch (error) {
       // The page stays usable; the toast is the only recovery action here.
-      ctx.toast('本地服务不可用，消息没有发送');
+      ctx.toast('站点服务不可用，消息没有发送');
     } finally {
       if (slowTimer) clearTimeout(slowTimer);
       send.disabled = false;
@@ -230,7 +230,7 @@ export function renderChat(root, ctx, options = {}) {
       ]),
       el('p', {
         class: 'disclaimer',
-        text: 'AI 生成 · 仅解释本次结果 · 非诊断 · 对话只保留最近 20 条（本机数据库）· 不要把手机号/身份证号等敏感信息发进来；配置模型后问题会发送给你选择的模型服务',
+        text: 'AI 生成 · 仅解释本次结果 · 非诊断 · 对话只保留最近 20 条（本账号）· 不要把手机号/身份证号等敏感信息发进来；站点会把问题发送给站点配置的模型服务',
       }),
     ]),
   );

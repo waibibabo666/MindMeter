@@ -1,13 +1,18 @@
-﻿/**
+/**
  * 极简 hash 路由。
  *
- * 为什么用 hash 而不是 History API：静态文件可以直接双击打开，也能被
- * FastAPI 静态目录托管，不需要服务端把未知路径回退到 index.html。
- * 刷新时 hash 天然保留，配合 store 里的 draft 就能恢复进度。
+ * 为什么用 hash 而不是 History API：静态文件可以直接由 FastAPI 的
+ * StaticFiles 托管，不需要服务端把未知路径回退到 index.html；刷新时 hash
+ * 天然保留，配合服务端保存的 draft 就能恢复进度。
+ *
+ * 认证页（/login、/register）由 auth.AUTH_PATHS 单独放行，未登录时其余
+ * 路由一律由 app.js 的闸门前置拦截。
  */
 
 export const ROUTES = [
   '/',
+  '/login',
+  '/register',
   '/tier',
   '/consent',
   '/intake',

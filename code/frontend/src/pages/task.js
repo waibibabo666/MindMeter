@@ -86,8 +86,8 @@ export function renderTask(root, ctx, taskId) {
     el('p', {
       class: 'tiny',
       text: isGame
-        ? '本项为游戏化测量，结束后统一计分；进度已存本机。'
-        : '本页只采集原始指标；计时与进度已存本机，刷新可继续。',
+        ? '本项为游戏化测量，结束后统一计分；进度已保存。'
+        : '本页只采集原始指标；计时与进度已保存到本账号，刷新可继续。',
     }),
   ]);
   root.appendChild(section);
@@ -152,7 +152,7 @@ export function renderTask(root, ctx, taskId) {
       host.appendChild(
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title', text: '这一项打不开' }),
-          el('p', { class: 'muted', text: '本地保存的进度可能已损坏，可以重开这一项后再试。' }),
+          el('p', { class: 'muted', text: '已保存的进度可能已损坏，可以重开这一项后再试。' }),
         ]),
       );
     }

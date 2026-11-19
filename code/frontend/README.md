@@ -1,11 +1,12 @@
-# Frontend（桌面本地版）
+# Frontend（Web 托管版）
 
 原生 HTML/CSS/JS（ES Module），**无构建步骤**；由本地 FastAPI 同源托管。
 
 数据层已经改为本地 API：
 
-- `api.js`：`X-MM-Token` + 本地 API 请求；
-- `boot.js`：从 pywebview bridge 取得 token，预取 state/sessions/memory/settings；
+- `api.js`：同源 `fetch` + 会话 Cookie（`credentials: same-origin`）；401 广播一次给壳层；
+- `auth.js`：用户名/密码规则、错误码文案、`session` 状态；
+- `boot.js`：先探 `/auth/session`，未登录不预取任何数据；已登录再取 state/sessions/memory/settings；
 - `storage.js` / `store.js`：内存缓存 + API 写入（页面仍可同步读取）；
 - Key 不再进入 localStorage；设置页只显示 `hasKey` / `keyHint`；
 - 报告/对话调用本地后端，不直连模型；
@@ -50,7 +51,7 @@ frontend/
    └─ styles/app.css     # 360px 起、44px 触控区、减少动效
 ```
 
-## 数据层（桌面本地版）
+## 数据层（按账号隔离）
 
 业务数据在 PostgreSQL，不再写 localStorage。前端只在内存缓存：
 
@@ -88,7 +89,7 @@ frontend/
 | 模型名 | 透传给请求体的 `model` |
 | API Key | 只进 `Authorization` 头，不进 URL、不进 body |
 
-**Key 的处理**：只保存在本机；界面只回显 `sk-…7890`；不写日志；`exportData()` 剥离；
+**Key 的处理**：浏览器完全不接触模型 Key（`MM_LLM_API_KEY` 只在服务端）；设置页只读显示模型名与掩码；`exportData()` 也不含 Key；
 点「清除 Key」立即抹掉；「清除本地数据」整体删除。
 
 **错误码**（收敛成有限集合，页面据此决定文案）：
@@ -151,7 +152,7 @@ node scripts/test_prototype.js     # 7 项：L1 原型未受影响
 
 **趋势页**：
 
-- 取本机最近两次已完成测评（`mindmeter.sessions.v1`，完成最后一项时写入）；
+- 取本账号最近两次已完成测评（服务端 `sessions`，完成最后一项时写入）；
 - **只比较两次都测过的维度**；只有一边测过的维度单独列出、不参与对比；
 - 间隔不足 7 天时提示练习效应，但不禁止；
 - 少于两次记录时给空态，不显示空表。
@@ -161,7 +162,7 @@ node scripts/test_prototype.js     # 7 项：L1 原型未受影响
 ## 约定
 
 - L-01 只展示原始指标；L-02 接本地计分，分数由 `scoring-v3` 产生；
-- 只提交原始指标；不存完整对话；设置里的 LLM Key 只存本机，不上传、不导出；
+- 只提交原始指标；对话每账号只留最近 20 条；模型 Key 不在前端出现，也不会被导出；
 - 反应时使用 `performance.now()`（不可用时回退 `Date.now()`），毫秒取整；
 - 快测与深度档在 L-01 只占位，任务实现随 L-03～L-08 补齐。
 

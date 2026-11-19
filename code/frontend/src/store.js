@@ -1,9 +1,14 @@
 /**
- * App-shell state: in-memory cache + debounced writes to the local API.
+ * App-shell state: in-memory cache + debounced writes to the account's rows.
  * Pages keep using the same synchronous readState/update API.
+ *
+ * Anonymous visitors only ever change the local cache: a route write without a
+ * session is a guaranteed 401, and a 401 on every navigation would pollute the
+ * console and the login screen with error toasts.
  */
 
 import { api } from './api.js';
+import { session } from './auth.js';
 import { STATE_VERSION, cache, defaultState, enqueue } from './cache.js';
 
 export { STATE_VERSION, defaultState };
@@ -14,11 +19,15 @@ export function readState() {
   return cache.state;
 }
 
-export function writeState(next) {
-  cache.state = Object.assign(defaultState(), next);
-  const snapshot = JSON.parse(JSON.stringify(cache.state));
+function syncState(snapshot) {
+  if (!session.authenticated) return false;
   enqueue(() => api.put('/state', snapshot));
   return true;
+}
+
+export function writeState(next) {
+  cache.state = Object.assign(defaultState(), next);
+  return syncState(JSON.parse(JSON.stringify(cache.state)));
 }
 
 export function update(mutator) {
@@ -31,7 +40,7 @@ export function update(mutator) {
 export function resetState() {
   const fresh = defaultState();
   cache.state = fresh;
-  enqueue(() => api.put('/state', fresh));
+  syncState(JSON.parse(JSON.stringify(fresh)));
   return fresh;
 }
 

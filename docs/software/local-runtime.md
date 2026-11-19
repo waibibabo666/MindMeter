@@ -1,5 +1,11 @@
 # 本地桌面运行时
 
+> **历史文档（2026-11-19 起）**：主形态已切换为 Web 托管版，见 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 与 [Render 部署指南](deploy-render.md)。
+> 本文的桌面壳、`X-MM-Token`、keyring 存 Key、便携 PostgreSQL 自启等条款已被取代；
+> `MindMeter.cmd` / `MindMeter.vbs` / `code/desktop/launcher.py` 仅作为历史入口保留，不再维护，
+> 且在多用户数据库结构上不能直接使用（迁移 `0004_hosted_copy` 会拒绝旧库并提示重建）。
+> 想在本地跑起来看效果：`python scripts/e2e_server.py` 然后浏览器打开 `http://127.0.0.1:8100` 注册账号。
+
 ## 一次安装（Windows x64）
 
 ```powershell

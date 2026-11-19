@@ -1,4 +1,4 @@
-﻿"""LangGraph agent for the local assistant.
+"""LangGraph agent for the local assistant.
 
 The graph is deliberately small: classify -> retrieve -> generate -> validate.
 Crisis/boundary/self-blame/unrelated/clarify never call a model. Any model
@@ -16,14 +16,12 @@ from contextvars import ContextVar
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import keyring_store
 from ..analysis import build_messages as build_analysis_messages
 from ..analysis import retrieve_context, template_analysis
-from ..llm import LLMError, call_llm, is_configured
-from ..models import AISettings
+from ..config import settings
+from ..llm import LLMError, call_llm, site_llm_config
 from ..rag import retrieve as retrieve_kb
 from ..templates import template_narrative, template_trend
 from .policies import SCOPE_MARKERS, DEFAULT_SCENE, policy_for, prompt_for
@@ -628,9 +626,8 @@ def _generate_node(state: AgentState) -> dict:
     fallback = template_analysis(facts, chunks) if summary else scene_template(state)
     if db is None:
         return {"text": fallback, "source": "template", "code": "unknown"}
-    row = db.scalar(select(AISettings).limit(1))
-    key = keyring_store.get_llm_key()
-    if row is None or not is_configured(row.endpoint, row.model, key, row.enabled):
+    config = site_llm_config()
+    if not config.enabled:
         return {"text": fallback, "source": "template", "code": "not_configured"}
     started = time.monotonic()
     try:
@@ -647,11 +644,12 @@ def _generate_node(state: AgentState) -> dict:
             )
         )
         reply = call_llm(
-            endpoint=row.endpoint,
-            model=row.model,
-            key=key or "",
+            endpoint=config.endpoint,
+            model=config.model,
+            key=config.key,
             messages=messages,
-            max_tokens=3000 if summary else 800,
+            max_tokens=3000 if summary else settings.llm_max_tokens,
+            temperature=settings.llm_temperature,
         )
         latency = int((time.monotonic() - started) * 1000)
         return {"text": reply.text, "source": "llm", "code": "ok", "model": reply.model, "latency_ms": latency}

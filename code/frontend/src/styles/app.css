@@ -1,4 +1,4 @@
-﻿/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
+/* MindMeter 桌面工作台主题（desktop-first + mobile-supported）
    布局：顶栏 56px ＋ 左侧栏 232px ＋ 主区 1fr（≤960）＋ 右上下文栏 340px；
    测评页切专注模式（760px 居中）；360px 为移动端回归底线（单栏）。
    配色：绿色系（品牌 #15803D），提醒用琥珀，不用红色做评判。 */
@@ -2695,4 +2695,76 @@ body.rail-min .rail-actions {
 }
 body.rail-min .rail .card {
   padding-bottom: var(--space-10);
+}
+
+/* ---------- 登录 / 注册（Web 部署） ---------- */
+.auth-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-top: var(--space-8);
+}
+.auth-form {
+  max-width: 100%;
+  gap: var(--space-8);
+}
+.auth-form .field {
+  margin: 0;
+}
+.auth-form .btn {
+  width: 100%;
+  justify-content: center;
+}
+.auth-status {
+  min-height: 20px;
+  margin: var(--space-4) 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.auth-status.bad {
+  color: var(--bad);
+}
+.auth-page[aria-busy='true'],
+.auth-form[aria-busy='true'] .btn {
+  opacity: 0.72;
+}
+/* 账号/AI 只读信息行：左标签右值，窄屏换行不断词。 */
+.kv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.kv-row:last-of-type {
+  border-bottom: none;
+}
+.kv-key {
+  flex: 0 0 92px;
+  color: var(--muted);
+}
+.kv-value {
+  flex: 1 1 200px;
+  color: var(--text);
+  word-break: break-all;
+}
+.card-subtitle {
+  margin: var(--space-16) 0 var(--space-6);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text);
+}
+/* 登录页不需要左侧栏与右栏：body.focus 已隐藏，这里只补主区留白。 */
+body.focus .auth-page {
+  padding-top: var(--space-24);
+}
+@media (max-width: 520px) {
+  .auth-page {
+    padding-top: var(--space-4);
+  }
+  body.focus .auth-page {
+    padding-top: var(--space-12);
+  }
 }

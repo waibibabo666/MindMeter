@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy.orm import Session
 
+from .. import auth
 from ..db import get_db
-from ..models import AppState
+from ..models import AppState, User
 from ..serializers import state_payload
 
 router = APIRouter()
@@ -27,13 +28,17 @@ def _dt(value):
 
 
 @router.get("/state")
-def get_state(db: Session = Depends(get_db)):
-    return state_payload(db)
+def get_state(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    return state_payload(db, int(user.id))
 
 
 @router.put("/state")
-def put_state(payload: dict = Body(...), db: Session = Depends(get_db)):
-    row = db.get(AppState, 1) or AppState(id=1)
+def put_state(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    row = db.get(AppState, int(user.id)) or AppState(user_id=int(user.id))
     row.route = str(payload.get("route") or "/")
     row.tier = payload.get("tier")
     row.consented = bool(payload.get("consented"))
@@ -45,4 +50,4 @@ def put_state(payload: dict = Body(...), db: Session = Depends(get_db)):
     row.drafts = payload.get("drafts") if isinstance(payload.get("drafts"), dict) else {}
     db.add(row)
     db.commit()
-    return state_payload(db)
+    return state_payload(db, int(user.id))

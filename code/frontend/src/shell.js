@@ -1,11 +1,14 @@
 /**
- * 桌面工作台外壳（顶栏 chip / 左侧栏 / 右侧上下文栏）。
+ * Web 工作台外壳（顶栏 chip / 左侧栏 / 右侧上下文栏）。
  *
  * 从 app.js 拆出，保持入口文件在复杂度门禁（300 行）以内。
  * 只操作外壳节点，不碰 #app 内的页面渲染。
+ * 未登录（auth.session.authenticated = false）时隐藏导航与快捷栏，
+ * 顶栏只留一个「登录 / 注册」状态位。
  */
 import { readState } from './store.js';
 import { STANDARD_ORDER } from './data.js';
+import { accountLabel, session } from './auth.js';
 import { clear, el } from './ui.js';
 import { flashChip } from './motion.js';
 import { readUiPrefs, writeUiPrefs, applyUiPrefs } from './ui-prefs.js';
@@ -29,6 +32,8 @@ const NAV_GROUP = {
 
 const PAGE_LABEL = {
   '/': '',
+  '/login': '登录',
+  '/register': '注册',
   '/tier': '选择档位',
   '/consent': '知情同意',
   '/intake': '开始之前',
@@ -93,36 +98,52 @@ export function createShell({ ctx, router }) {
     });
   }
 
-  // 退出应用：桌面壳里通过 pywebview 的 js_api 关窗口；浏览器里只给提示。
+  // 顶栏账号位：登录后显示「退出 · 用户名」，未登录时整块隐藏。
   const quitAppNode = document.getElementById('quit-app');
+  const settingsLinkNode = document.getElementById('toplink-settings');
   if (quitAppNode) {
     quitAppNode.addEventListener('click', () => {
-      const bridge = window.pywebview && window.pywebview.api;
-      if (bridge && typeof bridge.quit_app === 'function') {
-        bridge.quit_app();
+      if (session.authenticated && typeof ctx.signOut === 'function') {
+        ctx.signOut();
         return;
       }
-      ctx.toast('直接关闭窗口即可退出');
+      router.go('/login');
     });
   }
 
-  function updateShell(route) {
-    const group = NAV_GROUP[route.path] || '';
-    document.body.classList.toggle('focus', route.path === '/task');
+  /** 顶栏与布局骨架：未登录时收掉侧栏/右栏与全部导航控件。 */
+  function syncChrome(route, authed) {
+    // 未登录与测评专注模式共用同一套布局：收掉侧栏与右栏，主区居中窄列。
+    document.body.classList.toggle('focus', !authed || route.path === '/task');
     if (quitNode) quitNode.hidden = route.path !== '/task';
+    if (settingsLinkNode) settingsLinkNode.hidden = !authed;
+    if (navToggle) navToggle.style.display = authed ? '' : 'none';
+    if (railToggle) railToggle.style.display = authed ? '' : 'none';
+    if (!quitAppNode) return;
+    quitAppNode.hidden = !authed;
+    quitAppNode.textContent = authed ? `退出 · ${accountLabel()}` : '退出';
+  }
 
-    if (sidebar) {
-      for (const item of sidebar.querySelectorAll('.navitem')) {
-        item.classList.toggle('on', item.dataset.nav === group);
-      }
+  function syncNav(group, authed) {
+    if (!sidebar) return;
+    for (const item of sidebar.querySelectorAll('.navitem')) {
+      item.classList.toggle('on', authed && item.dataset.nav === group);
     }
-    if (chipNode) {
-      const next = route.path === '/task' ? taskChipText(route) : (PAGE_LABEL[route.path] ?? '');
-      if (chipNode.textContent !== next) {
-        chipNode.textContent = next;
-        flashChip(chipNode);
-      }
-    }
+  }
+
+  function syncChip(route) {
+    if (!chipNode) return;
+    const next = route.path === '/task' ? taskChipText(route) : (PAGE_LABEL[route.path] ?? '');
+    if (chipNode.textContent === next) return;
+    chipNode.textContent = next;
+    flashChip(chipNode);
+  }
+
+  function updateShell(route) {
+    const authed = Boolean(session.authenticated);
+    syncChrome(route, authed);
+    syncNav(NAV_GROUP[route.path] || '', authed);
+    syncChip(route);
   }
 
   /** 右栏快捷操作：图标行式按钮，比并排五个盒子安静。 */
@@ -154,10 +175,11 @@ export function createShell({ ctx, router }) {
     ]);
   }
 
-  /** 右侧上下文栏：快捷操作 + 数据说明（测评专注模式下由 CSS 隐藏）。 */
+  /** 右侧上下文栏：快捷操作 + 数据说明（专注模式与未登录时由 CSS 隐藏）。 */
   function renderRail() {
     if (!railNode) return;
     clear(railNode);
+    if (!session.authenticated) return;
     railNode.appendChild(
       el('div', { class: 'card' }, [
         railHead(),
@@ -166,14 +188,14 @@ export function createShell({ ctx, router }) {
           railButton('趋势', 'trending', () => router.go('/trend')),
           railButton('记忆', 'bookmark', () => router.go('/memory')),
           railButton('导出数据', 'download', () => ctx.exportData()),
-          railButton('清除本地数据', 'trash', () => ctx.clearAll(), 'danger'),
+          railButton('清除账号数据', 'trash', () => ctx.clearAll(), 'danger'),
         ]),
       ]),
     );
     railNode.appendChild(
       el('p', {
         class: 'rail-note tiny',
-        text: '本机运行 · 不上传 · 导出不含 Key · 非临床诊断',
+        text: '站点托管 · 按账号隔离 · 导出不含密钥 · 非临床诊断',
       }),
     );
   }

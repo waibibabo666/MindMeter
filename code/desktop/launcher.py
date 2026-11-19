@@ -202,7 +202,14 @@ def single_instance() -> tuple[object | None, bool]:
 
 
 def keyring_secret(username: str) -> str:
-    import keyring
+    try:
+        import keyring
+    except ImportError as exc:  # pragma: no cover - deprecated desktop entry
+        raise RuntimeError(
+            "桌面本地版已停用：keyring 不再是 Web 部署的依赖（模型 Key 改用 MM_LLM_API_KEY）。\n"
+            "请用 Web 形态本地启动：python scripts/e2e_server.py 然后打开 http://127.0.0.1:8100\n"
+            "部署说明见 docs/software/deploy-render.md；历史口径见 docs/adr/0003。"
+        ) from exc
 
     value = keyring.get_password(APP_NAME, username)
     if value:

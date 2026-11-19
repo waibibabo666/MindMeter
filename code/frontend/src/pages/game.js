@@ -1,6 +1,6 @@
 /**
  * 单局游戏页：说明 → 进行中 → 结算。
- * 结算不跳报告，就地显示成绩与本机最佳，避免误解为测评结果。
+ * 结算不跳报告，就地显示成绩与本设备最佳，避免误解为测评结果。
  */
 import { el, button, clear } from '../ui.js';
 import { findGame } from '../games/registry.js';
@@ -16,7 +16,7 @@ function introView(root, item, best, onStart) {
     el('div', { class: 'card' }, [
       el('h2', { class: 'card-title', text: item.title }),
       el('p', { class: 'muted', text: item.desc }),
-      el('p', { class: 'tiny', text: best === null ? '还没有记录' : `本机最佳：${best} 分` }),
+      el('p', { class: 'tiny', text: best === null ? '还没有记录' : `本设备最佳：${best} 分` }),
       el('div', { class: 'row' }, [
         button('开始', onStart, { variant: 'primary' }),
         button('返回游戏中心', () => globalThis.location.assign('#/games'), { variant: 'ghost' }),
@@ -31,7 +31,7 @@ function resultView(root, item, score, detail, best, onAgain) {
     .filter(([key]) => key !== 'ms')
     .map(([key, value]) => `${key}：${value}`);
   const prevBest = best === null ? '无' : String(best);
-  const bestLine = isBest ? `刷新了本机最佳（原 ${prevBest}）` : `本机最佳 ${best} 分`;
+  const bestLine = isBest ? `刷新了本设备最佳（原 ${prevBest}）` : `本设备最佳 ${best} 分`;
 
   root.appendChild(
     el('div', { class: 'card game-result' }, [

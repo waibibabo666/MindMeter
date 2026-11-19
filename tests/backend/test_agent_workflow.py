@@ -1,7 +1,7 @@
 """Agent P0 工作流测试：路由、场景策略、派生数字、统一出口、历史时序。
 
 不依赖数据库：classify/validate/build_messages 为纯函数；图级测试用假
-AISettings 与假 call_llm（CI 无需 Key）。对应设计文档 §九 1/3/4/5/7。
+site_llm_config 与假 call_llm（CI 无需 Key）。对应设计文档 §九 1/3/4/5/7。
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from app.agent import (
     validate_text,
 )
 from app.agent.policies import policy_for, prompt_for
-from app.llm import LLMReply
+from app.llm import LLMConfig, LLMReply
 
 TREND_FACTS = {
     "am": {"score": 51, "hits": 5, "falseAlarms": 3},
@@ -42,11 +42,9 @@ GOOD_TREND_REPLY = (
 
 
 def run_graph(monkeypatch, question, facts, reply_text, chunks=KB_CHUNKS, scene="chat_explain"):
-    settings = SimpleNamespace(endpoint="https://fake/v1", model="test-model", enabled=True)
-
     class FakeDb:
         def scalar(self, _stmt):
-            return settings
+            return None
 
     calls = {"llm": 0, "retrieve": 0, "messages": None}
 
@@ -61,7 +59,13 @@ def run_graph(monkeypatch, question, facts, reply_text, chunks=KB_CHUNKS, scene=
 
     monkeypatch.setattr(A, "retrieve_kb", fake_retrieve)
     monkeypatch.setattr(A, "call_llm", fake_call_llm)
-    monkeypatch.setattr("app.keyring_store.get_llm_key", lambda: "sk-test")
+    # The deployment owns the model config now (app.llm.site_llm_config):
+    # tests inject it the same way, with a fake key that never leaves memory.
+    monkeypatch.setattr(
+        A,
+        "site_llm_config",
+        lambda: LLMConfig(endpoint="https://fake/v1", model="test-model", key="sk-test", enabled=True),
+    )
     result = A.answer(FakeDb(), question, facts, [], None, scene=scene)
     return result, calls
 

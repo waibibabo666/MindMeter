@@ -3,6 +3,47 @@
 本文件记录 MindMeter 所有值得说明的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-11-19 — Web 托管版（账号 + Render）
+
+架构从“pywebview 桌面单用户”切换为“同源 Web 多用户”，部署目标 Render。
+决策与理由见 [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md)，操作手册见 [部署指南](docs/software/deploy-render.md)。
+
+### 新增
+
+- **账号体系**：用户名 + 密码注册/登录/登出；PBKDF2-HMAC-SHA256（240 000 轮、随机盐）；未知用户名也走一次散列以对齐响应时间；`/auth/register|login|logout|session|me|password|account`。
+- **服务端会话**：`HttpOnly + SameSite=Lax + Secure(auto)` Cookie，数据库只存 `sha256(token)`；30 天滑动续期；登出/改密码/注销即撤销；登录按 `IP+用户名`、注册按 `IP` 限流（429）。
+- **多租户数据模型**：`users` / `auth_sessions` 两张新表；`app_state`、`assessments`、`assessment_tasks/scores`、`memory_*`、`chat_messages` 全部改为以 `user_id` 打头的复合主键；`kb_chunks` 保持全站共享只读；`ai_runs` / `audit_log` 带 `user_id`；客户端 id（`s_xxx`、`kb-plan-01`）只在账号内唯一。
+- **注销与清除**：`DELETE /auth/account`（需当前密码，`ON DELETE CASCADE` 级联删全部数据）；`DELETE /data` 只清本账号。
+- **站点统一 LLM**：`MM_LLM_BASE_URL` / `MM_LLM_MODEL` / `MM_LLM_API_KEY`；`GET /settings/ai` 只读（`managedBy=site`、`readOnly=true`、掩码提示），`PUT /settings/ai` 与 `DELETE /settings/ai/key` 一律 403 `ai_managed_by_site`。
+- **前端登录体验**：`#/login`、`#/register` 两页（18+ 与边界勾选、错误码人话文案）；路由闸门（未登录只放行认证页，侧栏/右栏/顶部控件随之隐藏）；401 全局广播自动回登录页；设置页新增账号卡（用户名、注册/上次登录时间、退出、改密码、注销）。
+- **部署物料**：`render.yaml`（Blueprint：Web Free + PostgreSQL 17 Free + `vector` 扩展 + `preDeployCommand` 迁移 + `/api/v1/health/live` 探活）、`requirements.txt`（去掉 pywebview/keyring/fastembed）、`.python-version`、`scripts/smoke_web_deploy.py`（19 项部署后冒烟检查）。
+- **传输守卫**：`SecurityMiddleware` 保留安全头与 CSP，写请求要求同源 Origin + `application/json`（配合 `SameSite=Lax` 构成 CSRF 防线）。
+- **健康分层**：`/health/live`（不碰 DB，供平台探活）与 `/health`（DB/迁移号/pgvector/RAG/AI 配置状态/账号数，公开、无用户数据）。
+- **测试**：`tests/backend/test_auth_api.py`（口令/会话/限流/改密码撤销/注销复用）、`test_tenancy.py`（跨账号读写、同 id 不冲突、越权 404、每账号 50 次上限）；`scripts/test_auth.js`（10 项前端规则与传输断言）；E2E 改为真实注册/登录流；`scripts/e2e_server.py` 自建便携 PostgreSQL（trust、仅回环），不再依赖桌面 launcher。
+
+### 变更
+
+- `config.py`：`MM_DATA_DIR` 在 Render 上落到 `/tmp/mindmeter`；新增会话、限流、LLM、`MM_ALLOW_REGISTRATION`、`MM_EXPOSE_LOGS` 等开关。
+- `db.py`：连接串归一（`postgres://`、`postgresql://` → `postgresql+psycopg://`）、小连接池 + `pool_recycle=280`（免费实例会关闭空闲连接）。
+- `logging_setup.py`：托管环境同时输出到 stdout（Render 日志页可见），文件目录不可写时不再让进程启动失败。
+- `data.py`：导入不再依赖 `pg_dump`（文件系统临时），改为提示“先导出留档 + 平台每日备份”；`/logs` 默认关闭。
+- 口径统一：界面与知识库里“本机运行 / 数据不出这台电脑”改为“站点托管 · 按账号隔离”，`kb-limit-04` 同步改写（迁移 `0004_hosted_copy`）。
+- Alembic：新增 `0004_hosted_copy`；在旧桌面库（无 `users` 表）上会明确报错并提示需要全新数据库。
+
+### 删除
+
+- `keyring_store.py`、`testing_keyring.py`、`ai_settings` 表与 BYOK 输入框（Key 不再由用户提供）。
+- `LocalGuardMiddleware` 的 loopback/`X-MM-Token`/随机端口前提；`api.js` 不再依赖 pywebview 桥（桥仍是兼容分支）。
+- 旧 `logs` 端点的默认暴露、`POST /import` 的自动 `pg_dump` 备份。
+- 桌面版作为主入口的地位：`MindMeter.cmd` / `.vbs` / `code/desktop/` 保留但不再维护。
+
+### 已知限制
+
+- 没有邮件验证与自助找回密码（不收集邮箱，是刻意取舍；登录页与设置页已写明）。
+- 限流与会话状态在单实例内存+数据库里，未做多实例共享会话缓存。
+- 免费实例冷启动约 1 分钟、文件系统临时、免费 Postgres 30 天后过期；`*.onrender.com` 在中国大陆可达性不稳，文档给出换 region 与升级 `starter` 的做法。
+- 向量检索在 Web 依赖中默认关闭（`MM_RAG_MODE=keyword`），语义召回质量低于带 embedding 的桌面版。
+
 ## [0.2.0] - 2026-11-14 — 桌面本地架构
 
 架构从“浏览器 UI + localStorage + 浏览器直连 LLM”迁移为

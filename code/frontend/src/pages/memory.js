@@ -1,7 +1,7 @@
 /**
  * L-07 记忆页：画像 / 摘要 / 建议记录 / 对话条数。
  *
- * 只读写本机数据库（通过 API），不联网；删除后不再被引用。
+ * 读写本账号的服务端数据（同源 API）；删除后不再被引用。
  */
 
 import { button, el, emptyState } from '../ui.js';
@@ -186,7 +186,7 @@ export function renderMemory(root, ctx) {
 
   const page = el('section', { class: 'page', 'aria-labelledby': 'memory-title' }, [
     el('h1', { id: 'memory-title', class: 'page-title', text: '我的记忆' }),
-    el('p', { class: 'muted', text: '这些信息只存在本机数据库；删除后 AI 不会再引用。' }),
+    el('p', { class: 'muted', text: '这些信息只属于当前账号；删除后 AI 不会再引用。' }),
     profileCard(view, ctx, rerender),
     summaryCard(view, ctx, rerender),
     adviceCard(view, ctx, rerender),
@@ -201,16 +201,19 @@ export function renderMemory(root, ctx) {
       button(
         '清除全部记忆',
         () => {
-          if (!window.confirm('清除本机全部记忆？删除后 AI 不会再引用。')) return;
+          if (!window.confirm('清除本账号全部记忆？删除后 AI 不会再引用。')) return;
           clearAllMemory();
-          ctx.toast('已清除本机记忆');
+          ctx.toast('已清除本账号记忆');
           rerender();
         },
         { variant: 'danger' },
       ),
       button('返回', () => ctx.go('/report'), { variant: 'ghost' }),
     ]),
-    el('p', { class: 'disclaimer', text: '记忆只用于本机对话；清除本机数据会一并删除。' }),
+    el('p', {
+      class: 'disclaimer',
+      text: '记忆只用于本账号的对话；「清除本账号数据」会一并删除。',
+    }),
   ]);
 
   root.appendChild(page);

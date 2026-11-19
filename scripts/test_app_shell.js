@@ -58,9 +58,11 @@ async function main() {
       'src/router.js',
       'src/store.js',
       'src/storage.js',
+      'src/auth.js',
       'src/log.js',
       'src/data.js',
       'src/ui.js',
+      'src/pages/auth.js',
       'src/pages/home.js',
       'src/pages/tier.js',
       'src/pages/consent.js',
@@ -89,17 +91,36 @@ async function main() {
     assert(/skip-link/.test(html), 'skip link missing');
   });
 
-  test('只有本地 API 客户端可以发起网络请求', () => {
+  test('只有 API 客户端可以发起网络请求，且浏览器侧没有密钥通路', () => {
     for (const file of listSrc()) {
       const relative = path.relative(APP_DIR, file).replaceAll('\\', '/');
       if (relative === 'src/api.js' || relative === 'src/llm/client.js') continue;
       const text = fs.readFileSync(file, 'utf8');
       assert(!/\bfetch\s*\(/.test(text), `${relative} uses fetch()`);
       assert(!/XMLHttpRequest/.test(text), `${relative} uses XMLHttpRequest`);
+      if (
+        relative.startsWith('src/pages/') ||
+        relative === 'src/auth.js' ||
+        relative === 'src/api.js'
+      ) {
+        assert(!/apiKey/.test(text), `${relative} must not handle an LLM key`);
+      }
     }
     const api = read('src/api.js');
-    assert(api.includes("'X-MM-Token'"), 'api.js must attach the local token');
+    assert(api.includes("credentials: 'same-origin'"), 'api.js must send the session cookie');
+    assert(api.includes("'X-MM-Token'"), 'api.js keeps the legacy desktop token path');
     assert(!api.includes('apiKey'), 'api.js must not know about LLM keys');
+
+    const router = read('src/router.js');
+    for (const route of ["'/login'", "'/register'"]) {
+      assert(router.includes(route), `router must know ${route}`);
+    }
+    const app = read('src/app.js');
+    assert(app.includes('gateRoute'), 'app.js must gate routes on the session');
+    assert(/AUTH_PATHS\.includes/.test(app), 'the gate must consult AUTH_PATHS');
+    const settings = read('src/pages/settings.js');
+    assert(!settings.includes("#set-key'"), 'settings must not offer a key input');
+    assert(settings.includes('/settings/ai/test'), 'settings keeps the connection test');
   });
 
   test('标准档 8 项且顺序固定', () => {

@@ -1,6 +1,8 @@
-"""Convert database rows to the legacy frontend JSON shapes.
+"""Convert database rows to the JSON shapes the frontend already speaks.
 
-Keeping these shapes stable lets the frozen pages keep their rendering code.
+Every function takes ``user_id`` and filters by it — that is the whole tenancy
+story. Keeping these shapes stable lets the frozen pages keep their rendering
+code (docs/adr/0001, docs/adr/0003).
 """
 from __future__ import annotations
 
@@ -9,9 +11,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import keyring_store
+from .llm import site_llm_config
 from .models import (
-    AISettings,
     AppState,
     Assessment,
     AssessmentScore,
@@ -40,6 +41,40 @@ def ms(value: datetime | None) -> int | None:
     return int(value.timestamp() * 1000)
 
 
+# ---------------------------------------------------------------------------
+# Row lookup: composite (user_id, id) primary keys
+# ---------------------------------------------------------------------------
+
+
+def get_state_row(db: Session, user_id: int, create: bool = False) -> AppState | None:
+    row = db.get(AppState, user_id)
+    if row is None and create:
+        row = AppState(user_id=user_id)
+        db.add(row)
+    return row
+
+
+def find_assessment(db: Session, user_id: int, assessment_id: str) -> Assessment | None:
+    return db.get(Assessment, (user_id, assessment_id))
+
+
+def find_summary(db: Session, user_id: int, summary_id: str) -> MemorySummary | None:
+    return db.get(MemorySummary, (user_id, summary_id))
+
+
+def find_advice(db: Session, user_id: int, advice_id: str) -> MemoryAdvice | None:
+    return db.get(MemoryAdvice, (user_id, advice_id))
+
+
+def find_message(db: Session, user_id: int, message_id: str) -> ChatMessage | None:
+    return db.get(ChatMessage, (user_id, message_id))
+
+
+# ---------------------------------------------------------------------------
+# Payloads
+# ---------------------------------------------------------------------------
+
+
 def default_state() -> dict:
     return {
         "version": 1,
@@ -55,8 +90,8 @@ def default_state() -> dict:
     }
 
 
-def state_payload(db: Session) -> dict:
-    row = db.get(AppState, 1)
+def state_payload(db: Session, user_id: int) -> dict:
+    row = db.get(AppState, user_id)
     if row is None:
         return default_state()
     return {
@@ -77,7 +112,10 @@ def assessment_to_session(db: Session, assessment: Assessment) -> dict:
     tasks = list(
         db.scalars(
             select(AssessmentTask)
-            .where(AssessmentTask.assessment_id == assessment.id)
+            .where(
+                AssessmentTask.user_id == assessment.user_id,
+                AssessmentTask.assessment_id == assessment.id,
+            )
             .order_by(AssessmentTask.position)
         ).all()
     )
@@ -87,7 +125,10 @@ def assessment_to_session(db: Session, assessment: Assessment) -> dict:
     }
     score_rows = list(
         db.scalars(
-            select(AssessmentScore).where(AssessmentScore.assessment_id == assessment.id)
+            select(AssessmentScore).where(
+                AssessmentScore.user_id == assessment.user_id,
+                AssessmentScore.assessment_id == assessment.id,
+            )
         ).all()
     )
     scores = {dim: None for dim in DIMENSION_IDS}
@@ -104,11 +145,11 @@ def assessment_to_session(db: Session, assessment: Assessment) -> dict:
     }
 
 
-def sessions_payload(db: Session, limit: int = 50) -> dict:
+def sessions_payload(db: Session, user_id: int, limit: int = 50) -> dict:
     rows = list(
         db.scalars(
             select(Assessment)
-            .where(Assessment.status == "completed")
+            .where(Assessment.user_id == user_id, Assessment.status == "completed")
             .order_by(Assessment.finished_at.desc().nullslast())
             .limit(limit)
         ).all()
@@ -116,9 +157,9 @@ def sessions_payload(db: Session, limit: int = 50) -> dict:
     return {"schemaVersion": 1, "sessions": [assessment_to_session(db, row) for row in rows]}
 
 
-def memory_payload(db: Session, message_limit: int = 20) -> dict:
-    profile_row = db.get(MemoryProfile, 1)
-    profile = {}
+def memory_payload(db: Session, user_id: int, message_limit: int = 20) -> dict:
+    profile_row = db.get(MemoryProfile, user_id)
+    profile: dict[str, object] = {}
     if profile_row is not None:
         profile = {
             "goal": profile_row.goal,
@@ -137,7 +178,11 @@ def memory_payload(db: Session, message_limit: int = 20) -> dict:
             "adviceIds": list(row.advice_ids or []),
             "text": row.text,
         }
-        for row in db.scalars(select(MemorySummary).order_by(MemorySummary.at)).all()
+        for row in db.scalars(
+            select(MemorySummary)
+            .where(MemorySummary.user_id == user_id)
+            .order_by(MemorySummary.at)
+        ).all()
     ]
     advice = [
         {
@@ -147,7 +192,9 @@ def memory_payload(db: Session, message_limit: int = 20) -> dict:
             "shown": bool(row.shown),
             "done": bool(row.done),
         }
-        for row in db.scalars(select(MemoryAdvice).order_by(MemoryAdvice.at)).all()
+        for row in db.scalars(
+            select(MemoryAdvice).where(MemoryAdvice.user_id == user_id).order_by(MemoryAdvice.at)
+        ).all()
     ]
     messages = [
         {
@@ -161,7 +208,10 @@ def memory_payload(db: Session, message_limit: int = 20) -> dict:
             **({"risk": row.risk} if row.risk else {}),
         }
         for row in db.scalars(
-            select(ChatMessage).order_by(ChatMessage.seq.desc()).limit(message_limit)
+            select(ChatMessage)
+            .where(ChatMessage.user_id == user_id)
+            .order_by(ChatMessage.seq.desc())
+            .limit(message_limit)
         ).all()
     ]
     messages.reverse()
@@ -174,31 +224,22 @@ def memory_payload(db: Session, message_limit: int = 20) -> dict:
     }
 
 
-def settings_payload(db: Session) -> dict:
-    row = db.get(AISettings, 1)
-    key = keyring_store.get_llm_key()
-    return {
-        "schemaVersion": 1,
-        "endpoint": row.endpoint if row else "",
-        "model": row.model if row else "",
-        "enabled": bool(row.enabled) if row else False,
-        "hasKey": bool(key),
-        "keyHint": (row.key_hint if row else None) or "",
-    }
+def settings_payload(db: Session | None = None) -> dict:
+    """Site-provided AI: the browser sees the model name, never the key."""
+    config = site_llm_config()
+    payload = config.public()
+    payload["schemaVersion"] = 1
+    return payload
 
 
-def export_payload(db: Session) -> dict:
-    state = state_payload(db)
-    memory = memory_payload(db)
-    safe_settings = {
-        "endpoint": settings_payload(db)["endpoint"],
-        "model": settings_payload(db)["model"],
-        "enabled": settings_payload(db)["enabled"],
-    }
+def export_payload(db: Session, user_id: int) -> dict:
+    state = state_payload(db, user_id)
+    memory = memory_payload(db, user_id)
+    safe_settings = site_llm_config().public()
     return {
         "schemaVersion": 1,
         "exportedAt": datetime.now(timezone.utc).isoformat(),
-        "sessions": sessions_payload(db)["sessions"],
+        "sessions": sessions_payload(db, user_id)["sessions"],
         "draft": {
             "schemaVersion": 1,
             "tier": state["tier"],
@@ -210,7 +251,11 @@ def export_payload(db: Session) -> dict:
         }
         if state["tier"]
         else None,
-        "settings": safe_settings,
+        "settings": {
+            "endpoint": safe_settings["endpoint"],
+            "model": safe_settings["model"],
+            "enabled": safe_settings["enabled"],
+        },
         "memory": {
             "schemaVersion": 1,
             "profile": memory["profile"],

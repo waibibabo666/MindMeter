@@ -1,4 +1,10 @@
-"""OpenAI-compatible chat client used only by the local backend."""
+"""OpenAI-compatible chat client.
+
+The deployment owns the credential: ``MM_LLM_API_KEY`` / ``MM_LLM_BASE_URL`` /
+``MM_LLM_MODEL`` on the web service. Nothing in this module reads a local
+credential store, and no key is ever persisted to the database or returned to
+the browser (``site_llm_config().public()`` drops it).
+"""
 from __future__ import annotations
 
 import os
@@ -54,6 +60,49 @@ class LLMReply:
     text: str
     model: str
     finish_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class LLMConfig:
+    """Site-level model config. `key` must never leave the process."""
+
+    endpoint: str
+    model: str
+    key: str
+    enabled: bool
+
+    def public(self) -> dict:
+        """What the browser is allowed to know."""
+        return {
+            "endpoint": self.endpoint,
+            "model": self.model,
+            "enabled": self.enabled,
+            "hasKey": bool(self.key),
+            "keyHint": mask_key(self.key) if self.key else "",
+            "managedBy": "site",
+            "readOnly": True,
+        }
+
+
+def mask_key(value: str) -> str:
+    value = str(value or "")
+    if not value:
+        return ""
+    if len(value) <= 8:
+        return "已配置"
+    return f"{value[:3]}…{value[-4:]}"
+
+
+def site_llm_config() -> LLMConfig:
+    endpoint = settings.llm_endpoint or normalize_endpoint(settings.llm_base_url)
+    key = str(settings.llm_api_key or "").strip()
+    model = str(settings.llm_model or "").strip()
+    return LLMConfig(
+        endpoint=endpoint,
+        model=model,
+        key=key,
+        enabled=bool(endpoint and model and key),
+    )
 
 
 def call_llm(

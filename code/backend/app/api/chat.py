@@ -6,8 +6,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from .. import auth
 from ..agent import answer
-from ..privacy import find_sensitive, redact
 from ..db import get_db
 from ..models import (
     AIRun,
@@ -16,27 +16,41 @@ from ..models import (
     MemoryAdvice,
     MemoryProfile,
     MemorySummary,
+    User,
 )
-from ..serializers import assessment_to_session, memory_payload, sessions_payload
-from ..timeutil import parse_dt
+from ..privacy import find_sensitive, redact
+from ..serializers import (
+    assessment_to_session,
+    find_advice,
+    memory_payload,
+    sessions_payload,
+)
 from ..trend import build_trend_payload
 
 router = APIRouter()
+
+KEEP_MESSAGES = 20
+HISTORY_MESSAGES = 6
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _next_seq(db: Session) -> int:
-    current = db.scalar(select(ChatMessage.seq).order_by(ChatMessage.seq.desc()).limit(1))
+def _next_seq(db: Session, user_id: int) -> int:
+    current = db.scalar(
+        select(ChatMessage.seq)
+        .where(ChatMessage.user_id == user_id)
+        .order_by(ChatMessage.seq.desc())
+        .limit(1)
+    )
     return int(current or 0) + 1
 
 
-def _facts(db: Session) -> tuple[dict, str | None]:
+def _facts(db: Session, user_id: int) -> tuple[dict, str | None]:
     row = db.scalar(
         select(Assessment)
-        .where(Assessment.status == "completed")
+        .where(Assessment.user_id == user_id, Assessment.status == "completed")
         .order_by(Assessment.finished_at.desc().nullslast())
         .limit(1)
     )
@@ -51,14 +65,14 @@ def _facts(db: Session) -> tuple[dict, str | None]:
             if isinstance(score, int):
                 facts[dim]["score"] = score
     # 趋势数据挂在专用键下：delta/days 随 collect_numbers 进入校验白名单。
-    trend = build_trend_payload(sessions_payload(db, limit=2)["sessions"])
+    trend = build_trend_payload(sessions_payload(db, user_id, limit=2)["sessions"])
     if trend is not None:
         facts["trend"] = trend
     return facts, row.id
 
 
-def _memory_context(db: Session) -> dict:
-    profile_row = db.get(MemoryProfile, 1)
+def _memory_context(db: Session, user_id: int) -> dict:
+    profile_row = db.get(MemoryProfile, user_id)
     profile = None
     if profile_row is not None and profile_row.confirmed:
         profile = {
@@ -67,9 +81,19 @@ def _memory_context(db: Session) -> dict:
             "constraint": profile_row.constraint,
             "confirmed": True,
         }
-    latest = db.scalar(select(MemorySummary).order_by(MemorySummary.at.desc()).limit(1))
+    latest = db.scalar(
+        select(MemorySummary)
+        .where(MemorySummary.user_id == user_id)
+        .order_by(MemorySummary.at.desc())
+        .limit(1)
+    )
     advice = list(
-        db.scalars(select(MemoryAdvice).order_by(MemoryAdvice.at.desc()).limit(5)).all()
+        db.scalars(
+            select(MemoryAdvice)
+            .where(MemoryAdvice.user_id == user_id)
+            .order_by(MemoryAdvice.at.desc())
+            .limit(5)
+        ).all()
     )
     return {
         "profile": profile,
@@ -80,18 +104,21 @@ def _memory_context(db: Session) -> dict:
     }
 
 
-def _history(db: Session) -> list[dict]:
+def _history(db: Session, user_id: int) -> list[dict]:
     rows = list(
-        db.scalars(select(ChatMessage).order_by(ChatMessage.seq.desc()).limit(6)).all()
+        db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.user_id == user_id)
+            .order_by(ChatMessage.seq.desc())
+            .limit(HISTORY_MESSAGES)
+        ).all()
     )
-    return [
-        {"role": row.role, "content": row.content}
-        for row in reversed(rows)
-    ]
+    return [{"role": row.role, "content": row.content} for row in reversed(rows)]
 
 
 def _append(
     db: Session,
+    user_id: int,
     role: str,
     content: str,
     *,
@@ -100,8 +127,9 @@ def _append(
     code=None,
     risk=None,
 ) -> ChatMessage:
-    seq = _next_seq(db)
+    seq = _next_seq(db, user_id)
     row = ChatMessage(
+        user_id=user_id,
         id=f"msg_{int(_now().timestamp() * 1000)}_{seq}",
         role=role,
         content=content,
@@ -115,26 +143,41 @@ def _append(
     db.add(row)
     db.flush()
     keep = list(
-        db.scalars(select(ChatMessage.id).order_by(ChatMessage.seq.desc()).limit(20)).all()
+        db.scalars(
+            select(ChatMessage.id)
+            .where(ChatMessage.user_id == user_id)
+            .order_by(ChatMessage.seq.desc())
+            .limit(KEEP_MESSAGES)
+        ).all()
     )
     if keep:
-        db.execute(delete(ChatMessage).where(ChatMessage.id.not_in(keep)))
+        db.execute(
+            delete(ChatMessage).where(
+                ChatMessage.user_id == user_id, ChatMessage.id.not_in(keep)
+            )
+        )
     return row
 
 
 @router.get("/chat/messages")
-def messages(db: Session = Depends(get_db)):
-    return {"schemaVersion": 1, "messages": memory_payload(db)["messages"]}
+def messages(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    return {"schemaVersion": 1, "messages": memory_payload(db, int(user.id))["messages"]}
 
 
 @router.post("/chat/messages")
-def append_message(payload: dict = Body(...), db: Session = Depends(get_db)):
+def append_message(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    uid = int(user.id)
     role = "assistant" if payload.get("role") == "assistant" else "user"
     content = str(payload.get("content") or "")
     if not content:
         raise HTTPException(400, "empty_message")
     row = _append(
         db,
+        uid,
         role,
         content,
         source=payload.get("source"),
@@ -147,18 +190,23 @@ def append_message(payload: dict = Body(...), db: Session = Depends(get_db)):
 
 
 @router.post("/chat")
-def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
+def chat(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    uid = int(user.id)
     question = str(payload.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "empty_question")
-    facts, assessment_id = _facts(db)
-    memory = _memory_context(db)
-    history = _history(db)
+    facts, assessment_id = _facts(db, uid)
+    memory = _memory_context(db, uid)
+    history = _history(db, uid)
 
     # PII is redacted before storage and never forwarded to a model.
     sensitive = find_sensitive(question)
     if sensitive:
-        _append(db, "user", redact(question))
+        _append(db, uid, "user", redact(question))
         result = {
             "intent": "privacy",
             "risk": "high",
@@ -166,7 +214,7 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
                 "我检测到你在消息里写了"
                 + "、".join(sensitive)
                 + "。这类个人信息不会被保存原文，也不会发送给模型。"
-                "请只描述与测评相关的问题；如果已经发送过敏感信息，建议在设置里清除本机数据。"
+                "请只描述与测评相关的问题；如果已经发送过敏感信息，可以在设置里清除本账号数据。"
             ),
             "citations": [],
             "sources": [],
@@ -175,12 +223,13 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
         }
     else:
         # Persist the user turn before the model call so a crash still leaves the question.
-        _append(db, "user", question)
+        _append(db, uid, "user", question)
         db.commit()
         result = answer(db, question, facts, history, memory)
 
     _append(
         db,
+        uid,
         "assistant",
         result.get("text", ""),
         source=result.get("source"),
@@ -191,6 +240,7 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
     code = result.get("code")
     db.add(
         AIRun(
+            user_id=uid,
             assessment_id=assessment_id,
             model=result.get("model"),
             intent=result.get("intent"),
@@ -207,7 +257,9 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
             source_id = str(source.get("id") or "")
             if not source_id.startswith("kb-plan"):
                 continue
-            advice = db.get(MemoryAdvice, source_id) or MemoryAdvice(id=source_id, at=_now())
+            advice = find_advice(db, uid, source_id) or MemoryAdvice(
+                user_id=uid, id=source_id, at=_now()
+            )
             advice.title = str(source.get("title") or "")
             advice.shown = True
             db.add(advice)
@@ -224,5 +276,5 @@ def chat(payload: dict = Body(...), db: Session = Depends(get_db)):
             "risk": result.get("risk", "low"),
             "assessmentId": assessment_id,
         },
-        "messages": memory_payload(db)["messages"],
+        "messages": memory_payload(db, uid)["messages"],
     }

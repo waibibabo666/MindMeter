@@ -23,19 +23,19 @@ def _session_payload(assessment_id, finished_at, vc_correct):
     }
 
 
-def test_trends_endpoint_carries_delta_and_repeat_risk(client):
+def test_trends_endpoint_carries_delta_and_repeat_risk(logged_client):
     tag = uuid.uuid4().hex[:6]
-    prev = client.post(
+    prev = logged_client.post(
         "/api/v1/assessments",
         json={"session": _session_payload(f"s_prev_{tag}", "2027-01-01T01:00:00Z", 6)},
     )
-    nxt = client.post(
+    nxt = logged_client.post(
         "/api/v1/assessments",
         json={"session": _session_payload(f"s_next_{tag}", "2027-01-10T01:00:00Z", 5)},
     )
     assert prev.status_code == nxt.status_code == 200
 
-    trends = client.get("/api/v1/trends").json()
+    trends = logged_client.get("/api/v1/trends").json()
     assert trends["days"] == 9
     assert trends["repeatRisk"] is False
     assert trends["prevId"] == f"s_prev_{tag}"
@@ -45,8 +45,8 @@ def test_trends_endpoint_carries_delta_and_repeat_risk(client):
     assert by_id["vc"]["name"] == "言语理解"
 
 
-def test_chat_trend_question_routes_trend_scene(client):
-    response = client.post("/api/v1/chat", json={"question": "这两次测评有什么变化"})
+def test_chat_trend_question_routes_trend_scene(logged_client):
+    response = logged_client.post("/api/v1/chat", json={"question": "这两次测评有什么变化"})
     assert response.status_code == 200, response.text
     reply = response.json()["reply"]
     assert reply["intent"] == "trend"
@@ -56,22 +56,22 @@ def test_chat_trend_question_routes_trend_scene(client):
     assert "→" in reply["text"]
 
 
-def test_chat_self_blame_never_calls_model(client):
-    response = client.post("/api/v1/chat", json={"question": "我就是笨，什么都记不住"})
+def test_chat_self_blame_never_calls_model(logged_client):
+    response = logged_client.post("/api/v1/chat", json={"question": "我就是笨，什么都记不住"})
     assert response.status_code == 200, response.text
     reply = response.json()["reply"]
     assert reply["intent"] == "self_blame"
     assert "测评能得出的结论" in reply["text"]
 
 
-def test_report_explain_goes_through_validation(client):
+def test_report_explain_goes_through_validation(logged_client):
     tag = uuid.uuid4().hex[:6]
-    created = client.post(
+    created = logged_client.post(
         "/api/v1/assessments",
         json={"session": _session_payload(f"s_rep_{tag}", "2027-02-01T01:00:00Z", 5)},
     )
     assert created.status_code == 200
-    response = client.post(f"/api/v1/reports/s_rep_{tag}/explain")
+    response = logged_client.post(f"/api/v1/reports/s_rep_{tag}/explain")
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["text"]

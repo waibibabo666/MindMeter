@@ -1,20 +1,27 @@
-"""Local-only API guard.
+"""HTTP guard for the hosted web app.
 
-The backend binds to 127.0.0.1 and requires a per-launch token. We also reject
-non-loopback Host headers and cross-origin browser requests. There is no CORS
-middleware: the UI is served from the same origin.
+This replaces the desktop ``LocalGuardMiddleware`` (loopback + per-launch
+token), which cannot work on a public host. Two things stay, one thing is new:
+
+* the same security headers and strict same-origin CSP;
+* state-changing ``/api/`` requests must be same-origin and JSON — that plus
+  the ``SameSite=Lax`` session cookie is the CSRF defense (no token table,
+  no extra round-trip);
+* authentication itself is *not* decided here: ``app.auth.require_user`` is a
+  FastAPI dependency, so every endpoint says explicitly whether it is public.
+
+A pure ASGI middleware is used on purpose: BaseHTTPMiddleware buffers response
+bodies and breaks ``StaticFiles`` streaming (h11 "Too much data").
 """
 from __future__ import annotations
 
-import hmac
 import json
 from collections.abc import Awaitable, Callable
+from urllib.parse import urlsplit
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from starlette.datastructures import Headers, MutableHeaders
-
-from .config import settings
 
 CSP = (
     "default-src 'self'; "
@@ -27,50 +34,29 @@ CSP = (
     "frame-ancestors 'none'"
 )
 
-
-def _host_ok(host: str) -> bool:
-    if not host:
-        return False
-    hostname = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
-    return hostname in {"127.0.0.1", "localhost"}
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+API_PREFIX = "/api/"
 
 
-def _origin_ok(origin: str) -> bool:
+def _host_of(url: str) -> str:
+    parts = urlsplit(url)
+    return (parts.netloc or "").lower()
+
+
+def same_origin(headers: Headers, host: str) -> bool:
+    """No Origin header (non-browser client, curl, health probe) is allowed."""
+    origin = headers.get("origin", "") or headers.get("referer", "")
     if not origin:
         return True
-    return origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost")
+    return _host_of(origin) == (host or "").lower()
 
 
-async def enforce_local_request(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
-    """Deprecated helper kept for import compatibility; use LocalGuardMiddleware."""
-    path = request.url.path
-
-    if path.startswith("/api/"):
-        if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
-            return JSONResponse({"detail": "loopback_only"}, status_code=403)
-        if not _host_ok(request.headers.get("host", "")):
-            return JSONResponse({"detail": "invalid_host"}, status_code=400)
-        if not _origin_ok(request.headers.get("origin", "")):
-            return JSONResponse({"detail": "invalid_origin"}, status_code=403)
-        token = request.headers.get("x-mm-token", "")
-        if not settings.api_token or not hmac.compare_digest(token, settings.api_token):
-            return JSONResponse({"detail": "unauthorized"}, status_code=401)
-
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = CSP
-    if path.startswith("/api/"):
-        response.headers["Cache-Control"] = "no-store"
-    return response
+def _json_body(status: int, code: str) -> bytes:
+    return json.dumps({"error": code, "message": code, "detail": code}).encode("utf-8")
 
 
 async def _send_json(send: Callable, status: int, code: str) -> None:
-    """直接发一个最小的 JSON 响应，不经过任何中间件包装。"""
-    body = json.dumps({"detail": code}).encode("utf-8")
+    body = _json_body(status, code)
     await send(
         {
             "type": "http.response.start",
@@ -86,14 +72,8 @@ async def _send_json(send: Callable, status: int, code: str) -> None:
     await send({"type": "http.response.body", "body": body})
 
 
-class LocalGuardMiddleware:
-    """纯 ASGI 版本的本地访问守卫。
-
-    不用 FastAPI 的 `@app.middleware("http")`（BaseHTTPMiddleware）：那层会
-    缓冲并重发响应体，和 StaticFiles 的流式 FileResponse 叠在一起时会报
-    `h11: Too much data for declared Content-Length`。这里只在响应头上补安全
-    头，响应体原样透传。
-    """
+class SecurityMiddleware:
+    """Security headers + same-origin/JSON gate for mutating API calls."""
 
     def __init__(self, app: Callable) -> None:
         self.app = app
@@ -104,35 +84,42 @@ class LocalGuardMiddleware:
             return
 
         path = scope.get("path", "")
-        if path.startswith("/api/"):
-            client = scope.get("client") or ("", 0)
-            headers = Headers(scope=scope)
-            if client[0] not in {"127.0.0.1", "::1"}:
-                await _send_json(send, 403, "loopback_only")
-                return
-            if not _host_ok(headers.get("host", "")):
-                await _send_json(send, 400, "invalid_host")
-                return
-            if not _origin_ok(headers.get("origin", "")):
+        headers = Headers(scope=scope)
+        method = str(scope.get("method", "GET")).upper()
+
+        if path.startswith(API_PREFIX) and method not in SAFE_METHODS:
+            if not same_origin(headers, headers.get("host", "")):
                 await _send_json(send, 403, "invalid_origin")
                 return
-            token = headers.get("x-mm-token", "")
-            if not settings.api_token or not hmac.compare_digest(token, settings.api_token):
-                await _send_json(send, 401, "unauthorized")
-                return
+            length = headers.get("content-length", "")
+            if length and length != "0":
+                if "application/json" not in headers.get("content-type", "").lower():
+                    await _send_json(send, 415, "json_body_required")
+                    return
 
         async def send_with_headers(message: dict) -> None:
             if message["type"] == "http.response.start":
-                headers = MutableHeaders(scope=message)
-                headers["X-Content-Type-Options"] = "nosniff"
-                headers["Referrer-Policy"] = "no-referrer"
-                headers["X-Frame-Options"] = "DENY"
-                headers["Content-Security-Policy"] = CSP
-                if path.startswith("/api/"):
-                    headers["Cache-Control"] = "no-store"
+                out = MutableHeaders(scope=message)
+                out["X-Content-Type-Options"] = "nosniff"
+                out["Referrer-Policy"] = "no-referrer"
+                out["X-Frame-Options"] = "DENY"
+                out["Content-Security-Policy"] = CSP
+                if path.startswith(API_PREFIX):
+                    out["Cache-Control"] = "no-store"
+                    out["Vary"] = "Cookie"
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
+
+
+# Kept for the desktop launcher's old import path; the web app does not use it.
+LocalGuardMiddleware = SecurityMiddleware
+
+
+async def enforce_local_request(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:  # pragma: no cover - compatibility shim
+    return await call_next(request)
 
 
 def json_error(status: int, code: str, message: str = "") -> JSONResponse:

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mindmeter-backend"
-version = "0.2.0"
-description = "MindMeter local FastAPI backend"
+version = "0.3.0"
+description = "MindMeter hosted FastAPI backend (multi-user web app)"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
@@ -15,11 +15,9 @@ dependencies = [
   "psycopg[binary]>=3.2",
   "pgvector>=0.3",
   "pydantic-settings>=2.0",
-  "keyring>=25",
   "httpx>=0.27",
   "langgraph>=0.2",
   "langchain-core>=0.3",
-  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

@@ -115,7 +115,7 @@ function scoreNote() {
     el('h2', { class: 'card-title', text: '分数怎么来的' }),
     el('p', {
       class: 'muted',
-      text: `当前分数由本机服务端按 ${SCORING_VERSION} 折算（0–100），题量按本壳实际题数缩放；分数只代表本次任务表现。`,
+      text: `当前分数由服务端按 ${SCORING_VERSION} 折算（0–100），题量按本壳实际题数缩放；分数只代表本次任务表现。`,
     }),
     el('p', {
       class: 'tiny',
@@ -249,8 +249,8 @@ function renderAiCard(ctx, assessmentId) {
           ? '由你配置的模型生成，内容仅供参考。'
           : '未配置 AI 或模型不可用，已用模板解读';
     } catch {
-      // 本地服务不可用也保留卡片，重试是用户的下一步动作。
-      reason.textContent = '本地服务不可用，暂时无法生成解读。';
+      // 站点服务不可用也保留卡片，重试是用户的下一步动作。
+      reason.textContent = '站点服务暂不可用，暂时无法生成解读。';
     } finally {
       run.disabled = false;
     }
@@ -258,7 +258,7 @@ function renderAiCard(ctx, assessmentId) {
 
   const run = button('生成解读', () => runExplain(), { variant: 'ghost' });
 
-  // 没配 Key 时模板解读是本机即时返回的，直接显示，别让用户面对空白卡片。
+  // 未配置模型时模板解读即时返回，直接显示，别让用户面对空白卡片。
   if (!readSettings().hasKey) runExplain();
 
   return el('div', { class: 'card ai-card' }, [

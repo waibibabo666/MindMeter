@@ -2,7 +2,7 @@
  * 游戏记录的本地存储。
  *
  * 与 storage.js（走后端 API）分开：游戏是练习，不参与测评数据，
- * 只放本机 localStorage，清库/导出都不影响它。
+ * 只放本设备 localStorage，账号清库/导出都不影响它。
  */
 
 const KEY = 'mindmeter.games.v2';

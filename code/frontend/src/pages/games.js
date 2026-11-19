@@ -63,7 +63,7 @@ export function renderGames(root, ctx) {
       el('h1', { id: 'games-title', class: 'page-title', text: '游戏中心' }),
       el('p', {
         class: 'lead',
-        text: '自由练习、即时反馈，随时可退出。成绩只记本机最佳，不计入测评报告，也不改变维度分数。',
+        text: '自由练习、即时反馈，随时可退出。成绩只记本设备最佳，不计入测评报告，也不改变维度分数。',
       }),
       el('p', { class: 'tiny', text: note }),
       ...DIMS.map((dim) => dimSection(dim, records, ctx)),

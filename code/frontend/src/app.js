@@ -1,8 +1,9 @@
-﻿/**
- * 静态 App 壳（L-01）入口。
+/**
+ * Web App 壳（L-01 + 账号）入口。
  *
- * 路由：#/ → #/tier → #/consent → #/task/<id> → #/report → #/trend
- * 状态由 boot 预取到内存缓存，写回本地 FastAPI；刷新/返回不丢进度。
+ * 路由：#/login #/register（未登录） → #/ → #/tier → #/consent → #/intake
+ * → #/task/<id> → #/report → #/trend。状态由 boot 预取到内存缓存，写回
+ * 同源的 FastAPI；刷新/返回不丢进度，换设备登录后仍是同一份数据。
  */
 import { createRouter } from './router.js';
 import { createShell } from './shell.js';
@@ -10,12 +11,15 @@ import { animateNumbers } from './motion.js';
 import { attachClickSounds } from './sound.js';
 import { readState, update, resetState } from './store.js';
 import { addSession, clearAllData, exportData } from './storage.js';
-import { bootstrap, installFlushHook } from './boot.js';
+import { UNAUTHENTICATED } from './api.js';
+import { AUTH_PATHS, logout as signOutApi, session } from './auth.js';
+import { bootstrap, installFlushHook, resetCache } from './boot.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { log } from './log.js';
 import { STANDARD_ORDER, TIERS } from './data.js';
 import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
+import { renderLogin, renderRegister } from './pages/auth.js';
 import { renderTier } from './pages/tier.js';
 import { renderConsent } from './pages/consent.js';
 import { renderIntake } from './pages/intake.js';
@@ -41,7 +45,7 @@ function showRenderError(error) {
       el('h1', { class: 'page-title', text: '页面没能正常显示' }),
       el('p', {
         class: 'lead',
-        text: '可能是本地数据异常。可以先返回首页重试；如果反复出现，请在设置里清除本地数据。',
+        text: '可能是账号数据异常。可以先返回首页重试；如果反复出现，请在设置里清除本账号数据。',
       }),
       el('div', { class: 'row' }, [
         button(
@@ -59,6 +63,8 @@ function showRenderError(error) {
 
 const PAGES = {
   '/': renderHome,
+  '/login': renderLogin,
+  '/register': renderRegister,
   '/tier': renderTier,
   '/consent': renderConsent,
   '/intake': renderIntake,
@@ -144,7 +150,7 @@ async function finishTask(taskId, payload) {
     }));
   } catch (error) {
     log('error', '保存测评失败', error && error.message);
-    toast('保存失败：结果只保留在当前页面，请重启后重测');
+    toast('保存失败：结果只保留在当前页面，请检查网络后重试');
     setState(() => ({ scores: localScores, assessmentId: null }));
   }
   router.go('/report');
@@ -194,7 +200,7 @@ const ctx = {
       const data = await exportData();
       log(
         'info',
-        '导出本地数据',
+        '导出数据',
         `sessions=${Array.isArray(data.sessions) ? data.sessions.length : 0}`,
       );
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -206,19 +212,19 @@ const ctx = {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast('已导出本地数据（不含 LLM Key）');
+      toast('已导出数据（不含模型密钥）');
     } catch (error) {
       log('error', 'export failed', error && error.message);
-      toast('导出失败：本地服务不可用或下载被拦截');
+      toast('导出失败：站点服务不可用或下载被拦截');
     }
   },
   clearAll: async () => {
-    if (!window.confirm('清除本机保存的测评进度与结果？此操作不可恢复。')) return;
-    log('info', '清除本地数据');
+    if (!window.confirm('清除本账号保存的测评进度与结果？此操作不可恢复。')) return;
+    log('info', '清除账号数据');
     try {
       await clearAllData();
       resetState();
-      toast('已清除本地数据');
+      toast('已清除本账号数据');
       router.go('/');
     } catch (error) {
       log('error', 'clear failed', error && error.message);
@@ -232,22 +238,47 @@ const ctx = {
       return { drafts };
     });
   },
+  /** 登录/注册成功：拉取该账号的数据，再进入产品。 */
+  onAuthenticated: async (user) => {
+    log('info', '登录成功', user && user.username ? user.username : '');
+    await bootstrap();
+    toast(`已登录：${(user && user.username) || ''}`);
+    router.go('/');
+  },
+  /** 退出登录：清掉内存里属于上一个账号的一切，再回到登录页。 */
+  signOut: async () => {
+    try {
+      await signOutApi();
+    } catch (error) {
+      log('warn', 'logout failed', error && error.message);
+    }
+    resetCache();
+    resetState();
+    toast('已退出登录');
+    router.go('/login', { replace: true });
+  },
 };
 
 const router = createRouter((route) => {
-  log('info', '路由', route.full);
+  const target = gateRoute(route);
+  if (target.full !== route.full) {
+    router.go(target.full, { replace: true });
+    return;
+  }
+
+  log('info', '路由', target.full);
   dispose();
   dispose = () => {};
   clear(root);
 
-  setState(() => ({ route: route.full }));
-  shell.updateShell(route);
+  setState(() => ({ route: target.full }));
+  shell.updateShell(target);
   shell.renderRail();
 
-  const handler = PAGES[route.path] || renderHome;
+  const handler = PAGES[target.path] || renderHome;
   let result = () => {};
   try {
-    result = handler(root, ctx, route.param);
+    result = handler(root, ctx, target.param);
   } catch (error) {
     showRenderError(error);
   }
@@ -259,6 +290,25 @@ const router = createRouter((route) => {
   animateNumbers(root);
 });
 
+/**
+ * Auth gate: anonymous visitors only get the two account pages; a signed-in
+ * user never sees the login screen again.
+ */
+function gateRoute(route) {
+  const authPage = AUTH_PATHS.includes(route.path);
+  if (!session.authenticated && !authPage) return { path: '/login', param: null, full: '/login' };
+  if (session.authenticated && authPage) return { path: '/', param: null, full: '/' };
+  return route;
+}
+
+globalThis.addEventListener(UNAUTHENTICATED, () => {
+  if (!session.authenticated) return;
+  session.authenticated = false;
+  resetCache();
+  toast('登录状态已失效，请重新登录');
+  router.go('/login', { replace: true });
+});
+
 const shell = createShell({ ctx, router });
 
 function showBootError(error) {
@@ -266,10 +316,10 @@ function showBootError(error) {
   clear(root);
   root.appendChild(
     el('section', { class: 'page' }, [
-      el('h1', { class: 'page-title', text: '本地服务没有启动' }),
+      el('h1', { class: 'page-title', text: '站点服务没有响应' }),
       el('p', {
         class: 'lead',
-        text: 'MindMeter 的本地数据库或解读服务没有就绪。请关闭窗口后重新打开；如果反复出现，请查看启动日志。',
+        text: 'MindMeter 的后端或数据库没有就绪（免费实例冷启动约需 1 分钟）。请稍后刷新；如果反复出现，请查看 Render 日志。',
       }),
       el('div', { class: 'row' }, [
         button(
@@ -296,11 +346,14 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 async function startApp() {
-  await bootstrap();
+  const boot = await bootstrap();
   installFlushHook();
-  if (!window.location.hash) {
+  if (!boot.authenticated) {
+    // Anonymous: the gate owns the screen. Never restore a stale account route.
+    window.history.replaceState(null, '', '#/login');
+  } else if (!window.location.hash || AUTH_PATHS.includes(window.location.hash.slice(1))) {
     const saved = readState().route;
-    if (saved && saved !== '/') {
+    if (saved && saved !== '/' && !AUTH_PATHS.includes(saved)) {
       window.history.replaceState(null, '', `#${saved}`);
     }
   }

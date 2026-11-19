@@ -1,10 +1,13 @@
-"""Redacted, rotating local logs.
+"""Redacted logs: a rotating file for local runs, stdout for hosted runs.
 
 We never log prompts, answers, request bodies, Authorization headers, or keys.
+A hosted filesystem is ephemeral, so ``setup_logging`` must never crash the
+process just because the scratch directory is missing or read-only.
 """
 from __future__ import annotations
 
 import logging
+import os
 import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -28,20 +31,41 @@ class RedactionFilter(logging.Filter):
         return True
 
 
+def _add_stream_handler(logger: logging.Logger) -> None:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    handler.addFilter(RedactionFilter())
+    logger.addHandler(handler)
+
+
+def _add_file_handler(logger: logging.Logger, data_dir: Path) -> bool:
+    try:
+        log_dir = Path(data_dir) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            log_dir / "backend.log", maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        )
+    except OSError:
+        return False
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    handler.addFilter(RedactionFilter())
+    logger.addHandler(handler)
+    return True
+
+
 def setup_logging(data_dir: Path) -> logging.Logger:
-    log_dir = Path(data_dir) / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("mindmeter")
     logger.setLevel(logging.INFO)
     if logger.handlers:
         return logger
 
-    handler = RotatingFileHandler(
-        log_dir / "backend.log", maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-    )
-    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
-    handler.addFilter(RedactionFilter())
-    logger.addHandler(handler)
+    hosted = bool(os.environ.get("RENDER", "").strip())
+    if hosted:
+        _add_stream_handler(logger)
+        _add_file_handler(logger, data_dir)
+    else:
+        if not _add_file_handler(logger, data_dir):
+            _add_stream_handler(logger)
     logger.propagate = False
 
     for noisy in ("httpx", "httpcore", "httpcore2", "httpx2", "sqlalchemy.engine", "urllib3"):

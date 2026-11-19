@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light" />
     <meta
       name="description"
-      content="MindMeter 心智镜：本机认知测评。8 个维度、三档时长、分维度参考，不设总分，数据不出这台设备。"
+      content="MindMeter 心智镜：8 个维度、三档时长的认知自测与对话式解读。账号数据隔离，不设总分，不做临床诊断。"
     />
     <title>MindMeter · 心智镜</title>
     <link rel="stylesheet" href="./src/styles/app.css" />
@@ -96,8 +96,8 @@
             </svg>
             <span class="sr-only">收起或展开右侧快捷操作栏</span>
           </button>
-          <a class="toplink" href="#/settings">设置</a>
-          <button class="toplink-btn quit-app" id="quit-app" type="button">退出</button>
+          <a class="toplink" id="toplink-settings" href="#/settings">设置</a>
+          <button class="toplink-btn quit-app" id="quit-app" type="button">登录</button>
         </span>
       </header>
 
@@ -229,7 +229,7 @@
             </svg>
             设置
           </a>
-          <p class="sidefoot">本机运行 · 数据不出这台电脑<br />课程演示版 · 非临床诊断</p>
+          <p class="sidefoot">站点托管 · 数据按账号隔离<br />课程演示版 · 非临床诊断</p>
         </nav>
 
         <main id="app" tabindex="-1" aria-live="polite"></main>

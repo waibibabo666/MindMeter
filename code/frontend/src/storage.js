@@ -1,9 +1,9 @@
 /**
- * API-backed repository facade (local PostgreSQL; no localStorage business data).
+ * API-backed repository facade (per-account PostgreSQL rows; no localStorage business data).
  *
  * Reads come from the in-memory cache loaded by boot.js; writes go to the
- * local FastAPI service. The LLM key is never stored here: settings only
- * expose endpoint/model/enabled/hasKey/keyHint.
+ * same-origin FastAPI service. The model key is never handled here: the
+ * settings surface only exposes endpoint/model/enabled/hasKey/keyHint.
  */
 
 import { api } from './api.js';
@@ -85,8 +85,8 @@ export function readSettings() {
 }
 
 /**
- * Save non-secret config and, optionally, a transiently supplied key.
- * The returned object never contains the key.
+ * Non-secret config only: the hosted app never accepts a model key from the
+ * browser (the deployment owns it), and the response has no key either.
  */
 export async function writeSettings(patch) {
   const payload = {
@@ -94,7 +94,6 @@ export async function writeSettings(patch) {
     model: String(patch.model ?? cache.settings.model ?? ''),
     enabled: Boolean(patch.enabled ?? cache.settings.enabled),
   };
-  if (patch.apiKey) payload.apiKey = String(patch.apiKey);
   const saved = await api.put('/settings/ai', payload);
   cache.settings = Object.assign(defaultSettings(), saved);
   return readSettings();
@@ -121,7 +120,7 @@ export function readMemory() {
   };
 }
 
-/** Update cache immediately, then replace the server copy (small local dataset). */
+/** Update cache immediately, then replace this account's server copy. */
 export function writeMemory(patch) {
   cache.memory = Object.assign(readMemory(), patch, { schemaVersion: SCHEMA_VERSION });
   if (cache.memory.messages.length > MAX_MESSAGES) {

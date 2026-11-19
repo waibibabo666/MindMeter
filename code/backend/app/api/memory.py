@@ -6,9 +6,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from .. import auth
 from ..db import get_db
-from ..models import ChatMessage, MemoryAdvice, MemoryProfile, MemorySummary
-from ..serializers import memory_payload
+from ..models import ChatMessage, MemoryAdvice, MemoryProfile, MemorySummary, User
+from ..serializers import find_advice, find_summary, memory_payload
 from ..timeutil import parse_dt
 
 router = APIRouter()
@@ -19,15 +20,20 @@ def _now() -> datetime:
 
 
 @router.get("/memory")
-def get_memory(db: Session = Depends(get_db)):
-    return memory_payload(db)
+def get_memory(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    return memory_payload(db, int(user.id))
 
 
 @router.put("/memory")
-def replace_memory(payload: dict = Body(...), db: Session = Depends(get_db)):
-    """Replace the small local memory snapshot (used by the frontend facade)."""
+def replace_memory(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    """Replace this account's memory snapshot (used by the frontend facade)."""
+    uid = int(user.id)
     profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else {}
-    row = db.get(MemoryProfile, 1) or MemoryProfile(id=1)
+    row = db.get(MemoryProfile, uid) or MemoryProfile(user_id=uid)
     row.goal = str(profile.get("goal") or "").strip()
     row.preference = str(profile.get("preference") or "").strip()
     row.constraint = str(profile.get("constraint") or "").strip()
@@ -35,16 +41,18 @@ def replace_memory(payload: dict = Body(...), db: Session = Depends(get_db)):
     row.confirmed_at = _now() if row.confirmed else None
     db.add(row)
 
-    db.execute(delete(MemorySummary))
+    db.execute(delete(MemorySummary).where(MemorySummary.user_id == uid))
     for item in payload.get("summaries") or []:
         if not isinstance(item, dict) or not item.get("id"):
             continue
         lowest = item.get("lowest") or {}
         db.add(
             MemorySummary(
+                user_id=uid,
                 id=str(item["id"]),
                 at=parse_dt(item.get("at")) or _now(),
                 tier=str(item.get("tier") or "standard"),
+                assessment_id=item.get("assessmentId"),
                 lowest_dim=lowest.get("id") if isinstance(lowest, dict) else None,
                 lowest_value=lowest.get("value") if isinstance(lowest, dict) else None,
                 advice_ids=list(item.get("adviceIds") or []),
@@ -52,12 +60,13 @@ def replace_memory(payload: dict = Body(...), db: Session = Depends(get_db)):
             )
         )
 
-    db.execute(delete(MemoryAdvice))
+    db.execute(delete(MemoryAdvice).where(MemoryAdvice.user_id == uid))
     for item in payload.get("advice") or []:
         if not isinstance(item, dict) or not item.get("id"):
             continue
         db.add(
             MemoryAdvice(
+                user_id=uid,
                 id=str(item["id"]),
                 at=parse_dt(item.get("at")) or _now(),
                 title=str(item.get("title") or ""),
@@ -66,12 +75,13 @@ def replace_memory(payload: dict = Body(...), db: Session = Depends(get_db)):
             )
         )
 
-    db.execute(delete(ChatMessage))
+    db.execute(delete(ChatMessage).where(ChatMessage.user_id == uid))
     for seq, item in enumerate((payload.get("messages") or [])[-20:], 1):
         if not isinstance(item, dict):
             continue
         db.add(
             ChatMessage(
+                user_id=uid,
                 id=str(item.get("id") or f"msg_{seq}"),
                 role="assistant" if item.get("role") == "assistant" else "user",
                 content=str(item.get("content") or ""),
@@ -83,14 +93,15 @@ def replace_memory(payload: dict = Body(...), db: Session = Depends(get_db)):
             )
         )
     db.commit()
-    return memory_payload(db)
+    return memory_payload(db, uid)
 
 
 @router.delete("/memory")
-def clear_memory(db: Session = Depends(get_db)):
-    db.execute(delete(MemoryAdvice))
-    db.execute(delete(MemorySummary))
-    row = db.get(MemoryProfile, 1)
+def clear_memory(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    uid = int(user.id)
+    db.execute(delete(MemoryAdvice).where(MemoryAdvice.user_id == uid))
+    db.execute(delete(MemorySummary).where(MemorySummary.user_id == uid))
+    row = db.get(MemoryProfile, uid)
     if row is not None:
         row.goal = ""
         row.preference = ""
@@ -102,8 +113,13 @@ def clear_memory(db: Session = Depends(get_db)):
 
 
 @router.put("/memory/profile")
-def put_profile(payload: dict = Body(...), db: Session = Depends(get_db)):
-    row = db.get(MemoryProfile, 1) or MemoryProfile(id=1)
+def put_profile(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    uid = int(user.id)
+    row = db.get(MemoryProfile, uid) or MemoryProfile(user_id=uid)
     row.goal = str(payload.get("goal") or "").strip()
     row.preference = str(payload.get("preference") or "").strip()
     row.constraint = str(payload.get("constraint") or "").strip()
@@ -111,12 +127,13 @@ def put_profile(payload: dict = Body(...), db: Session = Depends(get_db)):
     row.confirmed_at = _now() if row.confirmed else None
     db.add(row)
     db.commit()
-    return memory_payload(db)["profile"]
+    return memory_payload(db, uid)["profile"]
 
 
 @router.delete("/memory/profile")
-def delete_profile(db: Session = Depends(get_db)):
-    row = db.get(MemoryProfile, 1)
+def delete_profile(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    uid = int(user.id)
+    row = db.get(MemoryProfile, uid)
     if row is not None:
         row.goal = ""
         row.preference = ""
@@ -128,13 +145,22 @@ def delete_profile(db: Session = Depends(get_db)):
 
 
 @router.post("/memory/summaries")
-def put_summary(payload: dict = Body(...), db: Session = Depends(get_db)):
+def put_summary(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    uid = int(user.id)
     summary_id = str(payload.get("id") or "")
     if not summary_id:
         raise HTTPException(400, "missing_id")
-    row = db.get(MemorySummary, summary_id) or MemorySummary(id=summary_id, at=_now(), tier="standard", text="")
+    row = find_summary(db, uid, summary_id) or MemorySummary(
+        user_id=uid, id=summary_id, at=_now(), tier="standard", text=""
+    )
     row.at = parse_dt(payload.get("at")) or _now()
     row.tier = str(payload.get("tier") or "standard")
+    if payload.get("assessmentId"):
+        row.assessment_id = str(payload["assessmentId"])
     lowest = payload.get("lowest") or {}
     row.lowest_dim = lowest.get("id") if isinstance(lowest, dict) else None
     row.lowest_value = lowest.get("value") if isinstance(lowest, dict) else None
@@ -146,8 +172,12 @@ def put_summary(payload: dict = Body(...), db: Session = Depends(get_db)):
 
 
 @router.delete("/memory/summaries/{summary_id}")
-def delete_summary(summary_id: str, db: Session = Depends(get_db)):
-    row = db.get(MemorySummary, summary_id)
+def delete_summary(
+    summary_id: str,
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    row = find_summary(db, int(user.id), summary_id)
     if row is not None:
         db.delete(row)
         db.commit()
@@ -155,11 +185,16 @@ def delete_summary(summary_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/memory/advice")
-def put_advice(payload: dict = Body(...), db: Session = Depends(get_db)):
+def put_advice(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    uid = int(user.id)
     advice_id = str(payload.get("id") or "")
     if not advice_id:
         raise HTTPException(400, "missing_id")
-    row = db.get(MemoryAdvice, advice_id) or MemoryAdvice(id=advice_id, at=_now())
+    row = find_advice(db, uid, advice_id) or MemoryAdvice(user_id=uid, id=advice_id, at=_now())
     row.at = parse_dt(payload.get("at")) or _now()
     row.title = str(payload.get("title") or "")
     row.shown = bool(payload.get("shown", True))
@@ -170,8 +205,13 @@ def put_advice(payload: dict = Body(...), db: Session = Depends(get_db)):
 
 
 @router.patch("/memory/advice/{advice_id}")
-def patch_advice(advice_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    row = db.get(MemoryAdvice, advice_id)
+def patch_advice(
+    advice_id: str,
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    row = find_advice(db, int(user.id), advice_id)
     if row is None:
         raise HTTPException(404, "advice_not_found")
     if "done" in payload:
@@ -181,8 +221,12 @@ def patch_advice(advice_id: str, payload: dict = Body(...), db: Session = Depend
 
 
 @router.delete("/memory/advice/{advice_id}")
-def delete_advice(advice_id: str, db: Session = Depends(get_db)):
-    row = db.get(MemoryAdvice, advice_id)
+def delete_advice(
+    advice_id: str,
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    row = find_advice(db, int(user.id), advice_id)
     if row is not None:
         db.delete(row)
         db.commit()

@@ -1,81 +1,52 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 
-from .. import keyring_store
-from ..db import get_db
-from ..llm import LLMError, call_llm, is_configured
-from ..models import AISettings
+from .. import auth
+from ..config import settings
+from ..llm import LLMError, call_llm, site_llm_config
+from ..models import User
 from ..serializers import settings_payload
 
 router = APIRouter()
 
+MANAGED = "ai_managed_by_site"
+
 
 @router.get("/settings/ai")
-def get_settings(db: Session = Depends(get_db)):
-    try:
-        return settings_payload(db)
-    except keyring_store.KeyStoreError:
-        return JSONResponse({"error": "keyring_unavailable"}, status_code=503)
+def get_settings(user: User = Depends(auth.require_user)):
+    """Read-only view of the site-provided model. The key never appears here."""
+    return settings_payload()
 
 
 @router.put("/settings/ai")
-def put_settings(payload: dict = Body(...), db: Session = Depends(get_db)):
-    row = db.get(AISettings, 1) or AISettings(id=1)
-    row.endpoint = str(payload.get("endpoint") or "").strip()
-    row.model = str(payload.get("model") or "").strip()
-    row.enabled = bool(payload.get("enabled"))
-    api_key = str(payload.get("apiKey") or payload.get("api_key") or "").strip()
-    try:
-        if api_key:
-            keyring_store.set_llm_key(api_key)
-            row.key_ref = f"keyring:{keyring_store.SERVICE}/{keyring_store.LLM_USER}"
-            row.key_hint = keyring_store.mask_key(api_key)
-        row.updated_at = datetime.now(timezone.utc)
-        db.add(row)
-        db.commit()
-        return settings_payload(db)
-    except keyring_store.KeyStoreError:
-        return JSONResponse({"error": "keyring_unavailable"}, status_code=503)
+def put_settings(
+    payload: dict = Body(...), user: User = Depends(auth.require_user)  # noqa: ARG001
+):
+    raise HTTPException(403, detail=MANAGED)
 
 
 @router.delete("/settings/ai/key")
-def delete_key(db: Session = Depends(get_db)):
-    try:
-        keyring_store.delete_llm_key()
-    except keyring_store.KeyStoreError:
-        return JSONResponse({"error": "keyring_unavailable"}, status_code=503)
-    row = db.get(AISettings, 1)
-    if row is not None:
-        row.key_ref = None
-        row.key_hint = None
-        row.enabled = False
-        db.commit()
-    return {"ok": True}
+def delete_key(user: User = Depends(auth.require_user)):
+    raise HTTPException(403, detail=MANAGED)
 
 
 @router.post("/settings/ai/test")
-def test_connection(db: Session = Depends(get_db)):
-    row = db.get(AISettings, 1)
-    try:
-        key = keyring_store.get_llm_key()
-    except keyring_store.KeyStoreError:
-        return JSONResponse({"error": "keyring_unavailable"}, status_code=503)
-    if row is None or not is_configured(row.endpoint, row.model, key, True):
+def test_connection(user: User = Depends(auth.require_user)):
+    """One-token round trip against the deployment's own credentials."""
+    config = site_llm_config()
+    if not config.enabled:
         return JSONResponse({"ok": False, "code": "not_configured"}, status_code=400)
     try:
         reply = call_llm(
-            endpoint=row.endpoint,
-            model=row.model,
-            key=key or "",
+            endpoint=config.endpoint,
+            model=config.model,
+            key=config.key,
             messages=[{"role": "user", "content": "只回复 OK"}],
             max_tokens=8,
-            timeout_s=15,
+            timeout_s=min(settings.llm_timeout_s, 20.0),
         )
         return {"ok": True, "code": "ok", "model": reply.model}
     except LLMError as exc:
-        return JSONResponse({"ok": False, "code": exc.code, "message": exc.code}, status_code=400)
+        return JSONResponse({"ok": False, "code": exc.code}, status_code=400)

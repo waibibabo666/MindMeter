@@ -1,41 +1,85 @@
-"""FastAPI application for the local desktop app.
+"""FastAPI application for the hosted MindMeter web app.
 
-Important: importing this module never starts PostgreSQL and never runs
-migrations. The desktop launcher owns both.
+The same origin serves the API and the static frontend, so the browser needs
+no CORS and the session cookie stays first-party. Importing this module does
+not connect to a database; ``MM_AUTO_MIGRATE=1`` (the default) runs
+``alembic upgrade head`` once at startup so a fresh Render Postgres works
+without extra dashboard steps — set it to ``0`` when the deploy platform runs
+a dedicated pre-deploy migration command.
 """
 from __future__ import annotations
 
+import os
 import threading
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .api import api_router
 from .config import settings
 from .logging_setup import setup_logging
 from .rag import warmup
-from .security import LocalGuardMiddleware
+from .security import SecurityMiddleware
 
-setup_logging(settings.data_dir)
+logger = setup_logging(settings.data_dir)
 
 app = FastAPI(
-    title="MindMeter Local API",
+    title="MindMeter Web API",
     version=settings.app_version,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
 )
-app.add_middleware(LocalGuardMiddleware)
+app.add_middleware(SecurityMiddleware)
 app.include_router(api_router)
 
 
+def _auto_migrate_enabled() -> bool:
+    return str(os.environ.get("MM_AUTO_MIGRATE", "1")).strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def run_migrations() -> None:
+    """Best-effort schema upgrade at boot. Never takes the app down."""
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        backend = Path(__file__).resolve().parents[2] / "backend"
+        config = Config(str(backend / "alembic.ini"))
+        config.set_main_option("script_location", str(backend / "alembic"))
+        command.upgrade(config, "head")
+        logger.info("migrations applied")
+    except Exception as exc:  # pragma: no cover - deployment safety net
+        logger.warning("auto-migration failed: %s", exc.__class__.__name__)
+
+
 @app.on_event("startup")
-def _warm_embedding_model() -> None:
-    """Load the optional local model off the request path (never starts DB)."""
+def _on_startup() -> None:
+    if settings.database_url and _auto_migrate_enabled():
+        run_migrations()
     if settings.rag_mode.lower() != "keyword":
         threading.Thread(target=warmup, daemon=True).start()
+
+    def _purge() -> None:
+        try:
+            from . import auth
+            from .db import SessionLocal
+
+            with SessionLocal() as db:
+                removed = auth.purge_expired_sessions(db)
+            if removed:
+                logger.info("purged %s expired sessions", removed)
+        except Exception:  # pragma: no cover
+            pass
+
+    threading.Thread(target=_purge, daemon=True).start()
 
 
 @app.get("/favicon.ico", include_in_schema=False)

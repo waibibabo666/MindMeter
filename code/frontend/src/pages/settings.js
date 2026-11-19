@@ -1,146 +1,334 @@
+/**
+ * 设置页（Web 部署）。
+ *
+ * 与桌面版最大的差别有两点：
+ * 1. 模型服务由站点统一提供（`MM_LLM_*` 环境变量），浏览器不再接受任何 API Key；
+ * 2. 数据归属从「这台电脑」变成「这个账号」，因此这里同时是账号与数据的主控台：
+ *    改密码、退出登录、注销账号（级联删除）、导出与导入。
+ */
 import { el, button, clear } from '../ui.js';
 import { api } from '../api.js';
-import { readSettings, writeSettings, clearSettings } from '../storage.js';
+import { readSettings } from '../storage.js';
 import { clearLogs, exportLogs, getLogs, log } from '../log.js';
 import { isSoundOn, setSoundOn, playClick } from '../sound.js';
-
-const ENDPOINT_HINT = '例如 https://api.deepseek.com/v1 或完整的 /chat/completions 地址';
+import { changePassword, deleteAccount, messageFor, passwordIssues, session } from '../auth.js';
 
 const RISKS = [
-  'Key 只保存在 Windows 凭据管理器（Credential Manager），不进入前端存储、数据库、日志或导出 JSON。',
-  '公用电脑不要保存 Key；用完点「清除 Key」。',
-  '模型请求由本机 FastAPI 转发，不再需要模型服务放行浏览器 CORS。',
-  '未配置、超时、限流、鉴权失败都会自动回退模板解读，页面不会空白。',
+  '模型服务由站点统一配置，Key 只存在于服务端环境变量：不进浏览器、不进数据库、不进日志与导出 JSON。',
+  '未配置、超时、限流或鉴权失败时，解读自动回退到内置模板，页面不会空白。',
+  '账号只保存用户名与密码散列（PBKDF2-SHA256），不收集邮箱、姓名或手机号，因此无法自助找回密码。',
+  '测评、记忆与对话按账号隔离；注销账号会立即级联删除全部数据，站点不做二次确认期。',
 ];
 
-function initialForm(saved) {
-  return {
-    enabled: Boolean(saved.enabled),
-    endpoint: saved.endpoint || '',
-    model: saved.model || '',
-    apiKey: '',
+function field(labelText, control, note = null) {
+  const children = [control];
+  if (note) children.push(note);
+  return el('label', { class: 'field' }, [
+    el('span', { class: 'field-label', text: labelText }),
+    ...children,
+  ]);
+}
+
+function statusNode(text = '') {
+  return el('p', { class: 'status', role: 'status', text });
+}
+
+function when(promise, ctx, onOk, onFail) {
+  return async () => {
+    try {
+      onOk(await promise());
+    } catch (error) {
+      ctx.log('warn', 'settings action failed', error && error.message);
+      onFail(error);
+    }
   };
 }
 
-function field(labelText, id, input, note = null) {
-  const children = [el('label', { class: 'field-label', for: id, text: labelText }), input];
-  if (note) children.push(note);
-  return el('div', { class: 'field' }, children);
+/* ------------------------------- 账号卡 ------------------------------- */
+
+function formatWhen(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN', { hour12: false });
 }
 
-function buildInputs(form, saved) {
-  const endpoint = el('input', {
-    id: 'set-endpoint',
-    class: 'input',
-    type: 'url',
-    inputmode: 'url',
-    autocomplete: 'off',
-    spellcheck: 'false',
-    placeholder: ENDPOINT_HINT,
-    value: form.endpoint,
-    oninput: (event) => {
-      form.endpoint = event.target.value;
-    },
-  });
+function accountRow(label, value) {
+  return el('div', { class: 'kv-row' }, [
+    el('span', { class: 'kv-key', text: label }),
+    el('span', { class: 'kv-value', text: value }),
+  ]);
+}
 
-  const model = el('input', {
-    id: 'set-model',
-    class: 'input',
-    type: 'text',
-    autocomplete: 'off',
-    spellcheck: 'false',
-    placeholder: '例如 deepseek-chat',
-    value: form.model,
-    oninput: (event) => {
-      form.model = event.target.value;
-    },
-  });
-
-  const key = el('input', {
-    id: 'set-key',
+function buildPasswordCard(ctx) {
+  const current = el('input', {
     class: 'input',
     type: 'password',
-    autocomplete: 'off',
-    spellcheck: 'false',
-    placeholder: saved.hasKey ? '已保存，留空则保持不变' : 'sk-...',
-    oninput: (event) => {
-      form.apiKey = event.target.value;
-    },
+    autocomplete: 'current-password',
+    placeholder: '当前密码',
   });
-
-  const enabled = el('input', {
-    id: 'set-enabled',
-    type: 'checkbox',
-    checked: form.enabled ? 'checked' : null,
-    onchange: (event) => {
-      form.enabled = event.target.checked;
-    },
+  const next = el('input', {
+    class: 'input',
+    type: 'password',
+    autocomplete: 'new-password',
+    placeholder: `新密码，至少 10 位`,
   });
+  const confirm = el('input', {
+    class: 'input',
+    type: 'password',
+    autocomplete: 'new-password',
+    placeholder: '再输入一次新密码',
+  });
+  const status = statusNode();
 
-  return { endpoint, model, key, enabled };
-}
-
-function configPayload(form) {
-  const payload = {
-    enabled: form.enabled,
-    endpoint: form.endpoint.trim(),
-    model: form.model.trim(),
-  };
-  if (form.apiKey.trim()) payload.apiKey = form.apiKey.trim();
-  return payload;
-}
-
-async function saveConfig(form, ctx, status, keyNote, silent = false) {
-  status.className = 'status';
-  status.textContent = '正在保存…';
-  try {
-    const saved = await writeSettings(configPayload(form));
-    form.apiKey = '';
-    const configured = Boolean(saved.enabled && saved.endpoint && saved.model && saved.hasKey);
-    if (!silent) ctx.toast('已保存到本机');
-    status.textContent = configured ? '✓ 已配置：可以使用 AI 解读' : '已保存，但还缺少必填项';
-    status.className = `status ${configured ? 'ok' : 'warn'}`;
-    keyNote.textContent = saved.hasKey ? `已保存：${saved.keyHint}` : '尚未保存 Key';
-    return { saved, configured };
-  } catch (error) {
-    ctx.log('warn', 'settings save failed', error && error.message);
-    status.className = 'status bad';
-    status.textContent = '保存失败：本地服务或 Windows 凭据管理器不可用';
-    return { saved: null, configured: false };
-  }
-}
-
-async function clearKey(form, ctx, draw) {
-  try {
-    await clearSettings();
-    form.apiKey = '';
-    form.enabled = false;
-    ctx.toast('已清除本机 Key');
-    draw();
-  } catch (error) {
-    ctx.log('warn', 'settings clear failed', error && error.message);
-    ctx.toast('清除失败：本地服务或 Windows 凭据管理器不可用');
-  }
-}
-
-async function testConnection(form, status, test) {
-  status.className = 'status';
-  status.textContent = '正在请求…';
-  test.disabled = true;
-  try {
-    if (form.apiKey.trim() || form.endpoint.trim() || form.model.trim()) {
-      await writeSettings(configPayload(form));
-      form.apiKey = '';
+  const submit = async () => {
+    status.className = 'status';
+    if (next.value !== confirm.value) {
+      status.className = 'status bad';
+      status.textContent = '两次输入的新密码不一致';
+      return;
     }
-    const result = await api.post('/settings/ai/test');
-    status.className = 'status ok';
-    status.textContent = `连接成功：${result.model || '模型可用'}`;
-  } catch (error) {
-    status.className = 'status bad';
-    status.textContent = `${error.code || 'unknown'}：本地服务或模型不可用`;
-  } finally {
-    test.disabled = false;
+    const problems = passwordIssues(next.value);
+    if (problems.length) {
+      status.className = 'status bad';
+      status.textContent = problems[0];
+      return;
+    }
+    status.textContent = '正在修改…';
+    try {
+      await changePassword({ current: current.value, next: next.value, confirm: confirm.value });
+      [current, next, confirm].forEach((node) => {
+        node.value = '';
+      });
+      status.className = 'status ok';
+      status.textContent = '密码已更新，其他设备需要重新登录';
+      ctx.toast('密码已更新');
+    } catch (error) {
+      status.className = 'status bad';
+      status.textContent = messageFor(error);
+    }
+  };
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '修改密码' }),
+    el('p', { class: 'muted', text: '修改后其他设备上的登录状态会全部失效，本设备保持登录。' }),
+    field('当前密码', current),
+    field('新密码', next),
+    field('确认新密码', confirm),
+    el('div', { class: 'row' }, [button('更新密码', submit, { variant: 'primary' })]),
+    status,
+  ]);
+}
+
+function buildAccountCard(ctx) {
+  const dangerStatus = statusNode();
+  const eraseInput = el('input', {
+    class: 'input',
+    type: 'password',
+    autocomplete: 'current-password',
+    placeholder: '输入当前密码以确认',
+  });
+
+  const erase = async () => {
+    if (
+      !window.confirm(
+        '注销账号会立即删除本账号的测评、分数、记忆、对话与运行记录，且无法恢复。继续吗？',
+      )
+    ) {
+      return;
+    }
+    dangerStatus.className = 'status';
+    dangerStatus.textContent = '正在删除…';
+    try {
+      await deleteAccount(eraseInput.value);
+      ctx.toast('账号已注销');
+      await ctx.signOut();
+    } catch (error) {
+      dangerStatus.className = 'status bad';
+      dangerStatus.textContent = messageFor(error);
+    }
+  };
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '账号' }),
+    accountRow('用户名', (session.user && session.user.username) || '—'),
+    accountRow('注册时间', formatWhen(session.user && session.user.createdAt)),
+    accountRow('上次登录', formatWhen(session.user && session.user.lastLoginAt)),
+    el('div', { class: 'row' }, [button('退出登录', () => ctx.signOut(), { variant: 'ghost' })]),
+    el('h3', { class: 'card-subtitle', text: '注销账号' }),
+    el('p', {
+      class: 'muted',
+      text: '需要输入当前密码。删除是不可恢复的；如需留档，请先在「我的数据」里导出。',
+    }),
+    field('确认密码', eraseInput),
+    el('div', { class: 'row' }, [button('注销并删除全部数据', erase, { variant: 'danger' })]),
+    dangerStatus,
+  ]);
+}
+
+/* ------------------------------ AI 解读卡 ------------------------------ */
+
+function buildAiCard() {
+  const saved = readSettings();
+  const status = statusNode();
+  const test = button('测试连接', () => runTest(), { variant: 'ghost' });
+
+  async function runTest() {
+    status.className = 'status';
+    status.textContent = '正在请求…';
+    test.disabled = true;
+    try {
+      const result = await api.post('/settings/ai/test');
+      status.className = 'status ok';
+      status.textContent = `连接成功：${result.model || '模型可用'}`;
+    } catch (error) {
+      status.className = 'status bad';
+      status.textContent = `${error.code || 'unknown'}：站点无法访问模型服务`;
+    } finally {
+      test.disabled = false;
+    }
   }
+
+  const state =
+    saved.enabled && saved.hasKey ? '已启用：解读走真实模型' : '未配置：解读自动回退模板';
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: 'AI 解读' }),
+    el('p', {
+      class: 'muted',
+      text: '模型由站点统一提供（服务端环境变量），这里只读：浏览器不接收也不保存任何密钥。',
+    }),
+    accountRow('状态', state),
+    accountRow('模型', saved.model || '—'),
+    accountRow('服务地址', saved.endpoint || '—'),
+    accountRow('密钥', saved.hasKey ? `服务端已配置（${saved.keyHint || 'masked'}）` : '未配置'),
+    el('div', { class: 'row' }, [test]),
+    status,
+    saved.enabled && saved.hasKey
+      ? null
+      : el('p', {
+          class: 'tiny',
+          text: '部署时在 Render 环境变量里填 MM_LLM_API_KEY 即可启用真实模型；不填也能正常测评。',
+        }),
+  ]);
+}
+
+/* ------------------------------- 数据卡 ------------------------------- */
+
+function buildDataCard(ctx, rerender) {
+  const importButton = button(
+    '导入 JSON',
+    when(
+      async () => {
+        const file = await pickJsonFile();
+        if (!file) throw new Error('cancelled');
+        if (
+          !window.confirm(
+            '导入会与本账号现有数据合并（相同 id 跳过）。建议先导出当前数据留档。继续吗？',
+          )
+        ) {
+          throw new Error('cancelled');
+        }
+        const data = JSON.parse(await file.text());
+        return api.post('/import', { data });
+      },
+      ctx,
+      (result) => {
+        const counts = result.imported || {};
+        ctx.toast(
+          `导入完成：${counts.sessions || 0} 次测评、${counts.messages || 0} 条消息；密钥未导入`,
+        );
+        setTimeout(() => globalThis.location.reload(), 700);
+      },
+      (error) => {
+        if (error && error.message !== 'cancelled')
+          ctx.toast(`导入失败：${error.code || 'unknown'}`);
+        rerender();
+      },
+    ),
+    { variant: 'ghost' },
+  );
+
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '我的数据' }),
+    el('p', {
+      class: 'muted',
+      text: '导出的是本账号的完整数据 JSON（测评、分数、记忆、对话、进度），不含任何密钥。',
+    }),
+    el('div', { class: 'row' }, [
+      button('导出数据', () => ctx.exportData(), { variant: 'ghost' }),
+      importButton,
+      button('清除本账号数据', () => ctx.clearAll(), { variant: 'danger' }),
+    ]),
+    el('p', {
+      class: 'tiny',
+      text: '「清除本账号数据」保留账号本身；要彻底删除账号，用上方「注销账号」。',
+    }),
+  ]);
+}
+
+function pickJsonFile() {
+  return new Promise((resolve) => {
+    const picker = el('input', { type: 'file', accept: 'application/json,.json', hidden: '' });
+    picker.addEventListener('change', () => {
+      const file = picker.files && picker.files[0];
+      picker.remove();
+      resolve(file || null);
+    });
+    document.body.appendChild(picker);
+    picker.click();
+  });
+}
+
+/* --------------------------- 体验 / 日志 / 风险 --------------------------- */
+
+function buildSoundToggle() {
+  return el('input', {
+    id: 'set-sound',
+    type: 'checkbox',
+    checked: isSoundOn() ? 'checked' : null,
+    onchange: (event) => {
+      setSoundOn(event.target.checked);
+      if (event.target.checked) playClick();
+    },
+  });
+}
+
+function buildExperienceCard() {
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '体验' }),
+    el('label', { class: 'check' }, [buildSoundToggle(), el('span', { text: '点击音效' })]),
+    el('p', {
+      class: 'muted',
+      text: '按钮和选项点击时播放一声轻微提示音；在当前页面实时合成，不加载音频文件、不联网。',
+    }),
+  ]);
+}
+
+function buildLogCard(ctx, rerender) {
+  const logs = getLogs();
+  const latest = logs[logs.length - 1];
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '诊断日志' }),
+    el('p', {
+      class: 'muted',
+      text: `前端日志只存在当前页面内存，最多 200 条；导出前会脱敏，不包含密钥。当前 ${logs.length} 条。`,
+    }),
+    latest ? el('p', { class: 'tiny', text: `最近：${latest.level} · ${latest.event}` }) : null,
+    el('div', { class: 'row' }, [
+      button('导出诊断日志', () => downloadLogs(ctx), { variant: 'ghost' }),
+      button(
+        '清除日志',
+        () => {
+          if (!window.confirm('清除本页面诊断日志？')) return;
+          clearLogs();
+          log('info', '日志已清除');
+          ctx.toast('已清除诊断日志');
+          rerender();
+        },
+        { variant: 'ghost' },
+      ),
+    ]),
+  ]);
 }
 
 function downloadLogs(ctx) {
@@ -163,153 +351,38 @@ function downloadLogs(ctx) {
   }
 }
 
-function importLegacy(ctx, rerender) {
-  const picker = el('input', {
-    type: 'file',
-    accept: 'application/json,.json',
-    style: 'display:none',
-  });
-  picker.addEventListener('change', async () => {
-    const file = picker.files && picker.files[0];
-    if (!file) return;
-    if (!window.confirm('导入旧版导出的 JSON？导入前会自动备份当前本机数据库。')) return;
-    try {
-      const data = JSON.parse(await file.text());
-      const result = await api.post('/import', data);
-      const counts = result.imported || {};
-      ctx.toast(
-        `导入完成：${counts.sessions || 0} 次测评、${counts.messages || 0} 条消息；Key 未导入`,
-      );
-      setTimeout(() => globalThis.location.reload(), 900);
-    } catch (error) {
-      ctx.toast(`导入失败：${error.code || 'unknown'}`);
-      rerender();
-    }
-  });
-  picker.click();
-}
-
-function buildLogCard(ctx, rerender) {
-  const logs = getLogs();
-  const latest = logs[logs.length - 1];
+function buildRiskCard() {
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '诊断日志' }),
-    el('p', {
-      class: 'muted',
-      text: `前端日志只存在本机内存，最多 200 条；导出前会脱敏，不包含 LLM Key。当前 ${logs.length} 条。`,
-    }),
-    latest
-      ? el('p', { class: 'tiny', text: `最近：${latest.level} · ${latest.event}` })
-      : el('p', { class: 'tiny', text: '还没有日志。' }),
-    el('div', { class: 'row' }, [
-      button('导出诊断日志', () => downloadLogs(ctx), { variant: 'ghost' }),
-      button(
-        '清除日志',
-        () => {
-          if (!window.confirm('清除本机诊断日志？')) return;
-          clearLogs();
-          log('info', '日志已清除');
-          ctx.toast('已清除诊断日志');
-          rerender();
-        },
-        { variant: 'ghost' },
-      ),
-    ]),
+    el('h2', { class: 'card-title', text: '风险与限制' }),
+    el(
+      'ul',
+      { class: 'plain-list' },
+      RISKS.map((text) => el('li', { text })),
+    ),
   ]);
 }
 
-function buildSoundToggle() {
-  return el('input', {
-    id: 'set-sound',
-    type: 'checkbox',
-    checked: isSoundOn() ? 'checked' : null,
-    onchange: (event) => {
-      setSoundOn(event.target.checked);
-      if (event.target.checked) playClick();
-    },
-  });
-}
-
-function buildPage(ctx, view) {
-  const { fields, actions, status, keyNote, diagnostics, migration } = view;
-  return el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
-    el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
-    el('p', {
-      class: 'lead',
-      text: '用自己的模型服务（BYOK）。不配置也可以正常测评，解读会走模板。',
-    }),
-    el('div', { class: 'card' }, [
-      el('label', { class: 'check' }, [fields.enabled, el('span', { text: '启用 AI 解读' })]),
-      field('Endpoint', 'set-endpoint', fields.endpoint),
-      field('模型名', 'set-model', fields.model),
-      field('API Key', 'set-key', fields.key, keyNote),
-      el('div', { class: 'row' }, [actions.test, actions.save]),
-      status,
-    ]),
-    el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: '体验' }),
-      el('label', { class: 'check' }, [buildSoundToggle(), el('span', { text: '点击音效' })]),
-      el('p', {
-        class: 'muted',
-        text: '按钮和选项点击时播放一声轻微提示音；只在本机实时合成，不加载音频文件、不联网。',
-      }),
-    ]),
-    el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: '风险与限制' }),
-      el(
-        'ul',
-        { class: 'plain-list' },
-        RISKS.map((text) => el('li', { text })),
-      ),
-      actions.clearKey,
-    ]),
-    el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: '旧数据迁移' }),
-      el('p', {
-        class: 'muted',
-        text: '从旧版静态应用导出的 JSON 可导入本机数据库；导入前自动 pg_dump 备份。LLM Key 不会导入，需要重新填写。',
-      }),
-      migration,
-    ]),
-    diagnostics,
-    button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
-  ]);
-}
+/* -------------------------------- 页面 -------------------------------- */
 
 export function renderSettings(root, ctx) {
-  const saved = readSettings();
-  const form = initialForm(saved);
-  const status = el('p', { class: 'status', role: 'status', text: '' });
-  const keyNote = el('p', {
-    class: 'tiny',
-    text: saved.hasKey ? `已保存：${saved.keyHint}` : '尚未保存 Key',
-  });
-
   const draw = () => {
     clear(root);
-    const fields = buildInputs(form, saved);
-    const test = button('测试连接', () => testConnection(form, status, test), {
-      variant: 'ghost',
-    });
-    const save = button('保存', () => saveConfig(form, ctx, status, keyNote), {
-      variant: 'primary',
-    });
-    const clearButton = button('清除 Key', () => clearKey(form, ctx, draw), {
-      variant: 'danger',
-    });
-    const importButton = button('导入旧数据', () => importLegacy(ctx, draw), {
-      variant: 'ghost',
-    });
-
     root.appendChild(
-      buildPage(ctx, {
-        fields,
-        actions: { test, save, clearKey: clearButton },
-        status,
-        keyNote,
-        migration: importButton,
-        diagnostics: buildLogCard(ctx, draw),
-      }),
+      el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
+        el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
+        el('p', {
+          class: 'lead',
+          text: '账号、模型服务与数据都在这里。不配置模型也能正常测评，解读会走模板。',
+        }),
+        buildAccountCard(ctx),
+        buildPasswordCard(ctx),
+        buildAiCard(),
+        buildDataCard(ctx, draw),
+        buildExperienceCard(),
+        buildRiskCard(),
+        buildLogCard(ctx, draw),
+        button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
+      ]),
     );
   };
 
