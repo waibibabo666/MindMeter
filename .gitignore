@@ -42,5 +42,28 @@ data/local/
 *.db
 logs/
 tmp/
+runtime/
+backups/
+pgdata/
+*.dump
+
+# ---- Portable runtime (never commit binaries) ----
+vendor/
+code/backend/runtime/
+
+# ---- Model caches ----
+models/
+fastembed_cache/
+
+# ---- Playwright ----
+test-results/
+playwright-report/
+blob-report/
 
 work_for_permission/
+
+# ---- 人工测试的验证截图 ----
+# 我自己回归时生成的 after-*.png（22 张 ~8.7MB）留在本地当证据，不进仓库也不部署；
+# 用户提交的原始反馈截图 01–05.png 仍然跟踪，它们是需求溯源材料。
+tests/manual_testing/after-*.png
+tests/manual_testing/*.json

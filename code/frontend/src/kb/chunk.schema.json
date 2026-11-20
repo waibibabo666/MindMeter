@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mindmeter.local/schema/kb-chunk.json",
+  "title": "MindMeter 知识块（P-06）",
+  "description": "本地知识库单条 chunk 的契约。字段语义见 docs/software/knowledge-base.md。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "category",
+    "dims",
+    "title",
+    "text",
+    "source",
+    "version",
+    "risk",
+    "review",
+    "tags",
+    "param"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^kb-(dim|task|score|factor|limit|plan)(-[a-z]{2,5})?-\\d{2}$"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["dim", "task", "score", "factor", "limit", "plan"]
+    },
+    "dims": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["vc", "ps", "sv", "am"] },
+      "uniqueItems": true
+    },
+    "title": { "type": "string", "minLength": 2, "maxLength": 20 },
+    "text": { "type": "string", "minLength": 120, "maxLength": 220 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "author", "year", "locator"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["textbook", "paper", "org", "product"] },
+        "title": { "type": "string", "minLength": 2 },
+        "author": { "type": "string", "minLength": 2 },
+        "year": { "type": ["integer", "string"] },
+        "locator": { "type": "string", "minLength": 2 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" }
+      }
+    },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "risk": { "type": "string", "enum": ["low", "medium", "high"] },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "by", "date"],
+      "properties": {
+        "status": { "type": "string", "enum": ["draft", "reviewed", "rejected"] },
+        "by": { "type": "string" },
+        "date": { "type": "string", "pattern": "^$|^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 1, "maxLength": 8 },
+      "uniqueItems": true
+    },
+    "param": { "type": ["string", "null"] }
+  }
+}

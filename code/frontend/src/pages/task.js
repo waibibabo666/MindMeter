@@ -1,0 +1,176 @@
+/**
+ * 测评步骤页：按维度分发到「任务」或「游戏」。
+ *
+ * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
+ */
+import { el, clear, hint } from '../ui.js';
+import { STANDARD_ORDER, TASK_META } from '../data.js';
+import { specFor } from '../scoring/levels.js';
+import { vcTask } from '../tasks/vc.js';
+import { psTask } from '../tasks/ps.js';
+import { svTask } from '../tasks/sv.js';
+import { amTask } from '../tasks/am.js';
+import { ncTask } from '../tasks/nc.js';
+import { irTask } from '../tasks/ir.js';
+import { species } from '../games/quizzes.js';
+import { naming } from '../games/speech.js';
+
+const TASK_RUNNERS = { vc: vcTask, ps: psTask, sv: svTask, am: amTask, nc: ncTask, ir: irTask };
+
+/** 游戏接入测评：把游戏的 (score, detail) 换成统一的结果结构。 */
+function gameRunner(game, toMetrics) {
+  return {
+    mount(root, ctx) {
+      const gameCtx = {
+        toast: ctx.toast,
+        level: ctx.level,
+        spec: ctx.spec,
+        finish: (score, detail) => {
+          ctx.finish({ metrics: toMetrics(score, detail || {}) });
+        },
+      };
+      return game.mount(root, gameCtx) || (() => {});
+    },
+  };
+}
+
+const GAME_RUNNERS = {
+  ni: gameRunner(species, (score, d) => ({ total: d.total, correct: d.correct })),
+  vf: gameRunner(naming, (score, d) => ({
+    validCount: d.valid,
+    seconds: d.seconds,
+    unavailable: d.unavailable,
+  })),
+};
+
+const RUNNERS = Object.assign({}, TASK_RUNNERS, GAME_RUNNERS);
+
+/* 反馈 2：这一行只留最短的一句，口径解释收进浮框；做题指令在各任务模块里，照常常驻。 */
+const TIP_COLLECT =
+  '本页只采集原始指标（正确数、反应时、命中与虚报），分数在全部完成后统一折算；计时与进度已保存到本账号，刷新可继续。';
+const TIP_GAME =
+  '本项为游戏化测量，结束后按同一套公式折算成这一维度的分数，不额外加分；进度已保存到本账号。';
+
+export function renderTask(root, ctx, taskId) {
+  const state = ctx.state;
+  const order = state.order && state.order.length ? state.order : STANDARD_ORDER;
+  const runner = RUNNERS[taskId];
+
+  if (!runner || !order.includes(taskId)) {
+    ctx.go('/tier', { replace: true });
+    return;
+  }
+  if (!state.tier) {
+    ctx.go('/tier', { replace: true });
+    return;
+  }
+
+  const position = order.indexOf(taskId) + 1;
+  const meta = TASK_META[taskId];
+  const level = state.level || 'standard';
+  const spec = specFor(level, taskId);
+  const isGame = Boolean(GAME_RUNNERS[taskId]);
+
+  const host = el('div', { class: 'task-host' });
+  const section = el('section', { class: 'page task-page', 'aria-labelledby': 'task-title' }, [
+    el('div', { class: 'hud' }, [
+      el('span', { class: 'kicker', text: `第 ${position} / ${order.length} 项` }),
+      el('span', { class: 'muted', text: `${meta.name} · ${levelLabel(level)}` }),
+    ]),
+    el(
+      'div',
+      {
+        class: 'bar',
+        role: 'progressbar',
+        'aria-valuemin': '0',
+        'aria-valuemax': String(order.length),
+        'aria-valuenow': String(position - 1),
+      },
+      [el('i', { style: `width:${Math.round(((position - 1) / order.length) * 100)}%` })],
+    ),
+    host,
+    el('p', { class: 'tiny' }, [
+      isGame ? '本项为游戏化测量，结束后统一计分。' : '进度已保存，刷新页面可以接着做。',
+      hint(isGame ? TIP_GAME : TIP_COLLECT, { edge: true }),
+    ]),
+  ]);
+  root.appendChild(section);
+
+  const draft = (state.drafts && state.drafts[taskId]) || null;
+  let current = draft ? Object.assign({}, draft) : null;
+  let cleanup = () => {};
+
+  const taskCtx = {
+    draft,
+    level,
+    spec,
+    saveDraft: (patch) => {
+      current = Object.assign({}, current, patch);
+      ctx.patchDraft(taskId, current);
+    },
+    finish: (payload, detail) => {
+      cleanup();
+      // New task modules call finish(null, metrics); older vc calls finish(payload).
+      if (detail && typeof detail === 'object') {
+        const metrics = Object.assign({}, detail);
+        if (taskId === 'ps') {
+          metrics.trials =
+            (detail.encCorrect || 0) +
+            (detail.encWrong || 0) +
+            (detail.catCorrect || 0) +
+            (detail.catWrong || 0);
+          metrics.correct = (detail.encCorrect || 0) + (detail.catCorrect || 0);
+          metrics.wrong = metrics.trials - metrics.correct;
+        }
+        if (taskId === 'am') {
+          metrics.hits = detail.firstTry || 0;
+          metrics.falseAlarms = detail.errors || 0;
+          metrics.trials = detail.targets || 0;
+        }
+        ctx.finishTask(taskId, {
+          taskId,
+          metrics,
+          answers: Array.isArray(detail.answers) ? detail.answers : [],
+        });
+        return;
+      }
+      ctx.finishTask(taskId, payload);
+    },
+    toast: ctx.toast,
+  };
+
+  const id = el('h2', { id: 'task-title', class: 'sr-only', text: meta.name });
+  section.insertBefore(id, host);
+
+  try {
+    cleanup = runner.mount(host, taskCtx) || (() => {});
+  } catch (error) {
+    ctx.toast('这一项的进度读取失败，已重开');
+    ctx.clearDraft(taskId);
+    taskCtx.draft = null;
+    clear(host);
+    try {
+      cleanup = runner.mount(host, taskCtx) || (() => {});
+    } catch (retryError) {
+      clear(host);
+      host.appendChild(
+        el('div', { class: 'card' }, [
+          el('h2', { class: 'card-title', text: '这一项打不开' }),
+          el('p', { class: 'muted', text: '已保存的进度可能已损坏，可以重开这一项后再试。' }),
+        ]),
+      );
+    }
+  }
+  section.dataset.taskId = taskId;
+
+  return () => {
+    cleanup();
+    clear(host);
+  };
+}
+
+function levelLabel(level) {
+  if (level === 'quick') return '快测档';
+  if (level === 'deep') return '精细档';
+  return '标准档';
+}

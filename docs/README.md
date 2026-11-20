@@ -1,6 +1,6 @@
 # MindMeter 文档索引
 
-> 当前口径：**L2 = 8 项测评 + 账号 + 服务端计分 + LangGraph Agent + 记忆 + RAG + 长期趋势**。L1（静态/无账号/BYOK 直连）只保留为 UI 参考与历史。
+> 当前口径：**Web 托管版 = FastAPI + PostgreSQL/pgvector + LangGraph，账号登录（用户名+密码、HttpOnly Cookie 会话）、按账号隔离数据、模型由站点环境变量提供**。架构以 [ADR-0003](adr/0003-web-accounts-and-hosted-deployment.md) 为准；桌面本地形态（ADR-0001）与旧 L1/L2 文档保留为历史。
 
 ## 核心文档
 
@@ -11,14 +11,27 @@
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | 当前 v3.0 | 性能、可靠、安全、隐私、AI 质量 |
 | `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
-| `software/` | [技术方案](software/architecture.md) | 当前 v4.0 | FastAPI/Postgres/pgvector/LangGraph、数据模型、部署 |
+| `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
+| `software/` | [Render 部署指南](software/deploy-render.md) | 当前 | Blueprint 一键部署、环境变量、LLM 选型、验收、排障 |
+| `software/` | [Web 本地开发与测试](software/local-development.md) | 当前 | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
+| `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
+| `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 部分被取代 | 桌面壳、loopback token、单用户与 keyring 条款由 ADR-0003 取代 |
+| `adr/` | [ADR-0003 Web 账号与托管部署](adr/0003-web-accounts-and-hosted-deployment.md) | 已接受 | 账号/会话/CSRF、多租户主键、站点 LLM 配置、RAG 与探活口径 |
+| `adr/` | [ADR-0002 非临床定位与 Agent 语言契约](adr/0002-agent-positioning-language-contract.md) | 提议 | MoCA 参考三分法、不借临床权威、Agent 措辞/校验约束 |
+| `software/` | [Agent P0 改造包设计](software/agent-trend-workflow.md) | 评审稿 v0.2 | 统一出口 + 趋势联动 + 定位落地（受 ADR-0002 约束） |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
+| `software/` | [诊断日志](software/logging.md) | 当前 v1.0 | 前端内存日志、脱敏、导出 |
+| `software/` | [本地知识库设计](software/knowledge-base.md) | 草案 v1.0 | P-06：分类、chunk schema、30 条计划、来源候选 |
+| `software/` | [测试与评测计划](software/test-plan.md) | 当前 v1.0 | P-07：分层、30 条 Agent 用例、20 条检索、缺陷记录 |
+| `software/` | [Agent 评测量表](software/eval-rubric.md) | 当前 v1.0 | P-07：四维评分锚点与通过标准 |
+| `software/` | [知识库来源核验](software/kb-source-review.md) | 待核验 | L-06：30 条来源逐项勾选表 |
 | `research/` | [用户故事](research/user_stories.md) | 当前 v3.0 | 16 条 L2 故事 + Gherkin |
 | `software/prototype/` | [原型说明](software/prototype/prototype.md) | L1 参考 | UI 骨架；不代表 L2 架构 |
 | `software/prototype/` | [AI 接入位](software/prototype/agent-接入位.md) | 当前 L2 | 前端 → FastAPI 的 Agent 契约；前端不直连模型 |
 | `mgmt/` | [沟通管理计划](mgmt/communication_mgmt_plan.md) | 当前 v2.0 | 分工、阶段节奏、升级 |
 | `mgmt/` | [风险管理计划](mgmt/risk_mgmt_plan.md) | 当前 v2.0 | 范围、Key、RAG、隐私、素材 |
-| `mgmt/` | [任务拆分](mgmt/task_breakdown.md) | 当前 v1.0 | M0/M1 任务、4 人分工、DoR/DoD |
+| `mgmt/` | [任务拆分](mgmt/task_breakdown.md) | 当前 v1.1 | L2 backlog + M1 本地执行（L-01～L-09） |
+| `mgmt/` | [M1 范围与验收](mgmt/m1_scope.md) | 历史 v1.1（被 ADR 取代） | M1 本地范围、验收、L-01～L-09 |
 | `mgmt/` | [AI 协作任务设计](mgmt/ai_collaboration.md) | 当前 v1.0 | 人机分工、审查清单、关键任务卡 |
 | `mgmt/` | [Issue 导入](mgmt/issue_import.md) | 当前 v1.0 | 标签/里程碑/CSV/批量建单 |
 | `retrospection/` | [复盘模板](retrospection/retrospection.md) | 模板 | 阶段复盘 |

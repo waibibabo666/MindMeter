@@ -1,0 +1,30 @@
+# Windows 开发 + Render(Linux) 部署：仓库内统一 LF，检出时不改写。
+# 没有这个文件时，git 会在 Windows 工作副本上反复报
+# "LF will be replaced by CRLF the next time Git touches it"，
+# 并在跨平台协作时制造整文件换行差异；更糟的是 .sh / Python 文件
+# 若被带 CRLF 检出，在 Linux 上执行会直接报错。
+* text=auto eol=lf
+
+# 真正的二进制类型不做任何换行处理
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.node binary
+
+# Windows 批处理/PowerShell 需要 CRLF 才能被某些旧控制台正确解析
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# 导出与文档里出现制表符时保持原样，不要触发空白噪声 diff
+*.csv text -whitespace
+*.md text eol=lf

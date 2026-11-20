@@ -1,0 +1,15 @@
+# MindMeter web runtime (Render / any Linux host). Python 3.12+.
+# Removed with the desktop era: pywebview (window shell), keyring (Windows
+# Credential Manager — the model key now comes from MM_LLM_API_KEY) and
+# fastembed (local embedding model; the hosted build uses keyword RAG, see
+# docs/software/deploy-render.md).
+fastapi==0.162.7
+uvicorn==0.54.0
+sqlalchemy==2.1.8
+alembic==1.20.1
+psycopg[binary]==3.3.9
+pgvector==0.5.1
+pydantic-settings==2.16.3
+httpx==0.28.1
+langgraph==1.2.21
+langchain-core==1.8.0

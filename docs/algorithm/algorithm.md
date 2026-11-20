@@ -5,11 +5,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档编号 | MM-DES-001 |
-| 版本 | v4.0（L2） |
+| 版本 | v4.1（L2，含 M1 落地口径） |
 | 状态 | 目标算法；服务端 Python 为唯一权威 |
 | 文档负责人 | song |
 | 评审人 | waibibabo666、xlr268、1213lz |
-| 最后更新 | 2026-10-24 |
+| 最后更新 | 2026-11-07 |
 | 关联文档 | [功能需求规范](../requirements/functional_spec.md)、[技术方案](../software/architecture.md) |
 
 > 本版对应 `scoring-v3`：8 个任务、8 个维度、**不设总分**。`scoring-v1`（4 维）和 `scoring-v2`（7 维）仅保留在历史记录中，不再用于新测评。L2 起由 `code/backend/app/scoring/` 的 Python 实现负责计分；客户端只提交原始指标，不计分。
@@ -30,13 +30,13 @@
 
 | 维度 | 任务 | 原始指标 | 说明 |
 | --- | --- | --- | --- |
-| 言语理解 `vc` | 近义词/反义词/句子理解 | `correct`、`total` | 15 题四选一 |
+| 言语理解 `vc` | 近义词/反义词/句子理解 | `correct`、`total` | M1 为 6 题四选一 |
 | 言语流畅性 `vf` | 60 秒动物命名（ASR） | `validCount`、`rawText` | 去重后的有效动物名数；`rawText` 只在内存中使用，不落库 |
 | 数字运算 `nc` | 两位数加减/简单乘法 | `correct`、`total` | 20 题四选一 |
-| 知觉速度 `ps` | 目标符号—四选项匹配 | `correct`、`attempted` | 60 秒内正确匹配数 |
+| 知觉速度 `ps` | 目标符号—四选项匹配 | `correct`、`attempted` | 45 秒内正确匹配数 |
 | 归纳推理 `ir` | 数列/字母序列/简单矩阵 | `correct`、`total` | 15 题四选一 |
-| 空间视觉化 `sv` | 心理旋转 | `correct`、`total`、`medianRt` | 20 题四选一 |
-| 联想记忆 `am` | 12 组词对 + 24 题配对再认 | `hits`、`falseAlarms`、`targets`、`foils` | 12 目标 + 12 干扰 |
+| 空间视觉化 `sv` | 心理旋转 | `correct`、`total`、`correctRts`、`medianRt` | M1 为 8 题四选一 |
+| 联想记忆 `am` | 12 组词对 + 16 题配对再认 | `hits`、`falseAlarms`、`targets`、`foils` | 8 目标 + 8 干扰 |
 | 自然探索 `ni` | 自然图片四选一分类 | `correct`、`total` | 20 张图片 |
 
 ## 四、计分公式
@@ -52,7 +52,7 @@ clamp01(x) = min(1, max(0, x))
 ### 4.1 言语理解（vc）
 
 ```text
-vc = round(100 * correct / 15)
+vc = round(100 * correct / total)          // M1 为 6 题，total 取本题实际题数
 ```
 
 ### 4.2 言语流畅性（vf）
@@ -76,8 +76,8 @@ nc = round(100 * correct / 20)
 ### 4.4 知觉速度（ps）
 
 ```text
-ps = round(100 * clamp01((correct - 20) / 40))
-// 20 个正确匹配 → 0 分，60 个 → 100 分
+ps = round(100 * clamp01((correct - 8) / 16))
+// 45 秒内：8 个正确匹配 → 0 分，24 个 → 100 分
 ```
 
 ### 4.5 归纳推理（ir）
@@ -89,20 +89,20 @@ ir = round(100 * correct / 15)
 ### 4.6 空间视觉化（sv）
 
 ```text
-accScore = clamp01(correct / 20)
-rtScore  = clamp01((5000 - medianRt) / 3000)   // 5000ms → 0，2000ms → 1
+accScore = clamp01(correct / total)            // M1 为 8 题
+rtScore  = clamp01((4000 - medianRt) / 2500)   // 4000ms → 0，1500ms → 1
 sv       = round(100 * (0.7 * accScore + 0.3 * rtScore))
 ```
 
 - `medianRt` 只统计正确试次；
 - 反应时 <200ms 或 >3× 该被试中位数的试次视为异常，不进入中位数；
-- 正确试次不足 10 个时，`sv = null`。
+- 正确试次不足 4 个时（8 题的一半），`sv = null`。
 
 ### 4.7 联想记忆（am）
 
 ```text
-H = (hits + 0.5) / (targets + 1)          // targets = 12
-F = (falseAlarms + 0.5) / (foils + 1)     // foils = 12
+H = (hits + 0.5) / (targets + 1)          // targets = 8
+F = (falseAlarms + 0.5) / (foils + 1)     // foils = 8
 d' = z(H) - z(F)                          // z 为标准正态分位数
 am = round(100 * clamp01((d' + 1) / 5))   // d' = -1 → 0，d' = 4 → 100
 ```
@@ -127,7 +127,7 @@ ni = round(100 * correct / 20)
 
 | 项目 | 规则 |
 | --- | --- |
-| 配置版本 | `scoring-v3`，写在 `code/backend/app/scoring/config.py` |
+| 配置版本 | `scoring-v3.2`；`code/frontend/src/scoring/{config,levels}.js` 与 `code/backend/app/scoring/{config,formulas}.py` 必须同口径，由 `tests/backend/test_scoring_golden.py::test_matches_the_js_engine` 逐维校验 |
 | 变更 | 每次调整阈值或公式升一个小版本，并在本文档记录 |
 | 复现 | 输入、配置、版本相同，输出必须相同 |
 | 测试 | 每个公式至少覆盖正常、边界、缺失三类单元测试 |
@@ -139,7 +139,27 @@ ni = round(100 * correct / 20)
 | --- | --- | --- |
 | `scoring-v1` | 4 维：工作记忆、抑制控制、加工速度、情景记忆 | 2026-10-19 首版 |
 | `scoring-v2` | 7 维：4 维 + 认知灵活性、视空间、言语流畅性 | 10-24 调研稿，未正式发布 |
-| `scoring-v3` | 8 维：言语理解、言语流畅性、数字运算、知觉速度、归纳推理、空间视觉化、联想记忆、自然探索 | 10-24 团队拍板，本版 |
+| `scoring-v3` | 8 维：言语理解、言语流畅性、数字运算、知觉速度、归纳推理、空间视觉化、联想记忆、自然探索 | 10-24 团队拍板 |
+| `scoring-v3.1` | 4 维（M1）：vc / ps / sv / am | 11-07 按 M1 实际题量重定分母与锚点：vc ÷6、ps 8→24（45 秒）、sv ÷8 且 RT 1500/4000、am targets=foils=8；其余四维 M1 不测，恒为 null |
+| `scoring-v3.2` | 8 维全量，**按档位取分母** | 11-20 修正 Python 端口与前端引擎的偏差：① 补上分档题量表（下表），nc/ir/ni 不再按 20/15/20 判完成率（标准档实际 10/8/8，旧端口因此把满分判成 null）；② vc 补四选一猜测校正 `(acc−0.25)/0.75`；③ sv 支持加权正确率 `weighted/total`（展开图按转动次数给分）；④ ps 支持编码/分类双段（错题扣 0.5，按 `45/seconds` 折算）；⑤ vf 支持 ASR 不可用→null 与 `60/seconds` 折算；⑥ am 支持 PAL 口径（`firstTry/targets`，六选一校正）。公式本身与 v3.1 的前端实现一致，**变的是"两端必须同口径"**，由跨引擎一致性测试锁定 |
+
+### 分档题量与完成率判定（v3.2）
+
+固定题量的维度按"实际下发题量"判完成率：`total < items × 0.8` → 该维度记 `null`（未测），不给低分。
+限时维度（ps、vf）没有完成率，只按秒数折算到锚点。
+
+| 维度 | 快测 | 标准 | 深度 | 判定 |
+| --- | --- | --- | --- | --- |
+| vc | 4 题 | 8 题 | 12 题 | 正确率 −0.25 后 ÷0.75 |
+| sv | 6 题 | 8 题 | 12 题 | 0.7×正确率 + 0.3×反应时；或 `weighted/total` 猜测校正 |
+| nc | 6 题 | 10 题 | 10 题 | 正确率 |
+| ir | 6 题 | 8 题 | 8 题 | 正确率 |
+| ni | 6 题 | 8 题 | 8 题 | 正确率 |
+| am | 6 组 / 8 题 | 12 组 / 16 题 | 同标准 | 优先 PAL（`firstTry/targets`）；否则信号检测论 d′，targets/foils 从逐题作答里数 |
+| ps | 30 秒 | 45 秒 | 90 秒 | 编码 0.7 + 分类 0.3，按 `45/seconds` 折算 |
+| vf | 30 秒 | 60 秒 | 90 秒 | 有效词按 `60/seconds` 折算，10→0 分、30→100 分 |
+
+> 这张表与 `code/frontend/src/scoring/levels.js` 的 `LEVEL_SPEC`、`code/backend/app/scoring/config.py` 的 `LEVEL_SPEC` 一一对应；改任一处都必须同时改另两处，否则跨引擎测试会红。
 
 ## 七、报告中的呈现
 
@@ -156,6 +176,7 @@ ni = round(100 * correct / 20)
 - 8 项是产品口径，不是学界公认的“8 种智力”；自然探索智能来自多元智能理论，不是 CHC 常规维度；
 - 本期不测工作记忆、抑制控制、认知灵活性，报告必须写明；
 - 练习效应、设备差异、睡眠和情绪都会影响结果；
+- **题库深度不均**：vc 有 64 题可分层随机抽题（并记录 `itemIds`），nc/ir/ps/sv(旋转、展开图) 是参数化生成器（每次不同），但 **am 只有 6 组配对、sv 折纸只有 6 道、ni 恰好等于标准档题量（8 题，零冗余）** —— 这几个维度短期内复测必然遇到同题，练习效应无法靠随机化消除，只能靠扩题或等值卷；趋势页对间隔 <7 天的复测给出提示，但提示不能替代等值卷；
 - 复测变化不等于训练效果，报告必须提示“相关不等于因果”；
 - M2/M3 只校准阈值，不改变“非临床”定位。
 

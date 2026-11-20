@@ -15,6 +15,8 @@
 | 关联 | [算法设计](../algorithm/algorithm.md)、[Agent 设计](../requirements/xlragentdesign.md)、[问题定义](../requirements/problem_definition.md) |
 
 > 本版从 L1（纯静态 + BYOK 直连）升级为 L2：**FastAPI + PostgreSQL/pgvector + LangGraph + 原生前端**。L1 的原型保留为 UI 参考，不再代表最终架构。
+>
+> **2026-11-19 当前实现**：主形态为 **Web 托管版 = FastAPI（同源托管前端）+ PostgreSQL/pgvector + Alembic + LangGraph + 账号会话 + 站点 LLM API**，以 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 为准；本地开发见 [local-development.md](local-development.md)，部署见 [deploy-render.md](deploy-render.md)。本文第四～九节属于早期 L2 设想：账号方向已实现，但**凭证是服务端会话 + HttpOnly Cookie，不是 JWT/refresh**，Key 也不加密存库而是只在环境变量。桌面本地形态（ADR-0001）与《本地运行时》文档已于 2026-11-20 删除。M1 旧范围文档中的“不做后端”已被 ADR-0001 取代。
 
 ## 二、摘要
 

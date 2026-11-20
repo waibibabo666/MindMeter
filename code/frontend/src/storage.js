@@ -1,0 +1,200 @@
+/**
+ * API-backed repository facade (per-account PostgreSQL rows; no localStorage business data).
+ *
+ * Reads come from the in-memory cache loaded by boot.js; writes go to the
+ * same-origin FastAPI service. The model key is never handled here: the
+ * settings surface only exposes endpoint/model/enabled/hasKey/keyHint.
+ */
+
+import { api } from './api.js';
+import {
+  MAX_MESSAGES,
+  MAX_SESSIONS,
+  SCHEMA_VERSION,
+  cache,
+  defaultMemory,
+  defaultSettings,
+  enqueue,
+} from './cache.js';
+
+export { MAX_MESSAGES, MAX_SESSIONS, SCHEMA_VERSION };
+export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+export const KEYS = Object.freeze({
+  app: 'mindmeter.app.shell.v1',
+  sessions: 'mindmeter.sessions.v1',
+  draft: 'mindmeter.draft.v1',
+  settings: 'mindmeter.settings.v1',
+  memory: 'mindmeter.memory.v1',
+});
+export const ALL_KEYS = Object.freeze(Object.values(KEYS));
+
+export function defaultSessions() {
+  return { schemaVersion: SCHEMA_VERSION, sessions: [] };
+}
+
+export function defaultDraft() {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    tier: null,
+    order: [],
+    cursor: 0,
+    results: {},
+    drafts: {},
+    updatedAt: null,
+  };
+}
+
+export { defaultMemory, defaultSettings };
+
+export function readSessions() {
+  return { schemaVersion: SCHEMA_VERSION, sessions: cache.sessions.slice() };
+}
+
+/** Persist a completed assessment server-side (server is the scoring authority). */
+export async function addSession(session) {
+  const result = await api.post('/assessments', { session });
+  const saved = result && result.session ? result.session : result;
+  if (saved && saved.id) {
+    cache.sessions = [saved, ...cache.sessions.filter((item) => item.id !== saved.id)].slice(
+      0,
+      MAX_SESSIONS,
+    );
+  }
+  return saved;
+}
+
+export function clearSessions() {
+  cache.sessions = [];
+}
+
+export function readDraft() {
+  return null;
+}
+
+export function saveDraft() {
+  return false;
+}
+
+export function clearDraft() {
+  return undefined;
+}
+
+export function readSettings() {
+  return Object.assign(defaultSettings(), cache.settings || {});
+}
+
+/**
+ * Non-secret config only: the hosted app never accepts a model key from the
+ * browser (the deployment owns it), and the response has no key either.
+ */
+export async function writeSettings(patch) {
+  const payload = {
+    endpoint: String(patch.endpoint ?? cache.settings.endpoint ?? ''),
+    model: String(patch.model ?? cache.settings.model ?? ''),
+    enabled: Boolean(patch.enabled ?? cache.settings.enabled),
+  };
+  const saved = await api.put('/settings/ai', payload);
+  cache.settings = Object.assign(defaultSettings(), saved);
+  return readSettings();
+}
+
+export async function clearSettings() {
+  await api.del('/settings/ai/key');
+  cache.settings = Object.assign(defaultSettings(), cache.settings, {
+    enabled: false,
+    hasKey: false,
+    keyHint: '',
+  });
+  return readSettings();
+}
+
+export function readMemory() {
+  const memory = Object.assign(defaultMemory(), cache.memory || {});
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    profile: memory.profile && typeof memory.profile === 'object' ? memory.profile : {},
+    summaries: Array.isArray(memory.summaries) ? memory.summaries : [],
+    advice: Array.isArray(memory.advice) ? memory.advice : [],
+    messages: Array.isArray(memory.messages) ? memory.messages.slice(-MAX_MESSAGES) : [],
+  };
+}
+
+/** Update cache immediately, then replace this account's server copy. */
+export function writeMemory(patch) {
+  cache.memory = Object.assign(readMemory(), patch, { schemaVersion: SCHEMA_VERSION });
+  if (cache.memory.messages.length > MAX_MESSAGES) {
+    cache.memory.messages = cache.memory.messages.slice(-MAX_MESSAGES);
+  }
+  const snapshot = JSON.parse(JSON.stringify(cache.memory));
+  enqueue(() => api.put('/memory', snapshot));
+  return cache.memory;
+}
+
+export function addMessage(message) {
+  const memory = readMemory();
+  return writeMemory({ messages: [...memory.messages, message] });
+}
+
+/**
+ * 单行 upsert，不再全量替换。
+ *
+ * 为什么：对话结束后服务端会自动沉淀摘要与建议（app/agent/insights.py）。
+ * 如果这里走 `PUT /memory` 的"先删后写整份快照"，一个拿着旧缓存的页面点一下
+ * 「用最近一次测评生成」就会把服务端刚写的行抹掉 —— 用户看到的是"记忆又空了"。
+ * 服务端本来就有 `POST /memory/summaries`、`POST /memory/advice` 两个 upsert 接口，
+ * 用它们，缓存仍然乐观更新，写失败只影响这一行。
+ */
+export function addSummary(summary) {
+  const memory = readMemory();
+  cache.memory = Object.assign(memory, {
+    summaries: [...memory.summaries, summary].slice(-MAX_MESSAGES),
+  });
+  enqueue(() => api.post('/memory/summaries', summary));
+  return cache.memory;
+}
+
+export function addAdvice(advice) {
+  const memory = readMemory();
+  cache.memory = Object.assign(memory, {
+    advice: [...memory.advice, advice].slice(-MAX_SESSIONS),
+  });
+  enqueue(() => api.post('/memory/advice', advice));
+  return cache.memory;
+}
+
+export function clearMemory() {
+  cache.memory = defaultMemory();
+  enqueue(() => api.del('/memory'));
+}
+
+export function safeSettings(settings) {
+  return {
+    endpoint: settings.endpoint || '',
+    model: settings.model || '',
+    enabled: Boolean(settings.enabled),
+  };
+}
+
+/** Export is generated by the backend and never includes the key. */
+export async function exportData() {
+  return api.get('/export');
+}
+
+export async function clearAllData() {
+  await api.del('/data');
+  cache.sessions = [];
+  cache.memory = defaultMemory();
+  cache.settings = defaultSettings();
+  for (const key of ALL_KEYS) {
+    try {
+      globalThis.localStorage?.removeItem(key);
+    } catch (error) {
+      // localStorage may be unavailable; the server data is already cleared.
+    }
+  }
+}
+
+export function __setStorageForTests() {
+  // Kept as a no-op for older tests; the repository no longer uses localStorage.
+}
