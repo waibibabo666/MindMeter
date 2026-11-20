@@ -1,6 +1,6 @@
 """Runtime configuration for the hosted MindMeter backend.
 
-Everything comes from the environment (prefix ``MM_``), which is what a Render
+Everything comes from the environment (prefix ``MM_``), which is what a hosted
 web service gives you: ``MM_DATABASE_URL`` from the provisioned Postgres and
 ``MM_LLM_*`` for the site-provided OpenAI-compatible model. No key is ever read
 from a local credential store, and no key is stored in the database.
@@ -22,7 +22,7 @@ DEFAULT_LLM_FALLBACKS = "glm-4-air-250414,glm-4.5-flash"
 
 
 def _data_dir() -> Path:
-    """Writable scratch dir for logs; ephemeral on Render, so keep it small."""
+    """Writable scratch dir for logs; ephemeral on Railway, so keep it small."""
     raw = os.environ.get("MM_DATA_DIR", "").strip()
     if raw:
         return Path(raw)

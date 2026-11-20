@@ -11,13 +11,13 @@
 | 评审人 | waibibabo666、xlr268、1213lz |
 | 最后更新 | 2026-11-20（v3.1：Web 账号与会话口径对齐实现） |
 | 上游文档 | [问题定义与产品描述](problem_definition.md) |
-| 关联文档 | [非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md)、[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)、[部署指南](../software/deploy-render.md)、[Agent 设计](xlragentdesign.md) |
+| 关联文档 | [非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md)、[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)、[部署指南](../software/deploy-railway.md)、[Agent 设计](xlragentdesign.md) |
 
 > 本版把 AI 从“可选解读”升级为**核心 Agent**，并引入账号、服务端计分、记忆、RAG 与长期趋势。L1 的“无账号/无后端/BYOK 直连”不再是目标架构。
 >
 > **2026-11-07 M1 范围变更**（历史）：M1 先做**纯本地 + 用户自备 LLM API**，不做账号/服务端/数据库；该范围已被 [ADR-0001](../adr/0001-local-desktop-runtime.md) 再被 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 取代。
 >
-> **2026-11-20 v3.1 当前实现口径**：Web 多用户已上线化（Render 托管）。与本文早期设想的三处差异已在正文对齐——① 账号凭证是**用户名+密码**（不收集邮箱，故无邮件验证/自助找回）；② 会话是**服务端会话表 + HttpOnly Cookie**，不是 JWT/refresh；③ 模型由**站点统一提供**（环境变量），BYOK 与 Key 加密存库取消。
+> **2026-11-20 v3.1 当前实现口径**：Web 多用户已上线化（Railway 托管）。与本文早期设想的三处差异已在正文对齐——① 账号凭证是**用户名+密码**（不收集邮箱，故无邮件验证/自助找回）；② 会话是**服务端会话表 + HttpOnly Cookie**，不是 JWT/refresh；③ 模型由**站点统一提供**（环境变量），BYOK 与 Key 加密存库取消。
 
 ## 二、目的与范围
 
@@ -83,7 +83,7 @@
 | F-02 | 登录/登出 | P0 | 用户名 + 密码；失败统一 401 `invalid_credentials`（不区分用户名/密码）；按 `IP+用户名` 限流（默认 10 次/5 分钟 → 429）；未知用户名也执行一次 PBKDF2 以对齐时序；登出撤销服务端会话行 |
 | F-03 | 会话保持 | P0 | 不透明随机令牌存 `HttpOnly + SameSite=Lax + Secure(auto)` Cookie；数据库只存 `sha256(token)`；30 天滑动续期；会话失效一律 401，前端广播一次并回登录页；**不把 token 放 URL 或 localStorage** |
 | F-04 | 密码修改/重置 | P1 | 已实现改密（需当前密码，改后撤销其他设备会话）；因不收集邮箱，**不提供自助找回**，登录页与设置页明示需联系发起人；邮件重置为 M2 可选项 |
-| F-05 | 注销账号 | P0 | 二次确认 + 当前密码；立即硬删除（`ON DELETE CASCADE` 级联清测评/分数/记忆/对话/AI 运行记录）；“30 天内清除”由 Render 每日数据库快照代替；用户名可被重新注册 |
+| F-05 | 注销账号 | P0 | 二次确认 + 当前密码；立即硬删除（`ON DELETE CASCADE` 级联清测评/分数/记忆/对话/AI 运行记录）；“30 天内清除”由托管数据库的备份能力代替；用户名可被重新注册 |
 | F-06 | 数据导出 | P0 | `GET /export` 返回本账号 JSON：测评、八维分数、记忆摘要、建议、对话、进度；**不含密码、不含 Key**（模型由站点提供，前端从未持有）；`DELETE /data` 只清本账号数据 |
 
 ### 5.2 测评

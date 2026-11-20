@@ -12,8 +12,7 @@
 | `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
-| `software/` | [Render 部署指南](software/deploy-render.md) | 当前 | Blueprint 一键部署、环境变量、LLM 选型、验收、排障 |
-| `software/` | [Railway 部署指南](software/deploy-railway.md) | 当前 | 不需要信用卡的替代方案；pgvector 模板是成败关键、`MM_AUTO_MIGRATE` 替代 pre-deploy |
+| `software/` | [Railway 部署指南](software/deploy-railway.md) | 当前 | Dockerfile 构建；pgvector 模板是成败关键、`DATABASE_URL_PRIVATE` 走内网 |
 | `software/` | [Web 本地开发与测试](software/local-development.md) | 当前 | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
 | `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 部分被取代 | 桌面壳、loopback token、单用户与 keyring 条款由 ADR-0003 取代 |
@@ -45,7 +44,6 @@
 | [维度与分档调研 v2](research/xlrdimensions_v2.md) | 4/7 维旧口径 |
 | [四维口径调研 v0.9](research/xlrweidudiaoyan.md) | “四项不换”旧结论 |
 | [Agent 平台调研](research/xlragentplatform.md) | 平台对比；L1 的 serverless 结论不再采用 |
-| [requirements/xlrweidudiaoyan.md](requirements/xlrweidudiaoyan.md) | 已合并，只剩指针 |
 
 > 历史文档顶部均有“已被取代/未采纳”的横幅；不要用它们反推当前需求。
 

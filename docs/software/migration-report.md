@@ -4,7 +4,7 @@
 > （[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)），2026-11-20 桌面入口
 > （`code/desktop/`、`MindMeter.cmd/.vbs`、keyring、`api.js` 的 pywebview 桥）与前端
 > 浏览器直连模型的 legacy（`src/llm/*`、`src/agent/*`）已删除。当前口径见
-> [本地开发与测试](local-development.md) 与 [部署指南](deploy-render.md)。
+> [本地开发与测试](local-development.md) 与 [部署指南](deploy-railway.md)。
 
 日期：2026-11-14  
 范围：架构迁移，不改 UI 视觉设计。

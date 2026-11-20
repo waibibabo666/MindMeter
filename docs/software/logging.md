@@ -1,11 +1,11 @@
 # 诊断日志（Web 托管版）
 
 > 当前实现有两层：前端内存日志（`code/frontend/src/log.js`，200 条、可脱敏导出），
-> 与后端脱敏日志（`app/logging_setup.py`）。托管环境下后端**同时写 stdout**（Render
-> Dashboard 的 Logs 页就是它），文件只在可写时落到 `MM_DATA_DIR/logs/backend.log`
-> （Render 上是 `/tmp/mindmeter`，文件系统临时）。后端不记录 prompt/回答/Key；
+> 与后端脱敏日志（`app/logging_setup.py`）。托管环境下后端**同时写 stdout**（Railway
+> 的 Deploy Logs 页就是它），文件只在可写时落到 `MM_DATA_DIR/logs/backend.log`
+> （Railway 上是 `/tmp/mindmeter`，文件系统临时）。后端不记录 prompt/回答/Key；
 > `GET /api/v1/logs` 默认关闭，需要 `MM_EXPOSE_LOGS=1` 且已登录才返回脱敏后的尾部日志。
-> 见 [本地开发与测试](local-development.md) 与 [部署指南](deploy-render.md)。
+> 见 [本地开发与测试](local-development.md) 与 [部署指南](deploy-railway.md)。
 
 ## 目标
 

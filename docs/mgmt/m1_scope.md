@@ -3,7 +3,7 @@
 > **2026-11-14 架构变更：本文的“纯本地静态、无 FastAPI/Postgres/pgvector”范围已被
 > [ADR-0001](../adr/0001-local-desktop-runtime.md) 取代。** 当前实现为
 > pywebview + FastAPI + 便携 PostgreSQL + Alembic + pgvector + keyring；
-> 该形态已于 2026-11-19 被 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 取代（Web 多用户 + Render 托管），
+> 该形态已于 2026-11-19 被 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 取代（Web 多用户 + 托管部署），
 > 桌面入口已于 2026-11-20 删除；本文仅作范围追溯。
 > 保留本文作为 M1 历史验收记录，不再作为架构约束。
 

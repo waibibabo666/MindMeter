@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """End-to-end smoke check against a deployed MindMeter web app.
 
-    python scripts/smoke_web_deploy.py https://mindmeter-web.onrender.com
+    python scripts/smoke_web_deploy.py https://mindmeter-web-production.up.railway.app
 
 Checks the parts that only break in a real deployment: the public health
 probe, cookie sessions, per-account isolation, the static shell, and that no

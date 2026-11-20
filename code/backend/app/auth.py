@@ -3,7 +3,7 @@
 Design notes (docs/adr/0003-web-accounts-and-hosted-deployment.md):
 
 * Passwords use PBKDF2-HMAC-SHA256 from the standard library — no native
-  build deps, which matters on Render's free builder.
+  build deps, which matters on a free-tier host.
 * Sessions are opaque random tokens in an HttpOnly, SameSite=Lax cookie. The
   database only ever stores ``sha256(token)``, so a leaked table cannot be
   replayed as a cookie. Logout / "log out everywhere" / account deletion all
@@ -276,7 +276,7 @@ def wants_secure_cookie(request: Request) -> bool:
         or (request.url.scheme or "")
     )
     host = request.url.hostname or ""
-    return scheme == "https" or host.endswith(".onrender.com")
+    return scheme == "https" or host.endswith((".onrender.com", ".up.railway.app"))
 
 
 def apply_session_cookie(response, token: str, secure: bool) -> None:

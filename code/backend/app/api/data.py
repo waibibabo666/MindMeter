@@ -2,8 +2,8 @@
 
 The desktop build shelled out to ``pg_dump`` before an import. A hosted build
 has an ephemeral filesystem and a managed database, so the backup is the
-account's own export JSON plus Render's daily Postgres snapshot — documented in
-docs/software/deploy-render.md.
+account's own export JSON plus the hosted database backup — documented in
+docs/software/deploy-railway.md.
 """
 from __future__ import annotations
 

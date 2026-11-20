@@ -1,10 +1,12 @@
-# ADR-0003：Web 账号体系与 Render 托管部署
+# ADR-0003：Web 账号体系与托管部署（Render → 后迁移 Railway）
+
+> **2026-11-20 更新**：部署目标已从 Render 迁移到 Railway（见 [Railway 部署指南](../software/deploy-railway.md)）。本文保留当时的决策记录，文中 “Render” 均指当时的托管方案，应用侧形态未变。
 
 - 状态：已接受（Accepted）
 - 日期：2026-11-19
 - 负责人：song
 - 取代：`docs/adr/0001-local-desktop-runtime.md` 的第 1/2/6/7 条（桌面壳、loopback token、单用户、keyring Key 存储）；其余条款（PostgreSQL + pgvector + Alembic + LangGraph + 模板兜底 + 不用 SQLite）继续有效
-- 关联：[Render 部署指南](../software/deploy-render.md)、[Web 本地开发与测试](../software/local-development.md)、[功能需求 §5.1](../requirements/functional_spec.md)、[非功能需求](../requirements/nonfunctional_spec.md)
+- 关联：[Railway 部署指南](../software/deploy-railway.md)、[Web 本地开发与测试](../software/local-development.md)、[功能需求 §5.1](../requirements/functional_spec.md)、[非功能需求](../requirements/nonfunctional_spec.md)
 
 ## 背景
 
@@ -54,4 +56,4 @@
 
 ## 验收
 
-见 [Render 部署指南](../software/deploy-render.md) §验收清单；自动化对应 `tests/backend/test_auth_api.py`、`tests/backend/test_tenancy.py`、`scripts/smoke_web_deploy.py`。
+见 [Railway 部署指南](../software/deploy-railway.md) §3「部署后必须验的两件事」；自动化对应 `tests/backend/test_auth_api.py`、`tests/backend/test_tenancy.py`、`scripts/smoke_web_deploy.py`。

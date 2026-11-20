@@ -5,7 +5,7 @@ Creating the engine does not connect. Migrations are run by the deploy
 a request needs the database.
 
 Hosted Postgres strings come in several dialects, so ``normalize_url`` accepts
-what Render (and a plain ``postgres://...`` handoff) actually gives you and
+what the host (and a plain ``postgres://...`` handoff) actually gives you and
 rewrites it to the psycopg3 driver this app uses.
 """
 from __future__ import annotations
@@ -34,7 +34,7 @@ def normalize_url(raw: str) -> str:
 
 
 def engine_kwargs(_url: str = "") -> dict:
-    """A small pool plus aggressive recycling: hosts like Render close idle conns."""
+    """A small pool plus aggressive recycling: hosts like Railway close idle conns."""
     return {
         "pool_pre_ping": True,
         "pool_recycle": 280,

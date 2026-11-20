@@ -1,8 +1,8 @@
-# MindMeter web runtime (Render / any Linux host). Python 3.12+.
+# MindMeter web runtime (Railway / any Linux host). Python 3.12+.
 # Removed with the desktop era: pywebview (window shell), keyring (Windows
 # Credential Manager — the model key now comes from MM_LLM_API_KEY) and
 # fastembed (local embedding model; the hosted build uses keyword RAG, see
-# docs/software/deploy-render.md).
+# docs/software/deploy-railway.md).
 fastapi==0.162.7
 uvicorn==0.54.0
 sqlalchemy==2.1.8

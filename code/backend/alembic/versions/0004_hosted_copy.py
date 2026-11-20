@@ -54,7 +54,7 @@ def upgrade() -> None:
         raise RuntimeError(
             "这是桌面单用户数据库：Web 多用户需要全新数据库。"
             "本地请用 scripts/init_web_db.ps1（或删掉 runtime/data/pgdata 后重跑迁移）；"
-            "Render 上请新建一个 Postgres 实例。"
+            "托管平台上请新建一个 pgvector Postgres 实例。"
         )
     bind.execute(
         sa.text(

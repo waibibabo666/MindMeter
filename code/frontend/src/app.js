@@ -331,7 +331,7 @@ function showBootError(error) {
       el('h1', { class: 'page-title', text: '站点服务没有响应' }),
       el('p', {
         class: 'lead',
-        text: 'MindMeter 的后端或数据库没有就绪（免费实例冷启动约需 1 分钟）。请稍后刷新；如果反复出现，请查看 Render 日志。',
+        text: 'MindMeter 的后端或数据库没有就绪（免费实例冷启动约需 1 分钟）。请稍后刷新；如果反复出现，请查看服务端日志。',
       }),
       el('div', { class: 'row' }, [
         button(
