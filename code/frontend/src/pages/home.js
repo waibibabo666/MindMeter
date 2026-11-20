@@ -1,4 +1,4 @@
-import { el, button } from '../ui.js';
+import { el, button, titled } from '../ui.js';
 import { DIMS } from '../data.js';
 import { readSessions } from '../storage.js';
 import { scoreSession } from '../scoring/index.js';
@@ -6,6 +6,13 @@ import { MIRROR_ART } from '../icons.js';
 import { DIM_COLORS } from '../charts/trend.js';
 
 const TIER_LABEL = { quick: '快测', standard: '标准', deep: '深度' };
+
+/* 人工测试反馈 2：说明性文字不常驻页面，只留板块名与按钮名，解释收进悬浮浮框（键盘可聚焦）。
+   同一句产品口径在多个页面重复的，正文只留在「说明」页，这里给一句最短的。 */
+const TIP_RECENT =
+  '按完成时间倒序记录这个账号的测评，这里只放最近一次；分数只描述这次任务表现，不设总分，也不与人群比较。';
+const TIP_DIMS =
+  '八个维度取自 CHC 能力分类里能短时测查的部分。没测到的维度显示「未测」，不按 0 计，也不参与任何平均或趋势。';
 
 function fmtDate(iso) {
   if (!iso) return '—';
@@ -32,8 +39,8 @@ function recentCard(ctx) {
 
   if (measured.length === 0) {
     return el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: '最近一次测评' }),
-      el('p', { class: 'muted', text: '还没有记录。完成一次测评后，这里会显示各维度分数。' }),
+      titled('h2', '最近一次测评', TIP_RECENT),
+      el('p', { class: 'muted', text: '还没有记录：先选一个档位开始。' }),
     ]);
   }
 
@@ -43,7 +50,7 @@ function recentCard(ctx) {
 
   return el('div', { class: 'card' }, [
     el('div', { class: 'row' }, [
-      el('h2', { class: 'card-title', text: '最近一次测评' }),
+      titled('h2', '最近一次测评', TIP_RECENT),
       el('span', {
         class: 'tiny',
         text: `${fmtDate(last.finishedAt)} · ${TIER_LABEL[last.mode] || '标准'}档`,
@@ -78,7 +85,7 @@ function dimsCard() {
   );
 
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '八个维度' }),
+    titled('h2', '八个维度', TIP_DIMS),
     el('div', { class: 'dim-grid' }, cells),
   ]);
 }

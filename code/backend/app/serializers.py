@@ -87,7 +87,37 @@ def default_state() -> dict:
         "cursor": 0,
         "results": {},
         "drafts": {},
+        "profile": {},
     }
+
+
+EDU_VALUES = {"middle", "high", "college", "bachelor", "graduate"}
+
+
+def clean_profile(raw: object) -> dict:
+    """Whitelist the account-level intake fields; refuse to store anything else.
+
+    Only age + education + a consent marker live here. They never enter the
+    scoring path (docs/algorithm/algorithm.md), and free-form text is dropped on
+    purpose so this column cannot become a place to stash personal data.
+    """
+    data = raw if isinstance(raw, dict) else {}
+    profile: dict[str, object] = {}
+    try:
+        age = int(data.get("age"))
+    except (TypeError, ValueError):
+        age = 0
+    if 10 <= age <= 100:
+        profile["age"] = age
+    edu = str(data.get("edu") or "")
+    if edu in EDU_VALUES:
+        profile["edu"] = edu
+    version = str(data.get("consentVersion") or "")[:24]
+    if version:
+        profile["consentVersion"] = version
+    if data.get("consentedAt"):
+        profile["consentedAt"] = str(data["consentedAt"])[:40]
+    return profile
 
 
 def state_payload(db: Session, user_id: int) -> dict:
@@ -105,6 +135,7 @@ def state_payload(db: Session, user_id: int) -> dict:
         "cursor": int(row.cursor or 0),
         "results": row.results or {},
         "drafts": row.drafts or {},
+        "profile": clean_profile(row.profile or {}),
     }
 
 

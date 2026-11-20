@@ -7,11 +7,11 @@
 import { credentialIssues, loadSession, login, messageFor, register, session } from '../auth.js';
 import { el } from '../ui.js';
 
-function field(label, control, hint) {
+function field(label, control, note) {
   return el('label', { class: 'field' }, [
     el('span', { class: 'field-label', text: label }),
     control,
-    hint ? el('span', { class: 'field-hint', text: hint }) : null,
+    note ? el('span', { class: 'field-hint', text: note }) : null,
   ]);
 }
 
@@ -83,9 +83,10 @@ function switchLine(kind, ctx) {
 }
 
 function disclaimer() {
+  // 报名前的边界声明必须主动可见；重复的产品口径只在「说明」页保留一次。
   return el('p', {
     class: 'disclaimer',
-    text: 'MindMeter 不是医疗器械，不提供临床诊断、治疗或危机干预；不设总分、没有常模、不做百分位。',
+    text: 'MindMeter 不是医疗器械，不提供临床诊断、治疗或危机干预。',
   });
 }
 
@@ -111,7 +112,7 @@ export function renderLogin(root, ctx) {
   const status = statusNode('login');
   const username = input('login-username', 'text', 'username', '例如 mind.demo');
   username.dataset.field = 'username';
-  const password = input('login-password', 'password', 'current-password', '至少 10 位');
+  const password = input('login-password', 'password', 'current-password', '登录密码');
   password.dataset.field = 'password';
 
   form.appendChild(field('用户名', username));
@@ -140,7 +141,7 @@ export function renderLogin(root, ctx) {
       switchLine('login', ctx),
       el('p', {
         class: 'tiny',
-        text: '忘记密码无法自助找回：本站不收集邮箱，也不发送任何邮件。需要重置请联系发起人。',
+        text: '本站不收集邮箱：忘记密码无法自助找回，需要重置请联系发起人。',
       }),
       disclaimer(),
     ]),
@@ -163,7 +164,7 @@ export function renderRegister(root, ctx) {
     'register-password',
     'password',
     'new-password',
-    '至少 10 位，含字母与数字',
+    '至少 8 位，含字母与数字',
   );
   password.dataset.field = 'password';
   const confirm = input('register-confirm', 'password', 'new-password', '再输入一次');
@@ -176,7 +177,7 @@ export function renderRegister(root, ctx) {
   adult.dataset.field = 'adult';
 
   form.appendChild(field('用户名', username));
-  form.appendChild(field('密码', password, '至少 10 位，包含字母与数字'));
+  form.appendChild(field('密码', password, '至少 8 位，包含字母与数字'));
   form.appendChild(field('确认密码', confirm));
   form.appendChild(adultLabel);
   form.appendChild(status);

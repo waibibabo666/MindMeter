@@ -10,14 +10,14 @@ code/backend/
 │  ├─ auth.py              # PBKDF2 口令、服务端会话表、限流、依赖注入
 │  ├─ audit.py             # 只记动作与结果，不记内容
 │  ├─ models.py            # 多租户 SQLAlchemy 模型（user_id 复合主键）
-│  ├─ scoring/             # scoring-v3.1 Python（唯一权威）
+│  ├─ scoring/             # scoring-v3.2 Python（唯一权威，与前端一致）
 │  ├─ rag/                 # BM25（默认）+ pgvector 向量检索 + embedding ingest
 │  ├─ agent/               # LangGraph 小图
 │  ├─ llm.py               # OpenAI 兼容客户端 + site_llm_config()
 │  ├─ db.py                # 连接串归一（postgres:// → postgresql+psycopg://）与小连接池
 │  ├─ security.py          # 安全头/CSP + 同源写请求守卫（不再有 loopback/token）
 │  └─ logging_setup.py     # 脱敏日志（托管时同时输出到 stdout）
-├─ alembic/                # 0001_initial → 0004_hosted_copy
+├─ alembic/                # 0001_initial → 0005_profile
 ├─ pyproject.toml
 └─ alembic.ini
 ```
@@ -42,7 +42,35 @@ python -m uvicorn app.main:app --reload --port 8000
 - **所有业务查询必须带 `user_id`**：新增表就用 `user_pk()` 作复合主键第一列，新增接口就取 `Depends(auth.require_user)`；
 - 模型 Key 只在 `MM_LLM_*` 环境变量里：数据库无 `ai_settings` 表，`GET /settings/ai` 只读，`PUT`/`DELETE key` 一律 403 `ai_managed_by_site`；
 - 会话是服务端表：登出、改密码、注销账号都会撤销数据库里的会话行；
-- 对话每账号只留最近 20 条、测评每账号只留最近 50 次；
+- 对话每账号只留最近 20 条、测评每账号只留最近 50 次；记忆沉淀每账号只留最近 20 条摘要、30 条建议；
 - AI 失败一律回退模板，分数与结论不变；
 - 日志不记录 prompt/回答/Key；`GET /logs` 需要 `MM_EXPOSE_LOGS=1` 且已登录；
 - 测试使用 PostgreSQL，不用 SQLite；口令散列与令牌散列都不落明文。
+
+## `POST /api/v1/chat` 的响应契约（记忆沉淀）
+
+```jsonc
+{
+  "reply": {
+    "text": "……",                  // 模型回答或确定性模板
+    "intent": "explain",            // explain / summary / trend / clarify / crisis / …
+    "source": "llm | template | policy",
+    "code": "ok | too_long | banned_word | unsourced_number | score_misattributed | mechanism_speculation | citation_missing | citation_placeholder | empty | timeout | auth | rate_limit | http | network | bad_response | truncated | not_configured | no_knowledge | unknown | trend_no_data | intent:<intent>",
+    "validation": [                 // 完整校验结论：code + 中文 detail + severity
+      { "code": "too_long", "detail": "回答过长：388 字，上限 360 字", "severity": "hard" }
+    ],
+    "citations": [ … ], "sources": [ … ], "risk": "low | medium | high",
+    "assessmentId": "s_xxx"
+  },
+  "memory": {                       // 与 GET /api/v1/memory 完全同形状（同一个 memory_payload）
+    "schemaVersion": 1, "profile": { … }, "summaries": [ … ], "advice": [ … ], "messages": [ … ]
+  },
+  "memoryUpdated": true,            // 本轮服务端是否写了记忆行（前端据此刷新面板）
+  "profileSuggested": null,         // {goal|preference|constraint}：画像线索，服务端未写，等用户确认
+  "messages": [ … ]                 // = memory.messages，兼容旧前端
+}
+```
+
+- 服务端在每轮**有效**对话后自动沉淀 `MemorySummary`（同一测评+同一天 upsert 一条）与本轮实际给出的 `MemoryAdvice`（kb 编号或建议正文哈希去重）；`pii_blocked`、`clarify`、`unrelated`、`greeting`，以及 `crisis/boundary/high_domain/support/self_blame` 这类敏感固定话术**一律不落记忆**。
+- 画像只在用户明确表达目标/偏好/约束、且 `MemoryProfile.confirmed` 已为真时才更新；未确认时只回 `profileSuggested`。
+- 因为 `PUT /api/v1/memory` 是**整份替换**（先删后写），对话页必须采用这里的 `memory` 更新缓存，不能把旧快照 PUT 回来，否则会抹掉服务端刚写的行。

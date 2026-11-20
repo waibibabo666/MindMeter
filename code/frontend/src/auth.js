@@ -11,7 +11,7 @@
 import { api } from './api.js';
 
 export const AUTH_PATHS = ['/login', '/register'];
-export const MIN_PASSWORD_LEN = 10;
+export const MIN_PASSWORD_LEN = 8;
 export const MAX_PASSWORD_LEN = 128;
 export const USERNAME_PATTERN = /^[a-z0-9\u4e00-\u9fff][a-z0-9._\u4e00-\u9fff-]{1,31}$/;
 

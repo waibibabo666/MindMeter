@@ -45,7 +45,8 @@ def persist_session(db: Session, user_id: int, session: dict) -> dict:
     if mode not in {"quick", "standard", "deep"}:
         mode = "standard"
     results = session.get("results") if isinstance(session.get("results"), dict) else {}
-    scored = score_session(results)
+    # 分档题量决定完成率判定：必须把 mode 传给引擎，否则 nc/ir/ni 会被判成未完成。
+    scored = score_session(results, mode)
     finished_at = parse_dt(session.get("finishedAt")) or datetime.now(timezone.utc)
     dims = session.get("dims") if isinstance(session.get("dims"), list) else list(results.keys())
 
@@ -199,8 +200,11 @@ def explain_report(
     return {
         "text": result.get("text", ""),
         "source": result.get("source", "template"),
+        # code 现在是真实原因（模型侧 timeout/auth/…，或校验侧 too_long/banned_word/
+        # unsourced_number/score_misattributed）；细到"哪几个数字没有出处"看 validation。
         "code": code,
         "reason": code or "",
+        "validation": result.get("validation") or [],
         "citations": result.get("citations") or [],
         "sources": result.get("sources") or [],
     }

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """End-to-end smoke check against a deployed MindMeter web app.
 
     python scripts/smoke_web_deploy.py https://mindmeter-web.onrender.com
@@ -136,7 +136,7 @@ def main() -> int:
                     "finishedAt": "2026-11-19T01:00:00Z",
                     "dims": ["vc", "ps", "sv", "am"],
                     "results": {
-                        "vc": {"metrics": {"total": 6, "correct": 6}, "answers": []},
+                        "vc": {"metrics": {"total": 8, "correct": 8}, "answers": []},
                         "ps": {"metrics": {"correct": 20}, "answers": []},
                         "sv": {
                             "metrics": {"total": 8, "correct": 8, "correctRts": [1500] * 8},
@@ -153,6 +153,30 @@ def main() -> int:
         scores = saved.json().get("session", {}).get("scores", {}) if saved.status_code == 200 else {}
         report("server-side scoring on POST /assessments", scores.get("vc") == 100, saved.text[:200])
 
+        # v3.2：分档题量。标准档实际下发 nc10/ir8/ni8，旧端口会把这些判成未完成。
+        leveled = a.post(
+            f"{api}/assessments",
+            json={
+                "session": {
+                    "id": "s_smoke_levels",
+                    "mode": "standard",
+                    "finishedAt": "2026-11-20T01:00:00Z",
+                    "dims": ["nc", "ir", "ni"],
+                    "results": {
+                        "nc": {"metrics": {"total": 10, "correct": 10}, "answers": []},
+                        "ir": {"metrics": {"total": 8, "correct": 8}, "answers": []},
+                        "ni": {"metrics": {"total": 8, "correct": 8}, "answers": []},
+                    },
+                }
+            },
+        )
+        level_scores = leveled.json().get("session", {}).get("scores", {}) if leveled.status_code == 200 else {}
+        report(
+            "level-aware scoring: standard nc/ir/ni are not null",
+            all(level_scores.get(dim) == 100 for dim in ("nc", "ir", "ni")),
+            leveled.text[:200],
+        )
+
         explained = a.post(f"{api}/reports/s_smoke_1/explain")
         payload = explained.json() if explained.status_code == 200 else {}
         report(
@@ -164,6 +188,27 @@ def main() -> int:
             print(f"     模型解读生效：{payload.get('source')} / {payload.get('code')}")
         else:
             print(f"     模板兜底：{payload.get('reason') or payload.get('code')}（填 MM_LLM_API_KEY 后走模型）")
+
+        # 配了 Key 就必须真的走模型，否则说明 MM_LLM_* 或网络有问题。
+        # 免费池高峰期会偶发过载（智谱 1305 / 429），单次抖动不代表配置坏了：
+        # 因此最多探 3 次，全失败才判红 —— 既不让验收随机变红，也不放过真故障。
+        ai_enabled = bool((body.get("ai") or {}).get("enabled"))
+        if ai_enabled:
+            probe = a.post(f"{api}/settings/ai/test")
+            report("settings/ai/test succeeds with the site key", probe.status_code == 200 and probe.json().get("ok") is True, probe.text[:200])
+            used = dict(payload)
+            for attempt in range(3):
+                if used.get("source") == "llm":
+                    break
+                time.sleep(2.0 + attempt)
+                again = a.post(f"{api}/reports/s_smoke_1/explain")
+                used = again.json() if again.status_code == 200 else {}
+                print(f"     第 {attempt + 2} 次尝试：source={used.get('source')} code={used.get('code')}")
+            report(
+                "explain actually used the model (not template fallback)",
+                used.get("source") == "llm",
+                f"source={used.get('source')} code={used.get('code')} reason={used.get('reason')}",
+            )
 
         chat = a.post(f"{api}/chat", json={"question": "为什么联想记忆低？"})
         report(

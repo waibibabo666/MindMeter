@@ -6,12 +6,25 @@
  * 2. 数据归属从「这台电脑」变成「这个账号」，因此这里同时是账号与数据的主控台：
  *    改密码、退出登录、注销账号（级联删除）、导出与导入。
  */
-import { el, button, clear } from '../ui.js';
+import { el, button, clear, hint, titled } from '../ui.js';
 import { api } from '../api.js';
 import { readSettings } from '../storage.js';
 import { clearLogs, exportLogs, getLogs, log } from '../log.js';
 import { isSoundOn, setSoundOn, playClick } from '../sound.js';
 import { changePassword, deleteAccount, messageFor, passwordIssues, session } from '../auth.js';
+
+/* 反馈 2：每个板块只留名字，解释收进标题旁的浮框；
+   风险与限制、注销后果这类会影响决策的话仍然写在页面上。 */
+const TIP_RELOGIN = '修改后其他设备上的登录状态会全部失效，本设备保持登录。';
+const TIP_ERASE =
+  '需要输入当前密码；删除是不可恢复的，会连带测评、分数、记忆、对话与运行记录一起清掉。如需留档，请先在「我的数据」里导出。';
+const TIP_AI =
+  '模型由站点统一提供（服务端环境变量），这里只读：浏览器不接收也不保存任何密钥；未配置、超时、限流或鉴权失败时，解读自动回退到内置模板。';
+const TIP_DATA =
+  '导出的是本账号的完整数据 JSON（测评、分数、记忆、对话、进度），不含任何密钥；导入会按相同 id 跳过，不覆盖已有记录。';
+const TIP_SOUND =
+  '按钮和选项点击时播放一声轻微提示音；在当前页面实时合成，不加载音频文件、不联网。';
+const TIP_LOG = '前端日志只存在当前页面内存，最多 200 条，刷新即清；导出前会脱敏，不包含密钥。';
 
 const RISKS = [
   '模型服务由站点统一配置，Key 只存在于服务端环境变量：不进浏览器、不进数据库、不进日志与导出 JSON。',
@@ -70,7 +83,7 @@ function buildPasswordCard(ctx) {
     class: 'input',
     type: 'password',
     autocomplete: 'new-password',
-    placeholder: `新密码，至少 10 位`,
+    placeholder: `新密码，至少 8 位`,
   });
   const confirm = el('input', {
     class: 'input',
@@ -109,8 +122,7 @@ function buildPasswordCard(ctx) {
   };
 
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '修改密码' }),
-    el('p', { class: 'muted', text: '修改后其他设备上的登录状态会全部失效，本设备保持登录。' }),
+    titled('h2', '修改密码', TIP_RELOGIN),
     field('当前密码', current),
     field('新密码', next),
     field('确认新密码', confirm),
@@ -154,11 +166,8 @@ function buildAccountCard(ctx) {
     accountRow('注册时间', formatWhen(session.user && session.user.createdAt)),
     accountRow('上次登录', formatWhen(session.user && session.user.lastLoginAt)),
     el('div', { class: 'row' }, [button('退出登录', () => ctx.signOut(), { variant: 'ghost' })]),
-    el('h3', { class: 'card-subtitle', text: '注销账号' }),
-    el('p', {
-      class: 'muted',
-      text: '需要输入当前密码。删除是不可恢复的；如需留档，请先在「我的数据」里导出。',
-    }),
+    el('h3', { class: 'card-subtitle' }, ['注销账号', hint(TIP_ERASE, { edge: true })]),
+    el('p', { class: 'muted', text: '删除后不可恢复。' }),
     field('确认密码', eraseInput),
     el('div', { class: 'row' }, [button('注销并删除全部数据', erase, { variant: 'danger' })]),
     dangerStatus,
@@ -190,25 +199,19 @@ function buildAiCard() {
 
   const state =
     saved.enabled && saved.hasKey ? '已启用：解读走真实模型' : '未配置：解读自动回退模板';
+  const tip =
+    saved.enabled && saved.hasKey
+      ? TIP_AI
+      : `${TIP_AI}部署时在 Render 的环境变量里填 MM_LLM_API_KEY 即可启用真实模型；不填也能正常测评。`;
 
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: 'AI 解读' }),
-    el('p', {
-      class: 'muted',
-      text: '模型由站点统一提供（服务端环境变量），这里只读：浏览器不接收也不保存任何密钥。',
-    }),
+    titled('h2', 'AI 解读', tip),
     accountRow('状态', state),
     accountRow('模型', saved.model || '—'),
     accountRow('服务地址', saved.endpoint || '—'),
     accountRow('密钥', saved.hasKey ? `服务端已配置（${saved.keyHint || 'masked'}）` : '未配置'),
     el('div', { class: 'row' }, [test]),
     status,
-    saved.enabled && saved.hasKey
-      ? null
-      : el('p', {
-          class: 'tiny',
-          text: '部署时在 Render 环境变量里填 MM_LLM_API_KEY 即可启用真实模型；不填也能正常测评。',
-        }),
   ]);
 }
 
@@ -249,11 +252,7 @@ function buildDataCard(ctx, rerender) {
   );
 
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '我的数据' }),
-    el('p', {
-      class: 'muted',
-      text: '导出的是本账号的完整数据 JSON（测评、分数、记忆、对话、进度），不含任何密钥。',
-    }),
+    titled('h2', '我的数据', TIP_DATA),
     el('div', { class: 'row' }, [
       button('导出数据', () => ctx.exportData(), { variant: 'ghost' }),
       importButton,
@@ -295,12 +294,8 @@ function buildSoundToggle() {
 
 function buildExperienceCard() {
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '体验' }),
+    titled('h2', '体验', TIP_SOUND),
     el('label', { class: 'check' }, [buildSoundToggle(), el('span', { text: '点击音效' })]),
-    el('p', {
-      class: 'muted',
-      text: '按钮和选项点击时播放一声轻微提示音；在当前页面实时合成，不加载音频文件、不联网。',
-    }),
   ]);
 }
 
@@ -308,11 +303,8 @@ function buildLogCard(ctx, rerender) {
   const logs = getLogs();
   const latest = logs[logs.length - 1];
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '诊断日志' }),
-    el('p', {
-      class: 'muted',
-      text: `前端日志只存在当前页面内存，最多 200 条；导出前会脱敏，不包含密钥。当前 ${logs.length} 条。`,
-    }),
+    titled('h2', '诊断日志', TIP_LOG),
+    el('p', { class: 'tiny', text: `当前 ${logs.length} 条。` }),
     latest ? el('p', { class: 'tiny', text: `最近：${latest.level} · ${latest.event}` }) : null,
     el('div', { class: 'row' }, [
       button('导出诊断日志', () => downloadLogs(ctx), { variant: 'ghost' }),
@@ -353,7 +345,10 @@ function downloadLogs(ctx) {
 
 function buildRiskCard() {
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '风险与限制' }),
+    el('h2', { class: 'card-title' }, [
+      '风险与限制',
+      hint('这一节是必须常驻的边界声明；更完整的口径、依据与 AI 边界写在「说明」页。'),
+    ]),
     el(
       'ul',
       { class: 'plain-list' },
@@ -370,10 +365,6 @@ export function renderSettings(root, ctx) {
     root.appendChild(
       el('section', { class: 'page', 'aria-labelledby': 'settings-title' }, [
         el('h1', { id: 'settings-title', class: 'page-title', text: '设置' }),
-        el('p', {
-          class: 'lead',
-          text: '账号、模型服务与数据都在这里。不配置模型也能正常测评，解读会走模板。',
-        }),
         buildAccountCard(ctx),
         buildPasswordCard(ctx),
         buildAiCard(),

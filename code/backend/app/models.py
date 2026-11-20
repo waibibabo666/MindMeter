@@ -127,6 +127,11 @@ class AppState(Base):
     drafts: Mapped[dict] = mapped_column(
         JSONB, nullable=False, server_default=sa_text("'{}'::jsonb")
     )
+    # 账号级"只填一次"的信息：age / edu / consentVersion / consentedAt。
+    # 不参与计分，只用于同龄段参考与有效性标记（docs/algorithm/algorithm.md）。
+    profile: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa_text("'{}'::jsonb")
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

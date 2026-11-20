@@ -2,9 +2,13 @@
  * 单局游戏页：说明 → 进行中 → 结算。
  * 结算不跳报告，就地显示成绩与本设备最佳，避免误解为测评结果。
  */
-import { el, button, clear } from '../ui.js';
+import { el, button, clear, hint, titled } from '../ui.js';
 import { findGame } from '../games/registry.js';
 import { readGames, recordGame } from '../games/store.js';
+
+/* 反馈 2：玩法说明与成绩是内容，留在页面上；「只在本机、不进报告」的口径收进浮框。 */
+const TIP_LOCAL_BEST =
+  '本设备最佳只存在这台浏览器的本地记录里，换设备或清除浏览器数据后会重置，不计入测评报告。';
 
 function bestOf(gameId) {
   const record = readGames().records[gameId];
@@ -14,7 +18,7 @@ function bestOf(gameId) {
 function introView(root, item, best, onStart) {
   root.appendChild(
     el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: item.title }),
+      el('h2', { class: 'card-title' }, [item.title, hint(TIP_LOCAL_BEST)]),
       el('p', { class: 'muted', text: item.desc }),
       el('p', { class: 'tiny', text: best === null ? '还没有记录' : `本设备最佳：${best} 分` }),
       el('div', { class: 'row' }, [
@@ -31,15 +35,16 @@ function resultView(root, item, score, detail, best, onAgain) {
     .filter(([key]) => key !== 'ms')
     .map(([key, value]) => `${key}：${value}`);
   const prevBest = best === null ? '无' : String(best);
-  const bestLine = isBest ? `刷新了本设备最佳（原 ${prevBest}）` : `本设备最佳 ${best} 分`;
+  // 「不计入测评报告」是防止误解成测评结果的口径，留在可见文字里；为什么只在本机，放浮框。
+  const bestLine =
+    (isBest ? `刷新了本设备最佳（原 ${prevBest}）` : `本设备最佳 ${best} 分`) + ' · 不计入测评报告';
 
   root.appendChild(
     el('div', { class: 'card game-result' }, [
-      el('h2', { class: 'card-title', text: isBest ? '新纪录！' : '这一局结束' }),
+      titled('h2', isBest ? '新纪录！' : '这一局结束', TIP_LOCAL_BEST),
       el('p', { class: 'game-score', text: `${score} 分` }),
       el('p', { class: 'muted', text: bestLine }),
       lines.length ? el('p', { class: 'tiny', text: lines.join(' · ') }) : null,
-      el('p', { class: 'tiny', text: '游戏成绩只在游戏中心保留，不计入测评报告。' }),
       el('div', { class: 'row' }, [
         button('再来一局', onAgain, { variant: 'primary' }),
         button('返回游戏中心', () => globalThis.location.assign('#/games'), { variant: 'ghost' }),

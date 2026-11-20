@@ -31,7 +31,7 @@ from .config import settings
 from .db import get_db
 from .models import AuthSession, User
 
-MIN_PASSWORD_LEN = 10
+MIN_PASSWORD_LEN = 8
 MAX_PASSWORD_LEN = 128
 MIN_USERNAME_LEN = 2
 MAX_USERNAME_LEN = 32

@@ -6,11 +6,15 @@
  * LangGraph Agent 里，这里不重复实现。
  */
 
-import { button, el, emptyState } from '../ui.js';
+import { button, el, emptyState, hint } from '../ui.js';
 import { api } from '../api.js';
 import { cache } from '../cache.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
 import { buildFacts, takePendingQuestion } from '../chat.js';
+
+/* 反馈 2：口径解释收进浮框；高风险提示、回退原因、发送失败提示一律留在页面上。 */
+const TIP_CHAT =
+  '回答只依据这个账号最近的结果与知识库，并标注来源；对话只保留最近 20 条，更早的自动清掉。';
 
 function fmtTime(at) {
   const date = new Date(at);
@@ -52,15 +56,28 @@ function citationsLine(citations) {
   ]);
 }
 
+/**
+ * 回退原因 → 用户能看懂的一句话（用户测试表 A5「拦截可理解」、A6「等待可感知」）。
+ * 内部术语（invalid / unsourced_number / kb id）一律不出现在界面上。
+ */
 const LLM_FALLBACK_REASON = {
   timeout: '模型响应超时',
-  auth: 'Key 无效或没有该模型权限',
-  rate_limit: '触发限流',
-  http: '模型服务返回错误',
+  auth: '模型服务拒绝了本次请求',
+  rate_limit: '模型服务正忙，已限流',
+  http: '模型服务返回异常',
   network: '无法连接模型服务',
-  bad_response: '模型响应格式异常',
-  truncated: '模型输出被截断',
+  bad_response: '模型返回的内容无法解析',
+  truncated: '模型回答被截断',
   unknown: '模型服务异常',
+  // 校验层（服务端 _validate_node 返回的真实 hard issue code）
+  too_long: '模型回答过长，已改用更稳的说法',
+  banned_word: '模型用了不该用的措辞',
+  unsourced_number: '模型提到了没有依据的数字',
+  score_misattributed: '模型把分数说到了别的维度上',
+  mechanism_speculation: '模型在编造指标背后的原因',
+  empty: '模型没有给出内容',
+  // citation_placeholder / citation_missing 是 soft（回答仍来自模型），
+  // 不进这张表：fallbackReasonNode 只在 source==='template' 时出文案。
 };
 
 function fallbackReasonNode(message) {
@@ -68,12 +85,11 @@ function fallbackReasonNode(message) {
   const code = String(message.code || '');
   if (!code || code === 'not_configured' || code === 'no_knowledge') return null;
   if (code.startsWith('intent:') || code === 'pii_blocked') return null;
-  if (code.startsWith('invalid')) {
-    return el('p', { class: 'tiny', text: '已回退模板：模型输出未通过校验' });
-  }
+  // 兼容旧值 invalid：后端已改为返回真实 code，这里只兜历史数据。
+  const reason = LLM_FALLBACK_REASON[code] || (code === 'invalid' ? '模型回答未通过校验' : '');
   return el('p', {
-    class: 'tiny',
-    text: `已回退模板：${LLM_FALLBACK_REASON[code] || code}`,
+    class: 'tiny fallback-reason',
+    text: reason ? `离线回答（已改用模板）：${reason}` : '离线回答（已改用模板）',
   });
 }
 
@@ -129,11 +145,45 @@ function configBanner(ctx, settings) {
   ]);
 }
 
+/**
+ * 画像草稿卡（反馈1：对话后记忆面板要能体现画像）。
+ *
+ * 服务端只回传线索、绝不代写画像（未确认不写是硬规矩），所以这里给一条
+ * 明确的确认路径；用户不确认就永远只是草稿，也不会被 PUT 回服务端覆盖。
+ */
+function profileDraftCard(ctx, host) {
+  const draft = cache.memory && cache.memory.profileDraft;
+  if (!draft || typeof draft !== 'object') return null;
+  const labels = { goal: '目标', preference: '偏好', constraint: '约束' };
+  const bits = Object.keys(labels)
+    .filter((key) => draft[key])
+    .map((key) => `${labels[key]}：${draft[key]}`);
+  if (!bits.length) return null;
+  return el('div', { class: 'card' }, [
+    el('h2', { class: 'card-title', text: '画像草稿（来自这次对话）' }),
+    el('p', { class: 'muted', text: bits.join(' · ') }),
+    // 「不确认就不写入」决定用户点不点「去确认」，必须留在页面上。
+    el('p', { class: 'tiny', text: '不确认就不会写入，AI 也不会引用它。' }),
+    el('div', { class: 'row' }, [
+      button('去确认', () => ctx.go('/memory'), { variant: 'primary' }),
+      button(
+        '不用了',
+        () => {
+          delete cache.memory.profileDraft;
+          host.replaceChildren();
+          renderChat(host, ctx, { restored: true });
+        },
+        { variant: 'ghost' },
+      ),
+    ]),
+  ]);
+}
+
 function emptyChat() {
   return emptyState({
     title: '还没有对话',
-    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。回答只依据本次结果和知识库，并标注来源。',
-    hint: 'Enter 发送，Shift+Enter 换行；对话只保留最近 20 条。',
+    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。',
+    hintText: 'Enter 发送，Shift+Enter 换行。',
   });
 }
 
@@ -147,7 +197,13 @@ export function renderChat(root, ctx, options = {}) {
   const hasFacts = Object.keys(facts).length > 0;
 
   const messages = readMemory().messages || [];
-  const list = el('div', { class: 'chat-list' }, messages.map(messageNode));
+  // 空态也放进 .chat-list 里：这样"第一次提问"时等待气泡有地方落，
+  // 不会出现"最需要反馈的时候反而没有反馈"。
+  const list = el(
+    'div',
+    { class: 'chat-list' },
+    messages.length ? messages.map(messageNode) : [emptyChat()],
+  );
 
   const input = el('textarea', {
     class: 'input chat-input',
@@ -172,7 +228,50 @@ export function renderChat(root, ctx, options = {}) {
     'aria-live': 'polite',
     text: '',
   });
-  let slowTimer = null;
+  /* 等待可感知（用户测试表 A6）：一次请求分三个阶段说清楚，
+     并在消息流里放一个真的在动的等待气泡，而不是只改一行小字。 */
+  const STAGES = [
+    { at: 0, text: '正在检索知识库…' },
+    { at: 3000, text: '正在组织回答（模型思考中）…' },
+    { at: 10000, text: '模型响应较慢；再等一会儿会自动改用离线模板回答…' },
+  ];
+  let stageTimers = [];
+
+  function clearPending() {
+    stageTimers.forEach((timer) => clearTimeout(timer));
+    stageTimers = [];
+    const stale = root.querySelector('.chat-pending');
+    if (stale) stale.remove();
+  }
+
+  function showPending(question) {
+    const listNode = root.querySelector('.chat-list');
+    if (!listNode) return;
+    clearPending();
+    // 空态卡片在第一次提问时让位给真实消息
+    const empty = listNode.querySelector('.empty-state');
+    if (empty) empty.remove();
+    // 先把用户这一句画出来，避免出现"发出去了但屏幕没反应"的空窗。
+    listNode.appendChild(
+      messageNode({ role: 'user', content: question, at: Date.now(), id: 'pending_user' }),
+    );
+    const bubble = el('div', { class: 'chat-pending', role: 'status', 'aria-live': 'polite' }, [
+      el('span', { class: 'pending-dots', 'aria-hidden': 'true' }, [
+        el('i', {}),
+        el('i', {}),
+        el('i', {}),
+      ]),
+      el('span', { class: 'pending-text', text: STAGES[0].text }),
+    ]);
+    listNode.appendChild(bubble);
+    bubble.scrollIntoView({ block: 'nearest' });
+    stageTimers = STAGES.slice(1).map((stage) =>
+      setTimeout(() => {
+        const node = bubble.querySelector('.pending-text');
+        if (node) node.textContent = stage.text;
+      }, stage.at),
+    );
+  }
 
   async function onSend() {
     const question = String(input.value || '').trim();
@@ -182,23 +281,24 @@ export function renderChat(root, ctx, options = {}) {
     autoGrow();
     send.disabled = true;
     send.textContent = '…';
-    status.textContent = '正在检索知识库并组织回答…';
-    slowTimer = setTimeout(() => {
-      status.textContent = '仍在处理中：检索或模型响应较慢，请稍等…';
-    }, 5000);
+    status.textContent = '';
+    showPending(question);
 
     try {
       const result = await api.post('/chat', { question }, { timeoutMs: 60000 });
       cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
+      // 对话会沉淀摘要与建议（服务端写库），这里直接采用服务端返回的那份，
+      // 不再用整份快照 PUT 回去覆盖。
+      if (result.memory) cache.memory = Object.assign(cache.memory, result.memory);
+      if (result.profileSuggested) cache.memory.profileDraft = result.profileSuggested;
       // eslint-disable-next-line sonarjs/no-ignored-exceptions
     } catch (error) {
       // The page stays usable; the toast is the only recovery action here.
       ctx.toast('站点服务不可用，消息没有发送');
     } finally {
-      if (slowTimer) clearTimeout(slowTimer);
+      clearPending();
       send.disabled = false;
       send.textContent = '发送';
-      status.textContent = '';
       root.replaceChildren();
       renderChat(root, ctx, { restored: true });
     }
@@ -221,17 +321,18 @@ export function renderChat(root, ctx, options = {}) {
       el('p', { class: 'kicker', text: '问问 AI' }),
       el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
       configBanner(ctx, settings),
-      messages.length === 0 ? emptyChat() : list,
+      list,
+      profileDraftCard(ctx, root),
       el('div', { class: 'row' }, [input, send]),
       status,
       el('div', { class: 'row' }, [
         button('返回报告', () => ctx.go('/report'), { variant: 'ghost' }),
         button('我的记忆', () => ctx.go('/memory'), { variant: 'ghost' }),
       ]),
-      el('p', {
-        class: 'disclaimer',
-        text: 'AI 生成 · 仅解释本次结果 · 非诊断 · 对话只保留最近 20 条（本账号）· 不要把手机号/身份证号等敏感信息发进来；站点会把问题发送给站点配置的模型服务',
-      }),
+      el('p', { class: 'disclaimer' }, [
+        'AI 生成 · 仅解释本次结果 · 非诊断。提问会发送给站点配置的模型服务，不要把手机号、身份证号等敏感信息发进来。',
+        hint(TIP_CHAT, { edge: true }),
+      ]),
     ]),
   );
 

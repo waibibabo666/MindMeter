@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .. import auth
 from ..db import get_db
 from ..models import AppState, User
-from ..serializers import state_payload
+from ..serializers import clean_profile, state_payload
 
 router = APIRouter()
 
@@ -48,6 +48,9 @@ def put_state(
     row.cursor = int(payload.get("cursor") or 0)
     row.results = payload.get("results") if isinstance(payload.get("results"), dict) else {}
     row.drafts = payload.get("drafts") if isinstance(payload.get("drafts"), dict) else {}
+    if "profile" in payload:
+        # 只有显式带上才覆盖：老快照（无 profile 字段）不该把账号的年龄/学历抹掉。
+        row.profile = clean_profile(payload.get("profile"))
     db.add(row)
     db.commit()
     return state_payload(db, int(user.id))

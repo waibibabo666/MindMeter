@@ -115,7 +115,25 @@ TEXT_SUFFIXES = {
     ".yml", ".yaml", ".py", ".json", ".toml", ".ini", ".cfg",
     ".txt", ".sql",
 }
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "coverage", "vendor", "runtime", "pgdata", "models"}
+SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    "coverage",
+    "vendor",
+    "runtime",
+    "pgdata",
+    "models",
+    # 跑 pytest 不带 `-p no:cacheprovider` 就会留下 .pytest_cache，
+    # 它自带 README.md，会被"重复文件"检查误判（已在 .gitignore 里，但检查扫的是磁盘）。
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+}
 CONFLICT_RE = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.MULTILINE)
 LINK_RE = re.compile(r"\]\(([^)]+)\)")
 

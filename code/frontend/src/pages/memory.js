@@ -4,7 +4,7 @@
  * 读写本账号的服务端数据（同源 API）；删除后不再被引用。
  */
 
-import { button, el, emptyState } from '../ui.js';
+import { button, el, emptyState, hint, titled } from '../ui.js';
 import { readSessions } from '../storage.js';
 import {
   PROFILE_KEYS,
@@ -19,9 +19,16 @@ import {
 
 const FIELD_LABEL = { goal: '目标', preference: '偏好', constraint: '约束' };
 
+/* 悬浮解释（反馈 2）：板块名留在页面上，长句收进浮框。 */
+const TIP_PROFILE =
+  '画像来自对话里提到的备考、作息与时间安排，只是线索；必须由你确认后 AI 才会引用，用来决定建议的详略，不确认则一直不写入。';
+const TIP_SUMMARY = '每次测评可生成一条，只记录最低项和建议数量，不写能力评价。';
+const TIP_ADVICE = 'AI 引用练习类知识块给出建议后，会在这里留下一条，方便你打勾完成或删除。';
+
 const ACTION_STYLE =
-  'background:none;border:0;padding:0 2px;color:#374151;text-decoration:underline;' +
-  'font-size:11px;cursor:pointer';
+  'display:inline-flex;align-items:center;min-height:var(--tap);padding:0 var(--space-8);' +
+  'background:none;border:0;color:var(--accent-deep);text-decoration:underline;' +
+  'font-size:12.5px;cursor:pointer';
 
 function fmtDate(value) {
   if (!value) return '—';
@@ -34,35 +41,54 @@ function actionButton(label, onClick) {
   return el('button', { type: 'button', style: ACTION_STYLE, text: label, onclick: onClick });
 }
 
+/**
+ * 一条记忆：文字行（正文用正常正文色，日期留在次要色）+ 独立的操作行。
+ * 人工测试反馈：条目正文曾是浅灰看不清，且按钮跟在长句尾端像句子的一部分。
+ */
+function memoryEntry(dateText, bodyText, actions) {
+  return el('div', { class: 'mem-entry' }, [
+    el('div', { class: 'kv-row' }, [
+      el('span', { class: 'kv-key', text: dateText }),
+      el('span', { class: 'kv-value', text: bodyText }),
+    ]),
+    actions.length ? el('div', { class: 'row' }, actions) : null,
+  ]);
+}
+
 function profileCard(view, ctx, rerender) {
   const profile = view.profile || {};
   const hasDraft = PROFILE_KEYS.some((key) => String(profile[key] || '').trim());
-  const card = el('div', { class: 'card' }, [el('h2', { class: 'card-title', text: '画像' })]);
+  const card = el('div', { class: 'card' }, [titled('h2', '画像', TIP_PROFILE)]);
 
   if (!hasDraft) {
     card.appendChild(
       emptyState({
         title: '还没有画像',
-        text: '画像只在你确认后才会被 AI 引用，用来决定建议的详略。',
+        text: '画像只在你确认后才会被 AI 引用。',
         actionLabel: '去对话里聊聊',
         onAction: () => ctx.go('/chat'),
-        hint: '在对话里提到备考、作息或时间安排，会生成一份待确认的画像草稿。',
       }),
     );
     return card;
   }
 
+  // 「待确认」会左右用户点不点确认保存，必须留在页面上，不能收进浮框。
   card.appendChild(
     el('p', {
-      class: 'tiny',
-      text: view.profileUsable ? '已确认，可被引用' : '待确认，AI 暂不引用',
+      class: 'muted',
+      text: view.profileUsable ? '已确认，可被引用' : '画像需要确认：AI 暂不引用',
     }),
   );
 
   PROFILE_KEYS.forEach((key) => {
     const value = String(profile[key] || '').trim();
     if (!value) return;
-    card.appendChild(el('p', { class: 'tiny', text: `${FIELD_LABEL[key]}：${value}` }));
+    card.appendChild(
+      el('div', { class: 'kv-row' }, [
+        el('span', { class: 'kv-key', text: FIELD_LABEL[key] }),
+        el('span', { class: 'kv-value', text: value }),
+      ]),
+    );
   });
 
   if (!view.profileUsable) {
@@ -92,16 +118,13 @@ function profileCard(view, ctx, rerender) {
 }
 
 function summaryCard(view, ctx, rerender) {
-  const card = el('div', { class: 'card' }, [
-    el('h2', { class: 'card-title', text: '摘要' }),
-    el('p', { class: 'muted', text: '每次测评可生成一条，只记录最低项和建议数量，不写能力评价。' }),
-  ]);
+  const card = el('div', { class: 'card' }, [titled('h2', '摘要', TIP_SUMMARY)]);
 
   if (view.summaries.length === 0) {
     card.appendChild(
       emptyState({
         title: '还没有摘要',
-        text: '每次测评可以生成一条摘要，只记录最低项和建议数量，不写能力评价。',
+        text: '每次测评可以生成一条。',
         art: false,
       }),
     );
@@ -127,8 +150,7 @@ function summaryCard(view, ctx, rerender) {
     .reverse()
     .forEach((item) => {
       card.appendChild(
-        el('div', { class: 'row' }, [
-          el('p', { class: 'tiny', text: `${fmtDate(item.at)} · ${item.text}` }),
+        memoryEntry(fmtDate(item.at), item.text, [
           actionButton('删除', () => {
             removeMemory('summary', item.id);
             rerender();
@@ -141,13 +163,13 @@ function summaryCard(view, ctx, rerender) {
 }
 
 function adviceCard(view, ctx, rerender) {
-  const card = el('div', { class: 'card' }, [el('h2', { class: 'card-title', text: '建议记录' })]);
+  const card = el('div', { class: 'card' }, [titled('h2', '建议记录', TIP_ADVICE)]);
 
   if (view.advice.length === 0) {
     card.appendChild(
       emptyState({
         title: '还没有建议记录',
-        text: 'AI 引用练习类知识块并给出建议后，会在这里留下一条记录，方便你打勾完成。',
+        text: 'AI 给出练习建议后会留在这里。',
         actionLabel: '去对话',
         onAction: () => ctx.go('/chat'),
         art: false,
@@ -158,18 +180,15 @@ function adviceCard(view, ctx, rerender) {
 
   view.advice.forEach((item) => {
     card.appendChild(
-      el('div', { class: 'row' }, [
-        el('p', { class: 'tiny', text: `${fmtDate(item.at)} · ${item.title || item.id}` }),
-        el('div', { class: 'row' }, [
-          actionButton(item.done ? '已完成' : '标记完成', () => {
-            setAdviceDone(item.id, !item.done);
-            rerender();
-          }),
-          actionButton('删除', () => {
-            removeMemory('advice', item.id);
-            rerender();
-          }),
-        ]),
+      memoryEntry(fmtDate(item.at), item.title || item.id, [
+        actionButton(item.done ? '已完成' : '标记完成', () => {
+          setAdviceDone(item.id, !item.done);
+          rerender();
+        }),
+        actionButton('删除', () => {
+          removeMemory('advice', item.id);
+          rerender();
+        }),
       ]),
     );
   });
@@ -186,12 +205,11 @@ export function renderMemory(root, ctx) {
 
   const page = el('section', { class: 'page', 'aria-labelledby': 'memory-title' }, [
     el('h1', { id: 'memory-title', class: 'page-title', text: '我的记忆' }),
-    el('p', { class: 'muted', text: '这些信息只属于当前账号；删除后 AI 不会再引用。' }),
     profileCard(view, ctx, rerender),
     summaryCard(view, ctx, rerender),
     adviceCard(view, ctx, rerender),
     el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title', text: '对话记录' }),
+      titled('h2', '对话记录', '对话只保留本账号最近这些条，更早的会自动清掉。'),
       el('p', {
         class: 'tiny',
         text: `保留最近 ${view.usage.maxMessages} 条，当前 ${view.usage.messages} 条。`,
@@ -210,10 +228,15 @@ export function renderMemory(root, ctx) {
       ),
       button('返回', () => ctx.go('/report'), { variant: 'ghost' }),
     ]),
-    el('p', {
-      class: 'disclaimer',
-      text: '记忆只用于本账号的对话；「清除本账号数据」会一并删除。',
-    }),
+    el('p', { class: 'disclaimer' }, [
+      '这些信息只属于当前账号，删除后 AI 不会再引用。',
+      hint(
+        '「清除本账号数据」（设置页）会一并删除记忆；注销账号则立即级联删除全部数据，不可恢复。',
+        {
+          edge: true,
+        },
+      ),
+    ]),
   ]);
 
   root.appendChild(page);

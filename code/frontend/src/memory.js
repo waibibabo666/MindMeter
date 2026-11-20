@@ -8,7 +8,9 @@
  *   - 提供按类型删除与清空，供记忆页与设置页使用。
  */
 
-import { MAX_MESSAGES, addSummary, clearMemory, readMemory, writeMemory } from './storage.js';
+import { api } from './api.js';
+import { cache, enqueue } from './cache.js';
+import { MAX_MESSAGES, addSummary, clearMemory, readMemory } from './storage.js';
 import { DIMS } from './data.js';
 
 const DIM_NAME = new Map(DIMS.map((dim) => [dim.id, dim.name]));
@@ -57,7 +59,12 @@ export function saveSummary(session, adviceIds = []) {
   return summary;
 }
 
-/** 用户确认画像后才落库；未确认一律不写。 */
+/**
+ * 用户确认画像后才落库；未确认一律不写。
+ *
+ * 走服务端专门的画像接口（`PUT /memory/profile`）而不是 `PUT /memory` 全量快照：
+ * 后者会先删掉本账号的 summaries/advice 再重写，会把对话自动沉淀出来的行抹掉。
+ */
 export function confirmProfile(profile) {
   const clean = {};
   PROFILE_KEYS.forEach((key) => {
@@ -65,16 +72,23 @@ export function confirmProfile(profile) {
   });
   if (!PROFILE_KEYS.some((key) => clean[key])) return null;
   const next = { ...clean, confirmed: true, confirmedAt: Date.now() };
-  writeMemory({ profile: next });
+  const memory = readMemory();
+  cache.memory = Object.assign(memory, { profile: next });
+  enqueue(() => api.put('/memory/profile', clean));
   return next;
 }
 
-/** 忽略待确认画像：清掉未确认内容，避免下一轮又被提起。 */
+/** 忽略待确认画像：只清未确认内容，不动摘要与建议。 */
 export function dismissProfile() {
-  writeMemory({ profile: {} });
+  const memory = readMemory();
+  cache.memory = Object.assign(memory, { profile: {} });
+  enqueue(() => api.del('/memory/profile'));
 }
 
-/** 记录一条建议展示；重复的建议 ID 只保留最新一条。 */
+/**
+ * 记录一条建议展示；重复的建议 ID 只保留最新一条。
+ * 走 `POST /memory/advice`（服务端按 (user_id, id) upsert），不用全量快照。
+ */
 export function recordAdvice(advice) {
   if (!advice?.id) return null;
   const memory = readMemory();
@@ -85,31 +99,43 @@ export function recordAdvice(advice) {
     shown: true,
     done: Boolean(advice.done),
   };
-  const rest = memory.advice.filter((item) => item.id !== entry.id);
-  writeMemory({ advice: [...rest, entry] });
+  cache.memory = Object.assign(memory, {
+    advice: [...memory.advice.filter((item) => item.id !== entry.id), entry],
+  });
+  enqueue(() => api.post('/memory/advice', entry));
   return entry;
 }
 
-/** 标记建议已完成 / 取消完成。 */
+/** 标记建议已完成 / 取消完成（PATCH 单行，用户勾过的状态不会被对话沉淀覆写）。 */
 export function setAdviceDone(id, done) {
   const memory = readMemory();
   const next = memory.advice.map((item) =>
     item.id === id ? { ...item, done: Boolean(done) } : item,
   );
-  writeMemory({ advice: next });
+  cache.memory = Object.assign(memory, { advice: next });
+  enqueue(() => api.patch(`/memory/advice/${encodeURIComponent(id)}`, { done: Boolean(done) }));
   return next;
 }
 
-/** 按类型删除一条记忆：summary / advice / message。 */
+const MEMORY_BUCKETS = {
+  summary: { key: 'summaries', segment: 'summaries' },
+  advice: { key: 'advice', segment: 'advice' },
+  message: { key: 'messages', segment: 'messages' },
+};
+
+/**
+ * 按类型删除一条记忆：summary / advice / message。
+ * 三条都走单行删除接口；`PUT /memory` 的全量替换会抹掉服务端对话沉淀的行，
+ * 所以这里一律不再用它。
+ */
 export function removeMemory(kind, id) {
+  const bucket = MEMORY_BUCKETS[kind];
+  if (!bucket) return readMemory();
   const memory = readMemory();
-  if (kind === 'summary') {
-    writeMemory({ summaries: memory.summaries.filter((item) => item.id !== id) });
-  } else if (kind === 'advice') {
-    writeMemory({ advice: memory.advice.filter((item) => item.id !== id) });
-  } else if (kind === 'message') {
-    writeMemory({ messages: memory.messages.filter((item) => item.id !== id) });
-  }
+  cache.memory = Object.assign(memory, {
+    [bucket.key]: memory[bucket.key].filter((item) => String(item.id) !== String(id)),
+  });
+  enqueue(() => api.del(`/memory/${bucket.segment}/${encodeURIComponent(id)}`));
   return readMemory();
 }
 

@@ -29,6 +29,8 @@ def test_username_is_normalized_but_password_is_not():
 
 def test_password_rules_are_explained_not_enforced_silently():
     assert any("至少" in text for text in auth.password_problems("abc1"))
+    assert auth.password_problems("abcdefg"), "7 位必须被拒绝"
+    assert auth.password_problems("abcdef12") == [], "8 位含字母数字必须放行（人工测试反馈）"
     assert auth.password_problems("aaaaaaaaaa")  # too few distinct characters
     assert auth.password_problems("alllettersnovalue")  # no digit
     assert auth.password_problems("1234567890"), "纯数字密码必须被拒绝"

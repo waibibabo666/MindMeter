@@ -47,7 +47,7 @@
 
 | 选项 | `MM_LLM_BASE_URL` | `MM_LLM_MODEL` | 成本 | 备注 |
 | --- | --- | --- | --- | --- |
-| **智谱 GLM-4.7-Flash（默认，0 元）** | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.7-flash` | 免费 | 4.x Flash 系列长期免费（GLM-4.5-Flash 已于 2026-01-30 下线并自动路由到 4.7-Flash）；不要把 model id 写死太久，留意官方下线公告 |
+| **智谱 GLM-4-Flash-250414（默认，0 元）** | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash-250414` | 免费 | 2026-11-20 实测秒回。**同账号下 `glm-4.7-flash` 高峰期返回 HTTP 429 / code 1305「该模型当前访问量过大」**，因此 4.7-flash 只作为备用链末位；`glm-z1-flash` 会把 `<think>` 写进 content，不要用 |
 | DeepSeek V4-Flash | `https://api.deepseek.com/v1` | `deepseek-v4-flash`（旧名 `deepseek-chat` 仍在兼容期） | 极低（输入约 ¥3/百万 tokens、输出约 ¥6/百万，缓存命中更低） | 中文稳、延迟低；`deepseek-chat` 官方标注日后弃用 |
 | 阿里百炼 / 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-turbo` 或 `qwen-plus` | 新用户有免费额度（以控制台到账为准），之后按量 | 国内直连稳定，OpenAI 兼容接口 |
 | OpenRouter（聚合） | `https://openrouter.ai/api/v1` | 例如 `deepseek/deepseek-chat` | 按所选模型 | 一个 Key 换模型；计费与限速看上游 |
@@ -56,6 +56,19 @@
 
 选好后只需要三个环境变量：`MM_LLM_BASE_URL`、`MM_LLM_MODEL`、`MM_LLM_API_KEY`。
 在 `MM_LLM_API_KEY` 为空时应用**照常可用**：AI 解读走模板（`ai.enabled=false`，报告与对话给出 `code=not_configured` 的模板文本）。这一点在冒烟测试里已验证。
+
+### 免费池过载时怎么办（2026-11-20 实测加入）
+
+免费模型是共享容量，高峰期会直接 429。后端不再"一次 429 就退回模板"，而是：
+
+1. 同一模型最多重试 `MM_LLM_RETRIES` 次，指数退避（`1.2s → 2.4s`）；
+2. 仍失败就按 `MM_LLM_MODEL_FALLBACKS` 顺序换下一个模型；
+3. 全链失败才回退模板，`/settings/ai/test` 会返回 `tried: [...]` 告诉你试过哪些。
+
+本地调试时 `python scripts/dev_serve.py restart` 后，启动行会直接打印
+`AI：真实模型已生效 · model=<实际应答的模型>`，不用猜配置有没有生效。
+另外：`.env.local` 改动后必须重启才生效——`dev_serve` 现在会**自动检测配置文件指纹并重启**，
+`start` 也能识别"进程比配置早启动"的情况。
 
 ## 3. 知识库检索（RAG）模式
 
@@ -71,6 +84,9 @@
 | `MM_LLM_BASE_URL` | `https://open.bigmodel.cn/api/paas/v4` | OpenAI 兼容 Base URL（可含或不含 `/chat/completions`） |
 | `MM_LLM_MODEL` | `glm-4.7-flash` | 模型名 |
 | `MM_LLM_API_KEY` | 空 | **只在服务端**；空值 = 模板兜底 |
+| `MM_LLM_MODEL_FALLBACKS` | `glm-4-air-250414,glm-4.5-flash,glm-4.7-flash` | 过载时按顺序降级的备用模型（逗号分隔） |
+| `MM_LLM_RETRIES` / `MM_LLM_RETRY_BACKOFF_S` | `2` / `1.2` | 同一模型的退避重试次数与基数（指数） |
+| `MM_LLM_EXTRA_PARAMS` | 空 | 网关专属 JSON 参数；留空时按域名自动判断（智谱自动发 `thinking:{type:disabled}`） |
 | `MM_LLM_TIMEOUT_S` | `45` | 单次模型请求超时 |
 | `MM_LLM_MAX_TOKENS` | `800` | 对话输出上限（报告解读为 3000） |
 | `MM_ALLOW_REGISTRATION` | `true` | 设 `false` 关闭自助注册（答辩控量用） |

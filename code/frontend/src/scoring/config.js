@@ -1,5 +1,5 @@
 /**
- * scoring-v3.1 的阈值与版本。
+ * scoring-v3.2 的阈值与版本（与 code/backend/app/scoring/config.py 同步）。
  *
  * 与 algorithm.md 的差异说明（L-02）：
  *   文档 v4.0 的分母按 15/20/24 题、60 秒设计，但 M1 实际实现的是
@@ -8,7 +8,7 @@
  *   并把阈值单独放这里，便于以后校准（只改这里，不改公式代码）。
  */
 
-export const SCORING_VERSION = 'scoring-v3.1';
+export const SCORING_VERSION = 'scoring-v3.2';
 
 /** 八个维度，顺序与 data.js 的 DIMS 一致。 */
 export const DIMENSION_IDS = ['vc', 'vf', 'nc', 'ps', 'ir', 'sv', 'am', 'ni'];

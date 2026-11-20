@@ -80,14 +80,15 @@ async function main() {
   });
 
   test('passwordIssues：长度、字符种类与字母数字要求', () => {
-    assert(
-      passwordIssues('abc1').length === 0 || passwordIssues('abc1').length === 1,
-      '短密码提示一条',
-    );
+    assert(passwordIssues('abc1').length === 1, '短密码只提示一条');
     assert(
       passwordIssues('abc1').some((t) => t.includes('至少')),
       '短密码要说「至少」',
     );
+    // 人工测试反馈：密码规则下调到 8 位，边界必须锁住，别悄悄回弹。
+    assert(passwordIssues('abcdef12').length === 0, '8 位含字母数字必须放行');
+    assert(passwordIssues('abcdefg1').length === 0, '8 位另一种排布同样放行');
+    assert(passwordIssues('abcdefg').length > 0, '7 位仍然要拒');
     assert(passwordIssues('aaaaaaaaaa').length > 0, '同一种字符要拒绝');
     assert(passwordIssues('alllettersnovalue').length > 0, '无数字要拒绝');
     assert(passwordIssues('1234567890').length > 0, '无字母要拒绝');

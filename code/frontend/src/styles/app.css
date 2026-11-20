@@ -256,7 +256,7 @@ body {
   border-top: 1px dashed var(--line);
   padding-top: var(--space-10);
   font-size: 12px;
-  color: var(--dim);
+  color: var(--muted);
   line-height: 1.7;
 }
 
@@ -371,12 +371,13 @@ body.focus #app {
   font-size: 13px;
 }
 .tiny {
-  color: var(--dim);
+  /* 次要文字也不能低于 A9 的对比度底线：--dim（≈2.9:1）只用于分隔线与装饰，不用于文字。 */
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
 }
 .disclaimer {
-  color: var(--dim);
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.75;
   margin-top: var(--space-14);
@@ -752,7 +753,7 @@ body.focus #app {
 }
 .report-table tr.untested th,
 .report-table tr.untested td {
-  color: var(--dim);
+  color: var(--muted);
 }
 
 /* ---- L-04：BYOK 设置表单与状态 ---- */
@@ -1309,8 +1310,9 @@ body.focus #app {
   }
 }
 
-/* 原始指标那一列不许被挤成竖排单字 */
-.page-report .report-table td:last-child {
+/* 原始指标那一列不许被挤成竖排单字（只作用于八维表：它是 .page-report 的直接子节点，
+   「与上次相比」的差值表/基线表在卡片里，跟着卡片一起折行就够） */
+.page-report > .report-table td:last-child {
   min-width: 170px;
 }
 
@@ -1763,18 +1765,39 @@ button.spot-cell {
   color: var(--accent-deep);
 }
 
-/* 报告表格：原始指标列保持可读宽度 */
+/* 报告表格：原始指标列保持可读宽度。
+   只针对页面直属的八维表——「与上次相比」的差值表/基线表在卡片里，
+   继承同一条 220px 会把变化列撑成一整块空白。 */
 .page-report table {
   width: 100%;
   table-layout: auto;
 }
-.page-report table th:last-child,
-.page-report table td:last-child {
+.page-report > .report-table th:last-child,
+.page-report > .report-table td:last-child {
   min-width: 220px;
   white-space: normal;
 }
 .page-report table td.score-cell {
   white-space: nowrap;
+}
+/* 「与上次相比」：卡片里的两张表左右留白收敛，避免窄屏横向溢出 */
+.compare-card .report-table,
+.compare-card {
+  overflow-wrap: anywhere;
+}
+.compare-card .plain-list {
+  margin: var(--space-6) 0 0;
+}
+.compare-card .notice {
+  margin: var(--space-8) 0;
+}
+/* 360px 回归底线：宁可「原始指标」列多换两行，也不许把整页顶出横向滚动。
+   放在两条 min-width 规则之后：媒体查询不加权重，写早了会被后面的规则盖掉。 */
+@media (max-width: 599px) {
+  .page-report > .report-table th:last-child,
+  .page-report > .report-table td:last-child {
+    min-width: 0;
+  }
 }
 
 /* 表单与提示 */
@@ -2639,7 +2662,7 @@ button.spot-cell {
 }
 .dim-badge {
   font-size: 12px;
-  color: var(--dim);
+  color: var(--muted);
 }
 
 /* 顶栏「退出」：靠右的弱化文字按钮，窄屏隐藏（桌面窗口最小 960px） */
@@ -2695,6 +2718,133 @@ body.rail-min .rail-actions {
 }
 body.rail-min .rail .card {
   padding-bottom: var(--space-10);
+}
+
+/* ---------- 等待可感知（A6）：对话与解读的三阶段等待气泡 ---------- */
+.chat-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  margin: var(--space-10) 0 0;
+  padding: var(--space-10) var(--space-12);
+  border: 1px dashed var(--ai-line);
+  border-radius: var(--radius-lg);
+  background: var(--ai-soft);
+  color: var(--ai-deep);
+  font-size: 13px;
+}
+.pending-dots {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+}
+.pending-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ai);
+  opacity: 0.35;
+  animation: pending-bounce 1.05s ease-in-out infinite;
+}
+.pending-dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.pending-dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes pending-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+/* 解读卡生成中：同一条动画语言，避免两个地方两套样式 */
+.explain-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--ai-deep);
+  font-size: 12.5px;
+}
+.explain-pending .pending-dots i {
+  width: 6px;
+  height: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pending-dots i {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+/* ---------- 悬浮解释（反馈：说明文字不该常驻页面） ---------- */
+.hint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-6);
+  border-radius: 50%;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
+}
+.hint:hover,
+.hint:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-deep);
+  outline: none;
+}
+.hint::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: min(320px, 72vw);
+  padding: var(--space-8) var(--space-10);
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--card);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+  z-index: 30;
+}
+.hint:hover::after,
+.hint:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* 靠右边缘的提示不能溢出视口 */
+.hint.edge-left::after {
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
+}
+.hint.edge-left:hover::after,
+.hint.edge-left:focus-visible::after {
+  transform: translateY(0);
 }
 
 /* ---------- 登录 / 注册（Web 部署） ---------- */
@@ -2755,6 +2905,158 @@ body.rail-min .rail .card {
   font-size: 14px;
   font-weight: 650;
   color: var(--text);
+}
+
+/* 记忆条目：正文行（正常正文色）+ 操作行（独立一行，长文本换行不压住按钮）。
+   人工测试反馈：条目曾是浅灰看不清，且「标记完成 / 删除」跟在句尾像句子的一部分。 */
+.mem-entry {
+  padding: var(--space-8) 0;
+  border-bottom: 1px dashed var(--line);
+}
+.mem-entry:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.mem-entry .kv-row {
+  padding: 0;
+  border-bottom: none;
+}
+.mem-entry .row {
+  margin: var(--space-6) 0 0;
+}
+
+/* ---------- 测评前置两页：资料一次 + 状态每次 ---------- */
+/* 这两页是"设置"而不是"工作台"：右侧快捷栏（查看报告/趋势/记忆）对第一次用的人
+   没有意义，还会把主区挤成靠左的一条。收掉右栏并让主区居中，卡片不再贴左边缘。 */
+body.setup .rail {
+  display: none;
+}
+body.setup .wb {
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-areas: 'side main';
+}
+body.setup #app {
+  max-width: 720px;
+  margin-inline: auto;
+}
+.page-narrow {
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+/* 大号步进器：替代 Chrome 原生 ~12px 的上下箭头（人工测试反馈：太小） */
+.stepper {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-8);
+}
+.stepper-btn {
+  flex: none;
+  width: var(--tap);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.stepper-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-deep);
+}
+.stepper-btn:active {
+  transform: translateY(1px);
+}
+.stepper-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+/* 原生 spin button 与自绘按钮重复，且触摸区过小 */
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.stepper-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* 分段单选：5 档疲劳用按钮条，避免 range 两端 thumb 半径造成的"拉不到边"缝隙 */
+.seg {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+.seg-opt {
+  flex: 1 1 0;
+  min-width: 56px;
+  min-height: var(--tap);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.seg-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.seg-value {
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.seg-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+.seg-opt:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.seg-opt:has(.seg-input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.stepper-btn:focus-visible,
+.seg-opt:has(.seg-input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 520px) {
+  body.setup .wb {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main';
+  }
+  body.setup .sidebar {
+    display: none;
+  }
+  .seg-opt {
+    min-width: 48px;
+  }
 }
 /* 登录页不需要左侧栏与右栏：body.focus 已隐藏，这里只补主区留白。 */
 body.focus .auth-page {

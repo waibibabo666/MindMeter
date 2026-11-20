@@ -1,5 +1,19 @@
-import { el, button } from '../ui.js';
+/**
+ * 选择深度（档位）页。
+ *
+ * 人工测试反馈 2：档位差别、区间宽窄这类解释不常驻页面——只留档位名、时长与维度名，
+ * 解释收进板块标题与每张档位卡上的悬浮浮框（键盘可聚焦，读屏有 aria-label）。
+ */
+import { el, button, hint, titled } from '../ui.js';
 import { DIMS, TIERS } from '../data.js';
+
+const TIP_TIER =
+  '三档测的是同样的 8 个维度，区别只在题量与限时；不设总分，只看各维度。题量越多，分数旁边的 ± 区间越窄。';
+
+function tierTip(tier) {
+  const base = `${tier.name}档：${tier.tasks.length} 项，约 ${tier.minutes} 分钟`;
+  return tier.note ? `${base}；${tier.note}。` : `${base}；逐项完成。`;
+}
 
 export function renderTier(root, ctx) {
   const cards = TIERS.map((tier) => {
@@ -26,30 +40,19 @@ export function renderTier(root, ctx) {
         el('div', { class: 'tier-head' }, [
           el('span', { class: 'tier-name', text: tier.name }),
           el('span', { class: 'tier-time', text: `≈ ${tier.minutes} 分钟` }),
+          hint(tierTip(tier), { edge: true }),
         ]),
         el('p', { class: 'muted', text: names }),
-        el('p', {
-          class: 'tiny',
-          text: disabled
-            ? `本任务只交付标准档（${tier.note}）`
-            : `${tier.tasks.length} 项 · 逐项完成`,
-        }),
       ],
     );
   });
 
   root.appendChild(
     el('section', { class: 'page', 'aria-labelledby': 'tier-title' }, [
-      el('h1', { id: 'tier-title', class: 'page-title', text: '选择深度' }),
-      el('p', {
-        class: 'lead',
-        text: '三档都测同样的 8 个维度，区别只在题量与限时；不设总分，只看各维度。',
+      titled('h1', '选择深度', TIP_TIER, {
+        attrs: { id: 'tier-title', class: 'page-title' },
       }),
       el('div', { class: 'tier-list' }, cards),
-      el('p', {
-        class: 'tiny',
-        text: '题量越多，分数旁边的 ±区间越窄。快测约 6 分钟，标准约 12 分钟，精细约 18 分钟。',
-      }),
       button('返回首页', () => ctx.go('/'), { variant: 'ghost' }),
     ]),
   );

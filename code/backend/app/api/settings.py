@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from .. import auth
 from ..config import settings
-from ..llm import LLMError, call_llm, site_llm_config
+from ..llm import LLMError, call_llm_with_fallback, site_llm_config
 from ..models import User
 from ..serializers import settings_payload
 
@@ -34,19 +34,24 @@ def delete_key(user: User = Depends(auth.require_user)):
 
 @router.post("/settings/ai/test")
 def test_connection(user: User = Depends(auth.require_user)):
-    """One-token round trip against the deployment's own credentials."""
+    """One-token round trip against the deployment's own credentials.
+
+    走的是与真实对话同一条链路（含退避重试与备用模型），所以这里成功就意味着
+    对话也会成功；返回实际应答的模型名，便于确认备用链是否在工作。
+    """
     config = site_llm_config()
     if not config.enabled:
         return JSONResponse({"ok": False, "code": "not_configured"}, status_code=400)
     try:
-        reply = call_llm(
-            endpoint=config.endpoint,
-            model=config.model,
-            key=config.key,
-            messages=[{"role": "user", "content": "只回复 OK"}],
+        reply = call_llm_with_fallback(
+            config,
+            [{"role": "user", "content": "只回复 OK"}],
             max_tokens=8,
             timeout_s=min(settings.llm_timeout_s, 20.0),
         )
-        return {"ok": True, "code": "ok", "model": reply.model}
+        return {"ok": True, "code": "ok", "model": reply.model, "requested": config.model}
     except LLMError as exc:
-        return JSONResponse({"ok": False, "code": exc.code}, status_code=400)
+        return JSONResponse(
+            {"ok": False, "code": exc.code, "tried": config.chain()},
+            status_code=400,
+        )

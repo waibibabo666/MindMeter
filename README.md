@@ -41,7 +41,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 - RAG：默认 BM25 关键词检索（`MM_RAG_MODE=keyword`），向量检索能力保留但不进 Web 依赖；
 - Agent：LangGraph 小图（classify → retrieve → generate → validate），模型不可用即回退模板；
 - AI：站点统一 LLM API，`MM_LLM_BASE_URL` / `MM_LLM_MODEL` / `MM_LLM_API_KEY` 只在服务端；
-- 计分：服务端 Python `scoring-v3.1` 唯一权威；
+- 计分：服务端 Python `scoring-v3.2` 唯一权威（与前端引擎逐维一致）；
 - 部署：`render.yaml`（Blueprint）+ [部署指南](docs/software/deploy-render.md)；本地一键起服见 [本地开发与测试](docs/software/local-development.md)。
 
 **不再采用（相关代码已于 2026-11-20 删除）**

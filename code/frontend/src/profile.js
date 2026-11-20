@@ -1,14 +1,18 @@
 /**
- * 测评前的基础信息与状态。
+ * 测评前要填的信息，按"变化频率"分两类存放（人工测试反馈：不该反复问、也不该每次都问）：
  *
- * 与测评结果分开存：
- *   - 年龄 / 教育：稳定信息，填一次记住
- *   - 睡眠 / 疲劳：每次测评前重填
+ * - **账号级**：年龄、最高学历、知情同意版本 —— 存在服务端 `app_state.profile`，
+ *   换浏览器/换设备登录后不会再问第二次；
+ * - **临场级**：昨晚睡眠时长、当前疲劳 —— 只在本次页面会话的内存里，每次测评重新填，
+ *   不进账号档案（它们只对"这次结果可不可信"有意义）。
  *
- * 用途只有两个：分段参考、有效性标记。**不参与分数计算**。
+ * 两类都**不参与计分**：只用于同龄段参考与有效性标记（docs/algorithm/algorithm.md）。
+ * 年龄与学历是产品明确询问的少量背景项，不收集姓名/邮箱/手机号等身份信息。
  */
 
-const KEY = 'mindmeter.profile.v1';
+import { readState, update } from './store.js';
+
+export const CONSENT_VERSION = '2026-11';
 
 export const EDU_OPTIONS = [
   { value: 'middle', label: '初中及以下' },
@@ -26,36 +30,107 @@ export const SLEEP_OPTIONS = [
   { value: 'gt8', label: '8 小时以上' },
 ];
 
+/** 临场状态：模块级内存，刷新页面即回到空值（这正是我们要的）。 */
+const session = { sleep: '', fatigue: null };
+
+function cleanAge(value) {
+  const age = Number(value);
+  return Number.isFinite(age) && age >= 10 && age <= 100 ? Math.round(age) : null;
+}
+
+function cleanEdu(value) {
+  const edu = String(value || '');
+  return EDU_OPTIONS.some((item) => item.value === edu) ? edu : '';
+}
+
 export function defaultProfile() {
-  return { age: null, edu: '', sleep: '', fatigue: null, updatedAt: '' };
+  return {
+    age: null,
+    edu: '',
+    consentVersion: '',
+    sleep: '',
+    fatigue: null,
+    updatedAt: '',
+  };
 }
 
+/** 账号里存的那一份（服务端 app_state.profile）。 */
+export function readAccountProfile() {
+  const raw = readState().profile || {};
+  return {
+    age: cleanAge(raw.age),
+    edu: cleanEdu(raw.edu),
+    consentVersion: String(raw.consentVersion || ''),
+    consentedAt: String(raw.consentedAt || ''),
+  };
+}
+
+/** 页面统一读的合并视图。 */
 export function readProfile() {
-  try {
-    const raw = globalThis.localStorage?.getItem(KEY);
-    if (!raw) return defaultProfile();
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return defaultProfile();
-    return Object.assign(defaultProfile(), parsed);
-  } catch {
-    return defaultProfile();
-  }
+  const account = readAccountProfile();
+  return {
+    ...defaultProfile(),
+    ...account,
+    sleep: session.sleep,
+    fatigue: session.fatigue,
+    updatedAt: account.consentedAt,
+  };
 }
 
-export function saveProfile(patch) {
-  const next = Object.assign(readProfile(), patch, { updatedAt: new Date().toISOString() });
-  try {
-    globalThis.localStorage?.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* 存不下就只用内存，本次仍然生效 */
+/**
+ * 保存。账号级字段写回 state（由 store 串行 PUT /state），临场字段只进内存。
+ * 年龄越界或学历不在选项内会被丢掉，不会污染档案。
+ */
+export function saveProfile(patch = {}) {
+  const account = {};
+  let touchedAccount = false;
+
+  // 无效值一律忽略，而不是写成 null 覆盖掉已有的好数据。
+  if ('age' in patch) {
+    const age = cleanAge(patch.age);
+    if (age !== null) {
+      account.age = age;
+      touchedAccount = true;
+    }
   }
-  return next;
+  if ('edu' in patch) {
+    const edu = cleanEdu(patch.edu);
+    if (edu) {
+      account.edu = edu;
+      touchedAccount = true;
+    }
+  }
+  if ('consentVersion' in patch) {
+    account.consentVersion = String(patch.consentVersion || '').slice(0, 24);
+    account.consentedAt = new Date().toISOString();
+    touchedAccount = true;
+  }
+
+  if ('sleep' in patch) session.sleep = String(patch.sleep || '');
+  if ('fatigue' in patch) {
+    const fatigue = Number(patch.fatigue);
+    session.fatigue = Number.isFinite(fatigue)
+      ? Math.min(5, Math.max(1, Math.round(fatigue)))
+      : null;
+  }
+
+  if (touchedAccount) {
+    // store.update 是就地修改（忽略返回值），这里必须写 draft，不能返回对象。
+    update((draft) => {
+      draft.profile = Object.assign({}, draft.profile || {}, account);
+    });
+  }
+  return readProfile();
 }
 
 /** 稳定信息是否齐全（年龄与教育填过就不再问）。 */
 export function hasBaseInfo(profile = readProfile()) {
-  const age = Number(profile.age);
-  return Number.isFinite(age) && age >= 10 && age <= 100 && Boolean(profile.edu);
+  return cleanAge(profile.age) !== null && Boolean(profile.edu);
+}
+
+/** 第一次用（或同意条款升版）需要走"认识你一次"那页。 */
+export function needsIntake(profile = readProfile()) {
+  return !hasBaseInfo(profile) || profile.consentVersion !== CONSENT_VERSION;
 }
 
 /** 年龄分段，用于报告里给「同龄参考」的提示语。 */
@@ -100,4 +175,10 @@ export function ageNote(age) {
     return '这一年龄段言语理解通常处于高位，速度类开始缓慢下降，属正常现象。';
   }
   return '';
+}
+
+/** 供 store 在重置账号数据时清掉临场值。 */
+export function resetSessionProfile() {
+  session.sleep = '';
+  session.fatigue = null;
 }

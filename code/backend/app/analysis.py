@@ -22,11 +22,23 @@ DIM_ORDER = ["vc", "vf", "nc", "ps", "ir", "sv", "am", "ni"]
 ANALYSIS_PROMPT = (
     "你是 MindMeter 的解读助手。根据本次原始指标和给定知识块，输出三部分："
     "1）用 2–3 句话解读本次结果，只使用给定数字；"
+    "允许的派生只有两种：毫秒除以 1000 换成秒并保留 1–2 位小数"
+    "（1870 毫秒写 1.87 秒，不要写 1.873 秒），比率写成百分比并保留 1 位小数"
+    "（5/8 写 62.5%）；除此之外不要出现任何别的数字。"
+    "数字一律用阿拉伯数字书写，不要写「两分五十秒」这类中文时间读法，"
+    "也不要把毫秒换算成分或小时（2500 毫秒只能写 2500 毫秒或 2.5 秒）。"
     "2）给 2 条具体、可执行的日常建议，说明针对哪个维度；"
+    "建议用编号列表给出，每条写成「短标题：具体怎么做」（例如「1. 睡眠与休息：保证充足睡眠」）；"
     "建议只写日常能做的行为：睡眠与休息、把练习分散到不同日子、环境与注意力、记录与复测；"
     "不要建议刷同类测评题、做题技巧或应试策略；知识块里的任务说明只用于解释“测什么”，不能直接当建议。"
-    "3）末尾另起一行写「引用：知识块编号 · 标题」。"
+    "3）末尾另起一行写「引用：<真实编号> · <真实标题>」："
+    "编号与标题都要逐字取自下面列出的知识块，不要编造编号，"
+    "也严禁把“知识块编号”“知识块标题”这些说明文字抄进回答。"
     "不推断能力高低，不下诊断，不与人群比较，不提总分、百分位或正常/异常。"
+    "不得给指标编造材料里没有的认知机制（“属于目标符号本身错误”“可能存在混淆”"
+    "“回忆效率/编码质量有待提升”这类都不行），只陈述数值本身与任务条件。"
+    "不得给出等级、好差、强弱的判断（“表现中等”“水平较高”“能力较弱”“优秀”“良好”都禁），"
+    "褒义的评级同样禁止；只描述任务条件与原始数字。"
     "总长不超过 700 字。"
 )
 
@@ -72,7 +84,14 @@ def facts_block(facts: dict) -> str:
             continue
         score = metrics.get("score")
         score_text = f"参考分 {score}" if isinstance(score, int) else "无可用参考分"
-        compact = {k: v for k, v in metrics.items() if k != "score"}
+        # 只把"真的有值"的字段给模型：None/空值喂进去就会被抄进中文回答。
+        compact = {
+            key: value
+            for key, value in metrics.items()
+            if key != "score" and value is not None and value != "" and value != []
+        }
+        if not compact and "无可用参考分" in score_text:
+            continue
         lines.append(
             f"- {DIM_NAMES[dim]}（{dim}）：{score_text}；原始指标 "
             + json.dumps(compact, ensure_ascii=False)
@@ -122,6 +141,20 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
         "可引用知识块：",
         kb,
     ]
+    if chunks:
+        # 引用行的真实编号来源（和 chat 侧同源）：逐条给出「引用：编号 · 标题」，
+        # 不写出来模型就会抄占位说明。
+        user.extend(
+            [
+                "",
+                "引用行请照抄下面任意一行（原样保留编号与标题，不要自己写编号，"
+                "也不要把「知识块编号」「标题」这些说明词抄进回答）：\n"
+                + "\n".join(
+                    f"引用：{chunk.get('id')} · {chunk.get('title', '')}".rstrip(" ·")
+                    for chunk in chunks[:3]
+                ),
+            ]
+        )
     if question:
         user.extend(["", f"用户问题：{question}"])
     return [

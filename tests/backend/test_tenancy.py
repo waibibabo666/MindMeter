@@ -17,7 +17,7 @@ SESSION = {
     "finishedAt": "2026-11-18T01:00:00Z",
     "dims": ["vc", "ps", "sv", "am"],
     "results": {
-        "vc": {"metrics": {"total": 6, "correct": 6}, "answers": []},
+        "vc": {"metrics": {"total": 8, "correct": 8}, "answers": []},
         "ps": {"metrics": {"correct": 20}, "answers": []},
         "sv": {"metrics": {"total": 8, "correct": 8, "correctRts": [1500] * 8}, "answers": []},
         "am": {

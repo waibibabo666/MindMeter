@@ -52,6 +52,15 @@
           <span class="brand-name">MindMeter<span class="brand-sub">心智镜</span></span>
         </span>
         <span class="chip" id="chip" role="status"></span>
+        <span
+          class="pill course-badge"
+          id="course-badge"
+          tabindex="0"
+          role="note"
+          aria-label="这是课程作业演示版，不是商业产品"
+          title="课程作业演示版：非商业产品、不收费、数据仅用于课程测试。详见「说明 · 关于这个项目」"
+          >课程项目</span
+        >
         <span class="topbar-right">
           <button class="toplink-btn" id="quit-task" type="button" hidden>退出测评</button>
           <button
@@ -117,7 +126,7 @@
             </svg>
             测评
           </a>
-          <a class="navitem" href="#/report" data-nav="报告">
+          <a class="navitem" href="#/report" data-nav="报告与趋势">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -132,7 +141,7 @@
               <path d="M12 16V6" />
               <path d="M17 16v-7" />
             </svg>
-            报告
+            报告与趋势
           </a>
           <a class="navitem" href="#/games" data-nav="游戏">
             <svg
@@ -183,21 +192,6 @@
             </svg>
             记忆
           </a>
-          <a class="navitem" href="#/trend" data-nav="趋势">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M22 7l-8.5 8.5-4-4L2 19" />
-              <path d="M16 7h6v6" />
-            </svg>
-            趋势
-          </a>
           <a class="navitem" href="#/about" data-nav="说明">
             <svg
               viewBox="0 0 24 24"
@@ -229,7 +223,11 @@
             </svg>
             设置
           </a>
-          <p class="sidefoot">站点托管 · 数据按账号隔离<br />课程演示版 · 非临床诊断</p>
+          <p class="sidefoot">
+            课程作业演示版 · 非商业产品<br />
+            站点托管 · 数据按账号隔离<br />
+            非常模 · 非临床诊断 · 不设总分
+          </p>
         </nav>
 
         <main id="app" tabindex="-1" aria-live="polite"></main>

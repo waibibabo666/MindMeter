@@ -1,11 +1,13 @@
 /**
  * Web App 壳（L-01 + 账号）入口。
  *
- * 路由：#/login #/register（未登录） → #/ → #/tier → #/consent → #/intake
- * → #/task/<id> → #/report → #/trend。状态由 boot 预取到内存缓存，写回
- * 同源的 FastAPI；刷新/返回不丢进度，换设备登录后仍是同一份数据。
+ * 路由：#/login #/register（未登录） → #/ → #/tier →（首次）#/intake → #/prep
+ * → #/task/<id> → #/report（八维结果 + 「与上次相比」）。状态由 boot 预取到内存
+ * 缓存，写回同源的 FastAPI；刷新/返回不丢进度，换设备登录后仍是同一份数据。
+ *
+ * 旧的 #/trend 不再是一页：router.js 的 LEGACY_REDIRECTS 把它重定向到 #/report。
  */
-import { createRouter } from './router.js';
+import { createRouter, redirectRoute } from './router.js';
 import { createShell } from './shell.js';
 import { animateNumbers } from './motion.js';
 import { attachClickSounds } from './sound.js';
@@ -14,6 +16,7 @@ import { addSession, clearAllData, exportData } from './storage.js';
 import { UNAUTHENTICATED } from './api.js';
 import { AUTH_PATHS, logout as signOutApi, session } from './auth.js';
 import { bootstrap, installFlushHook, resetCache } from './boot.js';
+import { needsIntake, resetSessionProfile } from './profile.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { log } from './log.js';
 import { STANDARD_ORDER, TIERS } from './data.js';
@@ -21,12 +24,11 @@ import { button, clear, el } from './ui.js';
 import { renderHome } from './pages/home.js';
 import { renderLogin, renderRegister } from './pages/auth.js';
 import { renderTier } from './pages/tier.js';
-import { renderConsent } from './pages/consent.js';
 import { renderIntake } from './pages/intake.js';
+import { renderPrep } from './pages/prep.js';
 import { renderTask } from './pages/task.js';
 import { renderReport } from './pages/report.js';
 import { renderSettings } from './pages/settings.js';
-import { renderTrend } from './pages/trend.js';
 import { renderMemory } from './pages/memory.js';
 import { renderChat } from './pages/chat.js';
 import { renderGames } from './pages/games.js';
@@ -66,18 +68,18 @@ const PAGES = {
   '/login': renderLogin,
   '/register': renderRegister,
   '/tier': renderTier,
-  '/consent': renderConsent,
   '/intake': renderIntake,
+  '/prep': renderPrep,
   '/task': renderTask,
   '/report': renderReport,
   '/settings': renderSettings,
-  '/trend': renderTrend,
   '/memory': renderMemory,
   '/chat': renderChat,
   '/games': renderGames,
   '/about': renderAbout,
   '/game': renderGame,
 };
+// 注意：没有 '/trend'。趋势已并入报告页，旧路径由 redirectRoute 改写（router.js）。
 
 const root = document.getElementById('app');
 const toastNode = document.getElementById('toast');
@@ -165,7 +167,12 @@ const ctx = {
   log,
   pickTier: (tier) => {
     setState(() => ({ tier }));
-    router.go('/intake');
+    // 资料齐了就别再问第二遍：直接进「今天的状态」页。
+    router.go(needsIntake() ? '/intake' : '/prep');
+  },
+  /** 知情同意只在这一处落库（年龄/学历那页），不在开始测评时偷偷置真。 */
+  setConsent: ({ consented, consentedAge }) => {
+    setState(() => ({ consented: Boolean(consented), consentedAge: Boolean(consentedAge) }));
   },
   startAssessment: () => {
     const current = readState();
@@ -176,8 +183,6 @@ const ctx = {
     setState(() => ({
       tier: tier.id,
       level: tier.level,
-      consented: true,
-      consentedAge: true,
       startedAt: Date.now(),
       order,
       cursor: 0,
@@ -254,6 +259,7 @@ const ctx = {
     }
     resetCache();
     resetState();
+    resetSessionProfile();
     toast('已退出登录');
     router.go('/login', { replace: true });
   },
@@ -295,10 +301,16 @@ const router = createRouter((route) => {
  * user never sees the login screen again.
  */
 function gateRoute(route) {
-  const authPage = AUTH_PATHS.includes(route.path);
+  // 旧路径先改写（#/trend → #/report）：router.js 已经在 dispatch 里改过一次，
+  // 这里再兜一层，保证直接调用闸门的调用方也不会渲染一个并不存在的趋势页。
+  const current = redirectRoute(route);
+  const authPage = AUTH_PATHS.includes(current.path);
   if (!session.authenticated && !authPage) return { path: '/login', param: null, full: '/login' };
   if (session.authenticated && authPage) return { path: '/', param: null, full: '/' };
-  return route;
+  // 测评前置两页：资料没填全不许直接进「今天的状态」，填全了就不拦手动回看。
+  if (current.path === '/prep' && needsIntake())
+    return { path: '/intake', param: null, full: '/intake' };
+  return current;
 }
 
 globalThis.addEventListener(UNAUTHENTICATED, () => {

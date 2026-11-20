@@ -16,7 +16,7 @@ def test_assessment_roundtrip_and_no_key_in_export(logged_client):
         "finishedAt": "2026-11-14T01:00:00Z",
         "dims": ["vc", "ps", "sv", "am"],
         "results": {
-            "vc": {"metrics": {"total": 6, "correct": 6}, "answers": []},
+            "vc": {"metrics": {"total": 8, "correct": 8}, "answers": []},
             "ps": {"metrics": {"correct": 20}, "answers": []},
             "sv": {"metrics": {"total": 8, "correct": 8, "correctRts": [1500] * 8}, "answers": []},
             "am": {
@@ -68,6 +68,45 @@ def test_anonymous_api_call_is_rejected(client, needs_db):
     response = client.get("/api/v1/state")
     assert response.status_code == 401
     assert response.json()["detail"] == "unauthenticated"
+
+
+def test_account_profile_roundtrip_is_whitelisted(logged_client, needs_db):
+    """年龄/学历/同意版本存进账号；自由文本一律丢掉，别让它变成藏个人信息的地方。"""
+    saved = logged_client.put(
+        "/api/v1/state",
+        json={
+            "tier": "standard",
+            "profile": {
+                "age": 28,
+                "edu": "bachelor",
+                "consentVersion": "2026-11",
+                "consentedAt": "2026-11-20T04:00:00+00:00",
+                "note": "我的手机号是13800000000",
+                "nickname": "小明",
+            },
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    profile = saved.json()["profile"]
+    assert profile["age"] == 28
+    assert profile["edu"] == "bachelor"
+    assert profile["consentVersion"] == "2026-11"
+    assert "note" not in profile and "nickname" not in profile
+    assert "13800000000" not in saved.text
+
+    # 越界年龄与未知学历被丢弃，其余保留
+    second = logged_client.put(
+        "/api/v1/state",
+        json={"profile": {"age": 7, "edu": "phd", "consentVersion": "2026-11"}},
+    )
+    clean = second.json()["profile"]
+    assert "age" not in clean and "edu" not in clean
+    assert clean["consentVersion"] == "2026-11"
+
+    # 不带 profile 的旧快照不该把已存资料抹掉
+    third = logged_client.put("/api/v1/state", json={"tier": "deep"})
+    assert third.json()["profile"]["consentVersion"] == "2026-11"
+    assert third.json()["tier"] == "deep"
 
 
 def test_site_ai_settings_are_read_only(logged_client, needs_db):

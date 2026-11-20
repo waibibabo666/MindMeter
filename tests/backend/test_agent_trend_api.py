@@ -15,7 +15,8 @@ def _session_payload(assessment_id, finished_at, vc_correct):
         "finishedAt": finished_at,
         "dims": ["vc", "ps", "sv", "am"],
         "results": {
-            "vc": {"metrics": {"total": 6, "correct": vc_correct}, "answers": []},
+            # 标准档 vc 实际下发 8 题；用 6 题会被完成率判定为未完成（null）
+            "vc": {"metrics": {"total": 8, "correct": vc_correct}, "answers": []},
             "ps": {"metrics": {"seconds": 60, "trials": 10, "correct": 8, "wrong": 2}, "answers": []},
             "sv": {"metrics": {"total": 8, "correct": 6}, "answers": []},
             "am": {"metrics": {"hits": vc_correct, "falseAlarms": 2}, "answers": []},

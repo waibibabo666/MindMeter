@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from .. import auth
 from ..agent import answer
+from ..agent.insights import after_turn
 from ..db import get_db
 from ..models import (
     AIRun,
+    AppState,
     Assessment,
     ChatMessage,
     MemoryAdvice,
@@ -21,7 +23,6 @@ from ..models import (
 from ..privacy import find_sensitive, redact
 from ..serializers import (
     assessment_to_session,
-    find_advice,
     memory_payload,
     sessions_payload,
 )
@@ -47,7 +48,7 @@ def _next_seq(db: Session, user_id: int) -> int:
     return int(current or 0) + 1
 
 
-def _facts(db: Session, user_id: int) -> tuple[dict, str | None]:
+def _facts(db: Session, user_id: int) -> tuple[dict, str | None, str | None]:
     row = db.scalar(
         select(Assessment)
         .where(Assessment.user_id == user_id, Assessment.status == "completed")
@@ -55,7 +56,8 @@ def _facts(db: Session, user_id: int) -> tuple[dict, str | None]:
         .limit(1)
     )
     if row is None:
-        return {}, None
+        tier = db.get(AppState, user_id)
+        return {}, None, (tier.tier if tier else None)
     session = assessment_to_session(db, row)
     facts = {}
     for dim, payload in (session.get("results") or {}).items():
@@ -68,7 +70,7 @@ def _facts(db: Session, user_id: int) -> tuple[dict, str | None]:
     trend = build_trend_payload(sessions_payload(db, user_id, limit=2)["sessions"])
     if trend is not None:
         facts["trend"] = trend
-    return facts, row.id
+    return facts, row.id, row.mode
 
 
 def _memory_context(db: Session, user_id: int) -> dict:
@@ -199,7 +201,7 @@ def chat(
     question = str(payload.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "empty_question")
-    facts, assessment_id = _facts(db, uid)
+    facts, assessment_id, tier = _facts(db, uid)
     memory = _memory_context(db, uid)
     history = _history(db, uid)
 
@@ -252,19 +254,23 @@ def chat(
     )
     db.commit()
 
-    if result.get("source") == "llm":
-        for source in result.get("sources") or []:
-            source_id = str(source.get("id") or "")
-            if not source_id.startswith("kb-plan"):
-                continue
-            advice = find_advice(db, uid, source_id) or MemoryAdvice(
-                user_id=uid, id=source_id, at=_now()
-            )
-            advice.title = str(source.get("title") or "")
-            advice.shown = True
-            db.add(advice)
-    db.commit()
+    # 核心功能：一次有效对话结束后，服务端自己把摘要/建议沉淀进记忆表。
+    # 任何一步出错都不能把已经成功的对话回答打挂，所以整体吞掉并记在响应标记里。
+    try:
+        sedimented = after_turn(
+            db,
+            user,
+            question=question,
+            reply=result,
+            facts=facts,
+            assessment_id=assessment_id,
+            tier=tier,
+        )
+    except Exception:  # noqa: BLE001 - 记忆沉淀失败 ≠ 对话失败
+        db.rollback()
+        sedimented = {"memory": memory_payload(db, uid), "updated": False, "profileSuggested": None}
 
+    memory_now = sedimented["memory"]
     return {
         "reply": {
             "text": result.get("text", ""),
@@ -272,9 +278,23 @@ def chat(
             "citations": result.get("citations", []),
             "sources": result.get("sources", []),
             "source": result.get("source", "template"),
+            # code 现在是真实原因（too_long / banned_word / unsourced_number /
+            # score_misattributed / 模型侧 timeout…），前端 LLM_FALLBACK_REASON
+            # 按这个值出中文；完整 issue 列表在 validation 里。
             "code": result.get("code", "ok"),
+            "validation": result.get("validation") or [],
             "risk": result.get("risk", "low"),
             "assessmentId": assessment_id,
         },
-        "messages": memory_payload(db, uid)["messages"],
+        # `memory` 与 `GET /api/v1/memory` 同形状（memory_payload 一个来源）。
+        # 为什么必须返回整份：前端 storage.js 的 writeMemory() 走的是
+        # `PUT /memory` 全量替换，会先 DELETE 本账号的 summaries/advice 再重写。
+        # 对话刚在服务端写入的摘要/建议如果让前端把旧快照 PUT 回来，就会被覆盖掉。
+        # 所以对话页请改成「直接采用这里的 memory」，不要再 PUT 快照。
+        "memory": memory_now,
+        "memoryUpdated": bool(sedimented.get("updated")),
+        # 画像线索：服务端一个字都没写，等用户在面板里确认（未确认不写是硬规矩）。
+        "profileSuggested": sedimented.get("profileSuggested"),
+        # 兼容旧前端：messages 仍是 memory.messages 的同一份。
+        "messages": memory_now["messages"],
     }

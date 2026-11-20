@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .. import auth
 from ..db import get_db
 from ..models import ChatMessage, MemoryAdvice, MemoryProfile, MemorySummary, User
-from ..serializers import find_advice, find_summary, memory_payload
+from ..serializers import find_advice, find_message, find_summary, memory_payload
 from ..timeutil import parse_dt
 
 router = APIRouter()
@@ -30,7 +30,13 @@ def replace_memory(
     user: User = Depends(auth.require_user),
     db: Session = Depends(get_db),
 ):
-    """Replace this account's memory snapshot (used by the frontend facade)."""
+    """Replace this account's memory snapshot (used by the frontend facade).
+
+    警告（写给前端与服务端两边）：这里是**整份替换** —— 先 DELETE 本账号的
+    summaries/advice/messages，再按传入快照重写。`POST /chat` 会在服务端沉淀摘要与建议
+    并把最新的整份 `memory` 放在响应里（形状与本接口返回的一致），所以对话页请**采用
+    响应里的 memory 更新缓存**，不要把旧快照 PUT 回来，否则刚写下的记忆会被抹掉。
+    """
     uid = int(user.id)
     profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else {}
     row = db.get(MemoryProfile, uid) or MemoryProfile(user_id=uid)
@@ -230,4 +236,24 @@ def delete_advice(
     if row is not None:
         db.delete(row)
         db.commit()
+    return {"ok": True}
+
+
+@router.delete("/memory/messages/{message_id}")
+def delete_message(
+    message_id: str,
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    """删单条对话。
+
+    记忆页早就支持"逐条删除"，但前端当时只能用 `PUT /memory` 全量快照去实现，
+    而那会把服务端在对话结束时自动沉淀的摘要/建议一并抹掉。补这个单行接口，
+    让记忆面板的所有写路径都是定向的。
+    """
+    row = find_message(db, int(user.id), message_id)
+    if row is None:
+        raise HTTPException(404, "message_not_found")
+    db.delete(row)
+    db.commit()
     return {"ok": True}

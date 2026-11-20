@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * L-02 本地计分（scoring-v3.1）的金标准检查。
+ * L-02 本地计分（scoring-v3.2）的金标准检查。
  *
  * 覆盖：
  *   - 4 组手算金标准：全对 / 中等 / 偏低 / 最低边界
@@ -157,7 +157,7 @@ async function main() {
     ['total', 'mean', 'average', 'composite', 'score'].forEach((key) => {
       assert(!(key in r), `不应出现 ${key} 字段`);
     });
-    eq(r.version, 'scoring-v3.1', 'version');
+    eq(r.version, 'scoring-v3.2', 'version');
     eq(Object.keys(r.dimensions).length, 8, '维度数');
   });
 

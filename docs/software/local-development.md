@@ -17,11 +17,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 ### A. 一键全起（推荐日常开发）
 
 ```powershell
-python scripts/e2e_server.py
-# 浏览器打开 http://127.0.0.1:8100 → 注册一个账号即可用
+python scripts/dev_serve.py start --port 8000
+# 浏览器打开 http://127.0.0.1:8000 → 注册一个账号即可用
+
+python scripts/dev_serve.py status   # 库/服务的 pid 与 url
+python scripts/dev_serve.py logs     # 看服务端日志尾部
+python scripts/dev_serve.py stop     # 停服务并停库
 ```
 
-它做四件事：初始化 `runtime/e2e` 的一次性集群（仅回环、trust 认证）→ 建库 → `alembic upgrade head` → 起 uvicorn。Ctrl+C 退出服务；想连库一起停：`python scripts/e2e_server.py --stop`。
+它做四件事：初始化 `runtime/e2e` 的一次性集群（仅回环、trust 认证）→ 建库 → `alembic upgrade head` → 起 uvicorn。
+
+**为什么用 `dev_serve` 而不是 `e2e_server`**：`e2e_server.py` 是前台进程（Playwright 的 webServer 用它），关掉终端/作业就没了；`dev_serve.py` 把进程脱离作业树，人工测试期间一直在线。分离进程**不能用 `--reload`**（uvicorn 的 reloader 在无控制台的分离进程里会抛 `WinError 6`，留下一个跑旧代码的 worker）——改了后端就 `stop` 再 `start`。
+
+想让站点用真实模型：把三个变量放进仓库根目录的 `.env.local`（已在 .gitignore 内），`dev_serve start` 会自动读取：
+
+```powershell
+# .env.local
+MM_LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v1  # 注意是 /v4 还是 /v1 看厂商文档
+MM_LLM_MODEL=glm-4.7-flash
+MM_LLM_API_KEY=sk-xxxx
+```
+
+没有 `.env.local` 也能跑：AI 一律走模板兜底，`/api/v1/health` 里 `ai.enabled=false`。
 
 ### B. 只起一个测试库（跑 pytest / 用别的数据库）
 
@@ -86,17 +103,17 @@ python scripts/e2e_server.py
 
 ## 5. 手工回归清单（答辩前 5 分钟）
 
-- [ ] 注册（含 18+ 勾选）→ 标准 8 项 → 报告 → 解读卡 → 对话 → 记忆 → 复测 → 趋势；
-- [ ] 刷新页面进度还在；**换浏览器/无痕窗口登录同一账号**，数据仍在（这是 Web 版的核心卖点）；
+- [ ] 注册（含 18+ 勾选，密码 ≥8 位）→ 选档位 → **「第一次见面」页**（年龄步进器 + 学历 + 两项勾选）→ **「今天的状态」页**（睡眠 + 疲劳分段）→ 标准 8 项 → 报告 → 解读卡 → 对话 → 记忆 → 复测 → 趋势；
+- [ ] 刷新页面进度还在；**换浏览器/无痕窗口登录同一账号**：数据仍在，且选完档位**直接进「今天的状态」**，不再问年龄与知情同意（临场的睡眠/疲劳则每次都要重填）；
 - [ ] 用第二个账号确认看不到第一个账号的测评（或跑 `test_tenancy.py`）；
 - [ ] 设置页导出 JSON → 文本搜 `sk-` 必须为 0 命中；模型卡只显示模型名；
 - [ ] 改密码后旧设备掉线；注销账号后同一用户名可重新注册且数据为空；
-- [ ] 360px 宽度无横向滚动条（E2E 已覆盖，肉眼再过一遍登录页）。
+- [ ] 360px 宽度无横向滚动条（E2E 与截图脚本都断言 `overflow=0`）。
 
 ## 6. 重置与数据
 
 ```powershell
-python scripts/e2e_server.py --stop
+python scripts/dev_serve.py stop
 Remove-Item -Recurse -Force runtime\e2e      # 下一次会重新 initdb，等价于全新站点
 ```
 

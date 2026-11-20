@@ -20,6 +20,7 @@ from ..db import get_db
 from ..logging_setup import redact_text
 from ..models import AppState, ChatMessage, MemoryAdvice, MemoryProfile, MemorySummary, User
 from ..serializers import (
+    clean_profile,
     export_payload,
     find_advice,
     find_message,
@@ -90,6 +91,8 @@ def import_data(
         row.cursor = int(app.get("cursor") or draft.get("cursor") or 0)
         row.results = app.get("results") or draft.get("results") or {}
         row.drafts = app.get("drafts") or draft.get("drafts") or {}
+        if isinstance(app.get("profile"), dict):
+            row.profile = clean_profile(app.get("profile"))
         db.add(row)
 
     memory = data.get("memory") if isinstance(data.get("memory"), dict) else {}

@@ -52,13 +52,14 @@ def run_graph(monkeypatch, question, facts, reply_text, chunks=KB_CHUNKS, scene=
         calls["retrieve"] += 1
         return list(chunks)
 
-    def fake_call_llm(**kwargs):
+    def fake_call_llm(config, messages, **kwargs):
         calls["llm"] += 1
-        calls["messages"] = kwargs["messages"]
+        calls["messages"] = messages
+        calls["config"] = config
         return LLMReply(text=reply_text, model="test-model")
 
     monkeypatch.setattr(A, "retrieve_kb", fake_retrieve)
-    monkeypatch.setattr(A, "call_llm", fake_call_llm)
+    monkeypatch.setattr(A, "call_llm_with_fallback", fake_call_llm)
     # The deployment owns the model config now (app.llm.site_llm_config):
     # tests inject it the same way, with a fake key that never leaves memory.
     monkeypatch.setattr(
@@ -129,6 +130,86 @@ def test_fixed_safety_replies_carry_the_right_words():
 
 # ---------- validate：派生数字 / 场景策略 / 软校验 ----------
 
+def test_score_attribution_is_tracked_per_dimension():
+    facts = {
+        "vc": {"correct": 5, "total": 8, "score": 50},
+        "am": {"hits": 4, "falseAlarms": 3, "score": 26},
+        "trend": {"days": 9, "rows": [{"prev": 50, "next": 60, "delta": 10}]},
+    }
+    owners = A.dimension_score_owners(facts)
+    assert owners[50.0] == {"言语理解"}
+    assert owners[26.0] == {"联想记忆"}
+    # trend 里的 50/60 是派生数字，不参与归属表
+    assert 10.0 not in owners
+
+
+def test_score_from_another_dimension_is_a_hard_failure():
+    """接通真实模型后实测到的错误：用言语理解的 5/50 解释联想记忆。"""
+    facts = {
+        "vc": {"correct": 5, "total": 8, "score": 50},
+        "am": {"hits": 4, "falseAlarms": 3, "score": 26},
+    }
+    allowed = derived_allowed_numbers(facts)
+    wrong = validate_text(
+        "联想记忆得分 50，说明你只回忆出 5 组。仅供参考。",
+        allowed_numbers=allowed,
+        policy=policy_for("chat_explain"),
+        score_owners=A.dimension_score_owners(facts),
+    )
+    assert not wrong["ok"], wrong["issues"]
+    assert any(
+        issue["code"] == "score_misattributed" and issue["severity"] == "hard"
+        for issue in wrong["issues"]
+    )
+
+    right = validate_text(
+        "联想记忆命中 4、虚报 3，得分 26。仅供参考。",
+        allowed_numbers=allowed,
+        policy=policy_for("chat_explain"),
+        score_owners=A.dimension_score_owners(facts),
+    )
+    assert right["ok"], right["issues"]
+
+
+def test_score_attribution_is_conservative():
+    facts = {
+        "vc": {"correct": 5, "total": 8, "score": 50},
+        "am": {"hits": 4, "falseAlarms": 3, "score": 26},
+    }
+    owners = A.dimension_score_owners(facts)
+    allowed = derived_allowed_numbers(facts)
+    # 没点名维度的句子不判（避免误伤"这次得分 50"这类整体表述）
+    assert validate_text(
+        "这次得分 50 偏低。仅供参考。", allowed_numbers=allowed, score_owners=owners
+    )["ok"]
+    # 两个维度共享同一个分数值时，两者都合法
+    shared = {"vc": {"correct": 5, "total": 8, "score": 50}, "am": {"hits": 4, "falseAlarms": 3, "score": 50}}
+    assert validate_text(
+        "联想记忆得分 50。仅供参考。",
+        allowed_numbers=derived_allowed_numbers(shared),
+        score_owners=A.dimension_score_owners(shared),
+    )["ok"]
+    # 题量类数字（8 题）不参与该检查
+    assert validate_text(
+        "联想记忆共 8 题，命中 4。仅供参考。", allowed_numbers=allowed, score_owners=owners
+    )["ok"]
+
+
+def test_misattributed_score_falls_back_to_template(monkeypatch):
+    facts = {
+        "vc": {"correct": 5, "total": 8, "score": 50},
+        "am": {"hits": 4, "falseAlarms": 3, "score": 26},
+    }
+    result, _ = run_graph(
+        monkeypatch,
+        "为什么联想记忆低？",
+        facts,
+        "联想记忆得分 50，说明你只回忆出 5 组，表现较弱。仅供参考。",
+    )
+    assert result["source"] == "template", result
+    assert "50" not in result["text"] or "联想记忆" not in result["text"]
+
+
 def test_derived_numbers_allowed_but_invented_fail():
     allowed = derived_allowed_numbers({"am": {"hits": 5, "falseAlarms": 3}})
     assert 8.0 in allowed and 2.0 in allowed and 62.0 in allowed
@@ -177,11 +258,34 @@ def test_soft_issues_keep_llm_answer():
 
 
 def test_scene_lengths_are_policy_driven():
-    long_201 = "字" * 201
-    assert not validate_text(long_201, policy=policy_for("chat_explain"))["ok"]
-    assert validate_text(long_201, policy=policy_for("trend"))["ok"]
-    long_301 = "字" * 301
-    assert not validate_text(long_301, policy=policy_for("trend"))["ok"]
+    explain_limit = policy_for("chat_explain")["max_chars"]
+    trend_limit = policy_for("trend")["max_chars"]
+    assert validate_text("字" * explain_limit, policy=policy_for("chat_explain"))["ok"]
+    assert not validate_text("字" * (explain_limit + 1), policy=policy_for("chat_explain"))["ok"]
+    assert not validate_text("字" * (trend_limit + 1), policy=policy_for("trend"))["ok"]
+
+
+def test_explain_length_limit_is_not_too_tight_for_chinese():
+    """2026-11-20 用户实测：200 字上限让中文一句有用的回答必然违规 → 一直回退模板。
+
+    这条把"上限不能收紧到误杀正常回答"钉住：一句带数字、带条件解释、带边界声明的
+    中文回答约 250 字，必须能过校验。
+    """
+    realistic = (
+        "联想记忆这次是词对配对加再认判断：首次配对成功 5/8 组，再认命中 6 个、虚报 2 个，"
+        "平均每次作答约 2.4 秒。配对没一次成功多半是词对之间的联系还没建立起来，"
+        "或者回忆时只记住了单个词而不是成对关系；限时与题目形式也会改变结果。"
+        "这些数字只反映本次任务，不是常模，也不与人群比较，不能读成能力高低。"
+        "引用：kb-dim-am-01 · 联想记忆"
+    )
+    assert len(realistic) < policy_for("chat_explain")["max_chars"], len(realistic)
+    assert validate_text(
+        realistic,
+        allowed_numbers=derived_allowed_numbers(
+            {"am": {"firstTry": 5, "targets": 8, "hits": 6, "falseAlarms": 2, "meanRtMs": 2400}}
+        ),
+        policy=policy_for("chat_explain"),
+    )["ok"]
 
 
 # ---------- build_messages：时序与场景块 ----------
@@ -228,7 +332,9 @@ def test_trend_good_answer_keeps_llm_and_strips_citation_line(monkeypatch):
 def test_trend_judgment_word_falls_back_to_trend_template(monkeypatch):
     result, _ = run_graph(monkeypatch, "这两次测评有什么变化", TREND_FACTS, "总体看你有进步。")
     assert result["source"] == "template"
-    assert result["code"] == "invalid"
+    # 真实原因，不再是一句 "invalid"（校验失败必须能被前端与遥测看懂）。
+    assert result["code"] == "banned_word"
+    assert any(issue["code"] == "banned_word" for issue in result["validation"])
     assert "44 → 51" in result["text"]
     assert "进步" not in result["text"]
 

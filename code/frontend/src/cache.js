@@ -20,6 +20,7 @@ export function defaultState() {
     cursor: 0,
     results: {},
     drafts: {},
+    profile: {},
     scores: null,
     assessmentId: null,
   };

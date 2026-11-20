@@ -8,6 +8,8 @@
  *   - 4 个任务的纯逻辑：旋转、选项唯一性、再认构造、指标汇总
  *   - 路由解析与状态读写（含损坏数据回退）
  *   - 360px / 触控区 / 减少动效等样式约定
+ *   - e2e 依赖的表单 id 与页面文件仍在
+ *   （文案精简与合规可见性门禁在 scripts/test_copy_discipline.js）
  *
  * 用法：node scripts/test_app_shell.js
  */
@@ -46,6 +48,8 @@ async function main() {
   const data = await import(pathToHref(path.join(APP_DIR, 'src', 'data.js')));
   const router = await import(pathToHref(path.join(APP_DIR, 'src', 'router.js')));
   const store = await import(pathToHref(path.join(APP_DIR, 'src', 'store.js')));
+  const profile = await import(pathToHref(path.join(APP_DIR, 'src', 'profile.js')));
+  const controls = await import(pathToHref(path.join(APP_DIR, 'src', 'controls.js')));
   const sv = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'sv.js')));
   const ps = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'ps.js')));
   const am = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'am.js')));
@@ -65,9 +69,18 @@ async function main() {
       'src/pages/auth.js',
       'src/pages/home.js',
       'src/pages/tier.js',
-      'src/pages/consent.js',
+      'src/pages/intake.js',
+      'src/pages/prep.js',
+      'src/controls.js',
       'src/pages/task.js',
       'src/pages/report.js',
+      'src/pages/trend.js',
+      'src/pages/memory.js',
+      'src/pages/chat.js',
+      'src/pages/games.js',
+      'src/pages/game.js',
+      'src/pages/settings.js',
+      'src/pages/about.js',
       'src/tasks/vc.js',
       'src/tasks/ps.js',
       'src/tasks/sv.js',
@@ -257,6 +270,21 @@ async function main() {
     assert(app.includes('safeScores'), 'app.js 计分失败未兜底');
   });
 
+  test('导航：报告与趋势是一个入口', () => {
+    const shell = read('src/shell.js');
+    assert(shell.includes("NAV_REPORT = '报告与趋势'"), '合并后的入口应叫「报告与趋势」');
+    assert(/'\/report':\s*NAV_REPORT/.test(shell), '/report 应归入合并后的导航组');
+    assert(/'\/trend':\s*NAV_REPORT/.test(shell), '旧 /trend 也应归入同一导航组');
+    assert(shell.includes('mergeTrendNav'), 'shell.js 应把静态侧栏的两项收敛成一项');
+
+    const router = read('src/router.js');
+    assert(/LEGACY_REDIRECTS/.test(router), 'router.js 缺少旧路径重定向表');
+    assert(/'\/trend':\s*'\/report'/.test(router), '/trend 应重定向到 /report');
+    assert(router.includes("'/trend'"), 'ROUTES 仍需保留 /trend 作为兼容路径');
+
+    assert(!read('src/app.js').includes("'/trend': renderTrend"), 'app.js 不应再注册独立的趋势页');
+  });
+
   test('路由解析与未知路径回退', () => {
     assert(router.parseHash('#/').path === '/', 'root parse failed');
     assert(router.parseHash('#/task/vc').param === 'vc', 'param parse failed');
@@ -279,6 +307,44 @@ async function main() {
     assert(store.readState().tier === null, 'reset must clear the cache');
   });
 
+  test('前置两页分工：账号级资料落 state，临场状态只留内存', () => {
+    store.resetState();
+    profile.resetSessionProfile();
+    assert(profile.needsIntake() === true, '新账号应当要走「第一次见面」页');
+
+    // 这一步同时验证 store.update 的就地修改语义：写成返回对象会让资料永远不落库。
+    profile.saveProfile({ age: 28, edu: 'bachelor', consentVersion: profile.CONSENT_VERSION });
+    const saved = store.readState().profile || {};
+    assert(saved.age === 28 && saved.edu === 'bachelor', '账号级资料必须写进 state');
+    assert(profile.needsIntake() === false, '填过一次就不该再问第二遍');
+    assert(profile.hasBaseInfo() === true, 'hasBaseInfo 应随资料更新');
+
+    // 临场字段不进档案
+    profile.saveProfile({ sleep: '7to8', fatigue: 4 });
+    const after = store.readState().profile || {};
+    assert(!('sleep' in after) && !('fatigue' in after), '睡眠/疲劳不该写进账号 profile');
+    const merged = profile.readProfile();
+    assert(merged.sleep === '7to8' && merged.fatigue === 4, '临场值应能被读回');
+    assert(profile.stateWarning(merged).includes('疲劳'), '高疲劳要给有效性提示');
+
+    // 脏数据丢掉，不污染档案
+    profile.saveProfile({ age: 7, edu: 'phd' });
+    assert(store.readState().profile.age === 28, '越界年龄与未知学历不该覆盖已有资料');
+
+    // 同意条款升版 → 重新走一次确认
+    profile.saveProfile({ consentVersion: '1999-01' });
+    assert(profile.needsIntake() === true, '同意版本变化后必须重新确认');
+  });
+
+  test('控件：步进器数值收敛', () => {
+    const { clampNumber } = controls;
+    assert(clampNumber('28', 10, 100, null) === 28, '字符串数字应转成数字');
+    assert(clampNumber('7', 10, 100, null) === 10, '低于下限应夹到下限');
+    assert(clampNumber('900', 10, 100, null) === 100, '超过上限应夹到上限');
+    assert(clampNumber('', 10, 100, null) === null, '空值返回 null，页面据此提示必填');
+    assert(clampNumber('28.6', 10, 100, null) === 29, '取整');
+  });
+
   test('样式：360px 适配、44px 触控区、减少动效', () => {
     const css = read('src/styles/app.css');
     assert(/--tap:\s*44px/.test(css), '44px tap target variable missing');
@@ -286,6 +352,25 @@ async function main() {
     assert(/prefers-reduced-motion/.test(css), 'reduced motion support missing');
     assert(/focus-visible/.test(css), 'focus ring missing');
     assert(/min-height:\s*var\(--tap\)/.test(css), 'tap target not applied to buttons');
+  });
+
+  test('e2e 依赖的表单 id 未被改动', () => {
+    const auth = read('src/pages/auth.js');
+    for (const id of [
+      'login-username',
+      'login-password',
+      'register-username',
+      'register-password',
+      'register-confirm',
+      'register-adult',
+    ]) {
+      assert(auth.includes(`'${id}'`), `表单 id ${id} 被改动，e2e 会找不到元素`);
+    }
+    const intake = read('src/pages/intake.js');
+    assert(intake.includes("'intake-age'"), 'intake 年龄 id 被改动');
+    assert(intake.includes("'intake-edu'"), 'intake 学历 id 被改动');
+    const prep = read('src/pages/prep.js');
+    assert(prep.includes("'prep-sleep'"), 'prep 睡眠 id 被改动');
   });
 
   let passed = 0;

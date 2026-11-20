@@ -15,7 +15,10 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_LLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-DEFAULT_LLM_MODEL = "glm-4.7-flash"
+# 2026-11-20 实测：glm-4.7-flash 免费池常过载（HTTP 429 / code 1305），
+# glm-4-flash-250414 与 glm-4-air-250414 稳定秒回，故以前者为主、后者为备。
+DEFAULT_LLM_MODEL = "glm-4-flash-250414"
+DEFAULT_LLM_FALLBACKS = "glm-4-air-250414,glm-4.5-flash"
 
 
 def _data_dir() -> Path:
@@ -32,7 +35,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MM_", extra="ignore")
 
     app_name: str = "MindMeter"
-    app_version: str = "0.3.1"
+    app_version: str = "0.3.4"
 
     # --- storage -----------------------------------------------------------
     database_url: str = ""
@@ -43,9 +46,17 @@ class Settings(BaseSettings):
     llm_base_url: str = DEFAULT_LLM_BASE_URL
     llm_model: str = DEFAULT_LLM_MODEL
     llm_api_key: str = ""
+    llm_model_fallbacks: str = DEFAULT_LLM_FALLBACKS
     llm_timeout_s: float = 45.0
     llm_max_tokens: int = 800
     llm_temperature: float = 0.2
+    # 免费池会过载（智谱 code=1305 / HTTP 429）。过载时先退避重试，再按顺序换备用模型。
+    # 注意：这里不能再声明一次 llm_model_fallbacks —— 后写的 `= ""` 会覆盖上面的默认链，
+    # 结果就是"配置了备用模型却永远不生效"，一次 429 直接退回模板（2026-11-20 实测修）。
+    llm_retries: int = 2
+    llm_retry_backoff_s: float = 1.2
+    # 少数兼容网关需要额外字段（如智谱关思考）。留空则按域名自动判断。
+    llm_extra_params: str = ""
 
     # --- accounts ----------------------------------------------------------
     allow_registration: bool = True

@@ -136,14 +136,31 @@ export function addMessage(message) {
   return writeMemory({ messages: [...memory.messages, message] });
 }
 
+/**
+ * 单行 upsert，不再全量替换。
+ *
+ * 为什么：对话结束后服务端会自动沉淀摘要与建议（app/agent/insights.py）。
+ * 如果这里走 `PUT /memory` 的"先删后写整份快照"，一个拿着旧缓存的页面点一下
+ * 「用最近一次测评生成」就会把服务端刚写的行抹掉 —— 用户看到的是"记忆又空了"。
+ * 服务端本来就有 `POST /memory/summaries`、`POST /memory/advice` 两个 upsert 接口，
+ * 用它们，缓存仍然乐观更新，写失败只影响这一行。
+ */
 export function addSummary(summary) {
   const memory = readMemory();
-  return writeMemory({ summaries: [...memory.summaries, summary] });
+  cache.memory = Object.assign(memory, {
+    summaries: [...memory.summaries, summary].slice(-MAX_MESSAGES),
+  });
+  enqueue(() => api.post('/memory/summaries', summary));
+  return cache.memory;
 }
 
 export function addAdvice(advice) {
   const memory = readMemory();
-  return writeMemory({ advice: [...memory.advice, advice] });
+  cache.memory = Object.assign(memory, {
+    advice: [...memory.advice, advice].slice(-MAX_SESSIONS),
+  });
+  enqueue(() => api.post('/memory/advice', advice));
+  return cache.memory;
 }
 
 export function clearMemory() {
