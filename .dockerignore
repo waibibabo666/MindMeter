@@ -1,0 +1,21 @@
+# 镜像只需要运行时代码，排除本地/CI 产物，构建更快、层更小
+.git
+.gitignore
+.github
+.env
+.env.*
+*.md
+node_modules
+vendor
+runtime
+code/backend/runtime
+test-results
+playwright-report
+.pytest_cache
+__pycache__
+*.pyc
+tests
+docs
+work_for_submission
+package.json
+package-lock.json

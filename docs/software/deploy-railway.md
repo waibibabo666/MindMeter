@@ -26,22 +26,31 @@ Railway **标准 Postgres 镜像不含 pgvector**（Railway 官方指南原话�
 ## 1. 建服务
 
 1. Railway → New Project → **Deploy from GitHub repo** → 选 `MindMeter`，分支 **`main`**
-   （PR #93 已合并，main 就是最新代码）
-2. **Root Directory 留空**（仓库根）。原因：根目录有 `requirements.txt` 供 Nixpacks 装依赖，
-   而应用代码在 `code/backend` —— 由启动命令 `cd code/backend` 处理，不要改成
-   `code/backend` 作 Root Directory，那样 Nixpacks 找不到 `requirements.txt`。
-3. 仓库已带 [`railway.json`](../../railway.json)，构建/启动/健康检查会自动读取：
+   （PR #94 已合并，main 就是最新代码）
+2. **Root Directory 留空**（仓库根）。原因：Dockerfile 要先 `COPY requirements.txt`、
+   再 `COPY code ./code`，这两个都必须位于构建上下文根目录。不要改成 `code/backend`
+   作 Root Directory，否则根目录的 `requirements.txt` 就取不到了。
+3. 仓库已带 [`Dockerfile`](../../Dockerfile)，`railway.json` 指定了 `"builder": "DOCKERFILE"`，
+   构建/启动/健康检查全部自动读取：
 
 ```json
 {
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
   "deploy": {
-    "startCommand": "cd code/backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips \"*\"",
     "healthcheckPath": "/api/v1/health/live",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5
   }
 }
 ```
+
+> 为什么不再用 Nixpacks：根目录有 `package.json`（只给本地测试/lint/playwright 用），
+> Nixpacks/Railpack 会把项目误判成 Node、只装 Node 不装 Python，构建时
+> `python -m pip install -r requirements.txt` 直接 `python: command not found`（exit 127）。
+> Dockerfile 用 `python:3.13-slim` 基底，彻底避免这个误判。
 
 > `--proxy-headers` + `--forwarded-allow-ips "*"` 是必须的：Railway 在代理后面，
 > 没有它们应用会把所有请求当成来自代理 IP，`MM_COOKIE_SECURE=auto` 也判断不出 https。
@@ -114,4 +123,4 @@ curl https://<你的服务>.up.railway.app/api/v1/health
 | 连接串注入 | `fromDatabase: connectionString` 自动 | 手工加 `MM_DATABASE_URL=${{Postgres.DATABASE_URL}}` |
 | 迁移时机 | `preDeployCommand: alembic upgrade head` | 只能 `MM_AUTO_MIGRATE=1` 启动时跑 |
 | 健康检查 | `healthCheckPath` | `railway.json` 的 `healthcheckPath` |
-| 代码改动 | — | **零** |
+| 代码改动 | — | 加一个 Dockerfile（约 25 行），其余零改动 |
