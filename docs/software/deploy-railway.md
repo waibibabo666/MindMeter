@@ -65,16 +65,28 @@ Railway **标准 Postgres 镜像不含 pgvector**（Railway 官方指南原话�
 
 ## 3. 部署后必须验的两件事
 
-```powershell
-# ① 迁移与数据库是否真的接上（看 db.connected / migration / pgvector）
-curl https://<你的服务>.up.railway.app/api/v1/health
+⚠️ **先看日志，别看健康检查。** `app/main.py` 里的 `run_migrations()` 是刻意做成
+best-effort 的（注释原话 "Never takes the app down"）：迁移失败只写一行
+`auto-migration failed: <异常类型>`，**服务照常启动、`/health/live` 照常 200**。
+所以 pgvector 缺失这类问题会伪装成"部署成功"，而 `db.connected` 也是 true
+（数据库连得上，只是表没建）—— 只有真正调数据库的接口才会 500。
 
-# ② 全链路冒烟（注册→隔离→导出无密钥→AI 是否走模型→注销，22 项）
+```powershell
+# ① 决定性检查：全链路冒烟（注册→隔离→导出无密钥→AI 是否走模型→注销，22 项）
 python scripts/smoke_web_deploy.py https://<你的服务>.up.railway.app
 ```
 
-`/api/v1/health` 期望：`status=ok`、`db.connected=true`、`db.migration=0005_profile`、
+它第一步就注册账号，表没建会当场失败 —— 比任何健康检查都可靠。期望 **22/22**。
+
+```powershell
+# ② 细节确认：迁移版本、pgvector 版本、AI 开关
+curl https://<你的服务>.up.railway.app/api/v1/health
+```
+
+期望：`status=ok`、`db.connected=true`、**`db.migration=0005_profile`**（说明迁移真跑过了）、
 `db.pgvector` 有版本号（**这里是 null 就说明库不是 pgvector 版**，回到 §0）、`ai.enabled=true`。
+
+同时在 Railway 的 Deploy Logs 里搜 `auto-migration failed` —— 出现就是迁移没成。
 
 常见失败对照：
 
