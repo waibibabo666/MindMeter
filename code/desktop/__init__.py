@@ -1,1 +1,0 @@
-"""MindMeter desktop runtime package."""

@@ -1,5 +1,11 @@
 # M1 → 桌面本地版迁移报告
 
+> **历史报告**：本文记录 0.2.0 的桌面化迁移结果。2026-11-19 起主形态已改为 Web 托管版
+> （[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)），2026-11-20 桌面入口
+> （`code/desktop/`、`MindMeter.cmd/.vbs`、keyring、`api.js` 的 pywebview 桥）与前端
+> 浏览器直连模型的 legacy（`src/llm/*`、`src/agent/*`）已删除。当前口径见
+> [本地开发与测试](local-development.md) 与 [部署指南](deploy-render.md)。
+
 日期：2026-11-14  
 范围：架构迁移，不改 UI 视觉设计。
 
@@ -62,4 +68,4 @@
 - 首次 embedding 需要模型缓存；无模型时 `rag_mode=keyword`，功能仍可用。
 - 当前没有独立安装包（Phase 6）；入口是仓库内 `.cmd`/`.vbs`，依赖本机 Python 与已安装依赖。
 - 旧浏览器 localStorage 不能自动读取，需先在旧版导出 JSON，再在新版设置页导入。
-- legacy `llm/client.js`、`agent/run.js`、`scripts/test_storage.js` 等保留为对照，不进入生产路径与 `npm run check`。
+- legacy `llm/client.js`、`agent/run.js`、`scripts/test_storage.js` 等当时保留为对照，不进入生产路径与 `npm run check`；**2026-11-20 已全部删除**（Web 版不允许浏览器侧存在任何携带模型凭证的代码路径）。

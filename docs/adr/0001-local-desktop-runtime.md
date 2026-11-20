@@ -1,10 +1,11 @@
 # ADR-0001：本地桌面运行时（pywebview + FastAPI + 便携 PostgreSQL + pgvector）
 
-- 状态：已接受（Accepted）
+- 状态：部分被取代（Superseded in part by [ADR-0003](0003-web-accounts-and-hosted-deployment.md)）
 - 日期：2026-11-14
 - 负责人：song
 - 取代：`docs/mgmt/m1_scope.md` 中“不做 FastAPI/Postgres/pgvector、静态托管”的旧范围
-- 关联：[本地运行时](../software/local-runtime.md)、[技术方案](../software/architecture.md)、[测试说明](../../tests/README.md)
+- 被取代：第 1/2/6/7 条（桌面壳、loopback token、单用户、keyring Key）由 [ADR-0003](0003-web-accounts-and-hosted-deployment.md) 于 2026-11-19 取代；`code/desktop/`、`MindMeter.cmd/.vbs` 与《本地运行时》文档已删除
+- 关联：[Web 本地开发与测试](../software/local-development.md)、[技术方案](../software/architecture.md)、[测试说明](../../tests/README.md)
 
 ## 背景
 
@@ -48,4 +49,4 @@ UI 已经冻结。本次是架构迁移，不是 UI 重做。
 
 ## 验收
 
-见 [本地运行时](../software/local-runtime.md) 与 [M1 范围](../mgmt/m1_scope.md) 的新验收表。
+见 [Web 本地开发与测试](../software/local-development.md)（原《本地运行时》已随桌面入口删除）与 [M1 范围](../mgmt/m1_scope.md) 的新验收表。

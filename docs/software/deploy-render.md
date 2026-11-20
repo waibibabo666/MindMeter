@@ -142,7 +142,9 @@ python scripts/smoke_web_deploy.py https://<service>.onrender.com
 - [`render.yaml`](../../render.yaml)：Blueprint（web + Postgres + 环境变量 + 探活 + 迁移）
 - [`requirements.txt`](../../requirements.txt)：Web 运行时依赖（已去掉 pywebview/keyring/fastembed）
 - [`.python-version`](../../.python-version)：3.13
+- [`docs/software/local-development.md`](local-development.md)：本地起服务与测试矩阵（部署前在本地跑同一套）
 - [`scripts/smoke_web_deploy.py`](../../scripts/smoke_web_deploy.py)：部署后冒烟检查
-- [`scripts/e2e_server.py`](../../scripts/e2e_server.py)：本地 E2E 服务（自建便携 PostgreSQL）
+- [`scripts/e2e_server.py`](../../scripts/e2e_server.py)：本地一键起库/服务（`--db-only`、`--stop`）
+- [`scripts/check_frontend_dead_code.py`](../../scripts/check_frontend_dead_code.py)：前端不可达模块检查（防止桌面 legacy 回流）
 - [`docs/adr/0003-web-accounts-and-hosted-deployment.md`](../adr/0003-web-accounts-and-hosted-deployment.md)：账号与部署决策
 - [`code/backend/app/auth.py`](../../code/backend/app/auth.py)：口令与会话实现

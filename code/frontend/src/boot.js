@@ -7,12 +7,11 @@
  * requests would only produce noise.
  */
 
-import { api, loadBoot } from './api.js';
+import { api } from './api.js';
 import { cache, defaultMemory, defaultSettings, defaultState, flushWrites } from './cache.js';
 import { loadSession, session } from './auth.js';
 
 export async function bootstrap() {
-  await loadBoot();
   await loadSession();
   if (!session.authenticated) {
     return { state: null, sessions: 0, authenticated: false };

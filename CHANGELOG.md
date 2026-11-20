@@ -3,6 +3,30 @@
 本文件记录 MindMeter 所有值得说明的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.1] - 2026-11-20 — 清理桌面时代遗留，文档与实现对齐
+
+### 删除
+
+- 桌面入口与运行时：`MindMeter.cmd`、`MindMeter.vbs`、`code/desktop/`（launcher）、`docs/software/local-runtime.md`。
+- 前端浏览器直连模型的 legacy：`src/llm/client.js`、`src/llm/degrade.js`、`src/agent/{run,classify,retrieve,validate}.js`、`src/eval/agent-cases.json`（评测集移到 `tests/ai_eval/agent-cases.json`）。
+- 只测上述 legacy 的历史脚本：`scripts/test_storage.js`、`test_llm_client.js`、`test_agent_run.js`、`test_eval.js`、`test_agent.js`（后者测的是前端 classify/validate/fixedReply；其独有的「危机话术必须含 12356 与 120」断言已迁到 `tests/backend/test_agent_workflow.py`）。`npm run check` 因此从 12 套 154 项变为 **11 套 138 项**。
+- 后端与前端里的桌面兼容分支：`security.py` 的 `LocalGuardMiddleware` 别名与 `enforce_local_request` 垫片、`config.py` 的 `MM_API_TOKEN`/`MM_PG_*` 残留字段、`api.js` 的 pywebview 桥与 `X-MM-Token` 头。
+
+### 新增
+
+- `scripts/check_frontend_dead_code.py`：从 `src/app.js` 做静态 import 可达性分析，报告不可达模块（防止 legacy 回流）。
+- `scripts/e2e_server.py --db-only` / `--stop`：只要一个一次性 pgvector 库（打印 `MM_TEST_DATABASE_URL`）或把它停掉，不必起服务。
+- [docs/software/local-development.md](docs/software/local-development.md)：本地三种起法、按改动类型的测试矩阵、LLM 联调（未配 Key / 已配 Key 两种状态）、手工回归清单、与 Render 的差异。
+
+### 变更
+
+- 知识库唯一来源重新确认：`src/kb/chunks.js`（人工编辑）→ `node scripts/export_kb_seed.mjs` → `app/rag/kb_seed.json`（迁移种子）；`kb-limit-04` 的标签与文案在两边一致。
+- `scripts/setup.ps1` 改为 Web 开发设置（不再提示双击入口）。
+- 需求文档与实现对齐：功能规范 §5.1（F-01～F-06 改为用户名+密码/Cookie 会话/即时注销）、§七 API 表按实际接口重写、§八 数据模型补 `users/auth_sessions/app_state` 与复合主键说明、§九 BR-09/BR-10 改写并新增 BR-13（按 `user_id` 隔离）；非功能规范 NFR-SEC-02/03/04/05/11 与 NFR-PRIV-02～07 改为 Cookie 会话、PBKDF2、站点凭证口径；两者均加 v3.1 变更记录行。
+- `docs/adr/0001` 标注「部分被 ADR-0003 取代」，`architecture.md`/`logging.md`/`migration-report.md`/`m1_scope.md` 的桌面口径改为历史标注，链接改指 `local-development.md`。
+- `scripts/check_docs.py` 必需清单同步（新增部署/开发文档、账号测试、冒烟与死代码检查脚本；移除已删除文件与 `code/desktop` 目录）。
+- 版本号统一升到 0.3.1（`package.json`、`code/backend/pyproject.toml`、`app/config.py`）。
+
 ## [0.3.0] - 2026-11-19 — Web 托管版（账号 + Render）
 
 架构从“pywebview 桌面单用户”切换为“同源 Web 多用户”，部署目标 Render。

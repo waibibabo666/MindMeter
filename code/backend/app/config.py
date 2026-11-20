@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MM_", extra="ignore")
 
     app_name: str = "MindMeter"
-    app_version: str = "0.3.0"
+    app_version: str = "0.3.1"
 
     # --- storage -----------------------------------------------------------
     database_url: str = ""
@@ -60,15 +60,6 @@ class Settings(BaseSettings):
     # --- retrieval ---------------------------------------------------------
     rag_mode: str = "keyword"  # auto | vector | keyword
     expose_logs: bool = False  # shared host: never stream server logs to clients
-
-    # --- compatibility leftovers (desktop era, unused by the web app) ------
-    api_token: str = ""
-    pg_dump: str = ""
-    pg_host: str = ""
-    pg_port: int = 0
-    pg_user: str = ""
-    pg_database: str = ""
-    pg_password: str = ""
 
     @property
     def is_configured(self) -> bool:

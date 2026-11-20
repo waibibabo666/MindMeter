@@ -19,9 +19,10 @@
 | `tests/unit/` / `tests/integration/` | 预留 | 后续补充 |
 | `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | 后续补充 |
 
-**说明**：`scripts/test_storage.js`、`scripts/test_llm_client.js`、`scripts/test_agent_run.js`、
-`scripts/test_eval.js` 是旧浏览器直连/localStorage 实现的历史文件，已从 npm scripts 移除；
-不要用它们判断当前实现。新实现对应的测试在 `tests/backend/` 与 `tests/e2e/`。
+**说明**：桌面时代的历史 oracle（`scripts/test_storage.js`、`test_llm_client.js`、`test_agent_run.js`、
+`test_eval.js`）以及它们测试的前端 legacy 模块（`src/llm/*`、`src/agent/*`）已在 2026-11-20 删除；
+Agent 行为回归改由 `tests/backend/test_agent_chat.py` / `test_agent_workflow.py` 承担，
+评测用例集在 `tests/ai_eval/agent-cases.json`。`scripts/check_frontend_dead_code.py` 会持续挡住不可达模块回流。
 
 ## 本地命令
 

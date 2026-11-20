@@ -1,14 +1,14 @@
 /**
- * Same-origin API client.
+ * Same-origin API client for the hosted web app.
  *
  * Auth is an HttpOnly, SameSite=Lax session cookie owned by the server, so
- * JavaScript never sees a credential: `credentials: 'same-origin'` carries it.
- * A 401 on any non-auth endpoint means the session expired — we broadcast that
- * once and the app shell routes the user back to the login page.
+ * JavaScript holds no credential at all: `credentials: 'same-origin'` carries
+ * it, and a 401 on any non-auth endpoint means the session expired — we
+ * broadcast that once and app.js routes back to the login page.
  *
- * The desktop shell's `window.__MM_BOOT__` / pywebview bridge is still honoured
- * (it may hand us an apiBase and a legacy token), but the hosted app works with
- * neither.
+ * There is deliberately no bearer/launch token here, no injected boot object
+ * and no desktop-shell path: the desktop build was retired (docs/adr/0003), and
+ * `scripts/test_app_shell.js` fails the build if any of them comes back.
  */
 
 export class ApiError extends Error {
@@ -22,7 +22,7 @@ export class ApiError extends Error {
 
 export const UNAUTHENTICATED = 'mm:unauthenticated';
 
-let boot = { apiBase: '/api/v1', token: '' };
+let boot = { apiBase: '/api/v1' };
 
 export function configure(next) {
   boot = Object.assign({}, boot, next || {});
@@ -31,36 +31,6 @@ export function configure(next) {
 
 export function getBootConfig() {
   return { ...boot };
-}
-
-function waitForDesktopBridge() {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve({}), 8000);
-    const onReady = async () => {
-      clearTimeout(timer);
-      try {
-        resolve(await globalThis.pywebview.api.get_boot());
-      } catch (error) {
-        resolve({});
-      }
-    };
-    globalThis.addEventListener('pywebviewready', onReady, { once: true });
-  });
-}
-
-function readBridge() {
-  if (globalThis.__MM_BOOT__) return Promise.resolve(globalThis.__MM_BOOT__);
-  const bridge = globalThis.pywebview;
-  if (bridge && bridge.api && typeof bridge.api.get_boot === 'function') {
-    return bridge.api.get_boot();
-  }
-  if (bridge) return waitForDesktopBridge();
-  return Promise.resolve({});
-}
-
-export async function loadBoot() {
-  configure(await readBridge());
-  return getBootConfig();
 }
 
 async function readPayload(response) {
@@ -91,11 +61,11 @@ function normalizeError(error) {
 
 function announce401(path) {
   if (path.startsWith('/auth/')) return;
-  const target = globalThis.document || globalThis;
   if (typeof globalThis.dispatchEvent === 'function' && globalThis.CustomEvent) {
     globalThis.dispatchEvent(new globalThis.CustomEvent(UNAUTHENTICATED, { detail: { path } }));
     return;
   }
+  const target = globalThis.document;
   if (target && target.dispatchEvent) {
     target.dispatchEvent(new Event(UNAUTHENTICATED));
   }
@@ -106,7 +76,6 @@ async function request(path, options = {}) {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   const headers = { Accept: 'application/json' };
-  if (boot.token) headers['X-MM-Token'] = boot.token; // legacy desktop bridge only
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   try {
     const response = await fetch(`${boot.apiBase}${path}`, {

@@ -5,7 +5,7 @@
 
 ## 一、为什么必须人工打分
 
-`scripts/test_eval.js` 能判定的是**行为分支**：意图对不对、有没有走固定话术、兜底有没有生效、
+`tests/backend/test_agent_chat.py`、`test_agent_workflow.py` 能判定的是**行为分支**：意图对不对、有没有走固定话术、兜底有没有生效、
 禁用词和数字有没有被拦下。这些都可由代码确定性判定。
 
 但「这段话是不是真的回答了用户」「引用是否支撑结论」属于**判断**，机器判不了。
@@ -110,7 +110,7 @@
 
 | 评测 | 归谁 | 文件 |
 | --- | --- | --- |
-| 行为分支（意图/兜底/校验） | 自动化 | [`scripts/test_eval.js`](../../scripts/test_eval.js) |
+| 行为分支（意图/兜底/校验） | 自动化 | [`tests/backend/test_agent_chat.py`](../../tests/backend/test_agent_chat.py)、[`test_agent_workflow.py`](../../tests/backend/test_agent_workflow.py)；用例集在 [`tests/ai_eval/agent-cases.json`](../../tests/ai_eval/agent-cases.json) |
 | 回答质量（四维打分） | 人工 | 本文件 |
 | 检索命中率（hit@3） | 自动化 | [`scripts/test_kb.js`](../../scripts/test_kb.js) |
 | 知识块字段与禁用词 | 自动化 | 同上 |

@@ -13,7 +13,7 @@
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
 | `software/` | [Render 部署指南](software/deploy-render.md) | 当前 | Blueprint 一键部署、环境变量、LLM 选型、验收、排障 |
-| `software/` | [本地运行时](software/local-runtime.md) | 历史 | 桌面版双击入口、便携 PostgreSQL、启停、日志 |
+| `software/` | [Web 本地开发与测试](software/local-development.md) | 当前 | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
 | `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 部分被取代 | 桌面壳、loopback token、单用户与 keyring 条款由 ADR-0003 取代 |
 | `adr/` | [ADR-0003 Web 账号与托管部署](adr/0003-web-accounts-and-hosted-deployment.md) | 已接受 | 账号/会话/CSRF、多租户主键、站点 LLM 配置、RAG 与探活口径 |

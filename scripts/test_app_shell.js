@@ -94,7 +94,7 @@ async function main() {
   test('只有 API 客户端可以发起网络请求，且浏览器侧没有密钥通路', () => {
     for (const file of listSrc()) {
       const relative = path.relative(APP_DIR, file).replaceAll('\\', '/');
-      if (relative === 'src/api.js' || relative === 'src/llm/client.js') continue;
+      if (relative === 'src/api.js') continue;
       const text = fs.readFileSync(file, 'utf8');
       assert(!/\bfetch\s*\(/.test(text), `${relative} uses fetch()`);
       assert(!/XMLHttpRequest/.test(text), `${relative} uses XMLHttpRequest`);
@@ -108,7 +108,9 @@ async function main() {
     }
     const api = read('src/api.js');
     assert(api.includes("credentials: 'same-origin'"), 'api.js must send the session cookie');
-    assert(api.includes("'X-MM-Token'"), 'api.js keeps the legacy desktop token path');
+    assert(!api.includes('X-MM-Token'), 'the retired desktop token must be gone');
+    assert(!api.includes('__MM_BOOT__'), 'the retired pywebview boot bridge must be gone');
+    assert(!api.includes('pywebview'), 'no desktop shell references left in api.js');
     assert(!api.includes('apiKey'), 'api.js must not know about LLM keys');
 
     const router = read('src/router.js');

@@ -4,7 +4,7 @@
 - 日期：2026-11-19
 - 负责人：song
 - 取代：`docs/adr/0001-local-desktop-runtime.md` 的第 1/2/6/7 条（桌面壳、loopback token、单用户、keyring Key 存储）；其余条款（PostgreSQL + pgvector + Alembic + LangGraph + 模板兜底 + 不用 SQLite）继续有效
-- 关联：[Render 部署指南](../software/deploy-render.md)、[功能需求 §5.1](../requirements/functional_spec.md)、[非功能需求](../requirements/nonfunctional_spec.md)、[本地运行时（历史）](../software/local-runtime.md)
+- 关联：[Render 部署指南](../software/deploy-render.md)、[Web 本地开发与测试](../software/local-development.md)、[功能需求 §5.1](../requirements/functional_spec.md)、[非功能需求](../requirements/nonfunctional_spec.md)
 
 ## 背景
 
@@ -23,7 +23,7 @@
    - 密码规则：≥10 位（沿用 F-01）、≤128、至少含字母与数字、不得只有 1–2 种字符。前后端同一套口径，前端只做即时提示，**服务端才是边界**。
 4. **会话**：随机 256-bit 令牌放 `HttpOnly`、`SameSite=Lax`、`Path=/` 的 Cookie；数据库只存 `sha256(token)`；有效期 30 天并滑动续期；登出/改密码/注销账号都会撤销服务端会话行。
    - **不采用 JWT**：没有无状态收益（单机单库），却带来撤销与密钥管理负担；功能需求里的 JWT 口径由“服务端会话 + Cookie”等价替代。
-   - **不使用 pywebview 桥**：`window.__MM_BOOT__`/`X-MM-Token` 作为兼容分支留在 `api.js` 里，Web 部署不依赖它。
+   - **不使用 pywebview 桥**：`window.__MM_BOOT__`、`X-MM-Token` 与桌面启动路径已从 `api.js` 删除；浏览器里不留任何令牌概念（2026-11-20 清理）。
 5. **CSRF**：`SameSite=Lax` + 同源 Origin/Referer 校验 + 写请求必须 `application/json`（跨站表单发不出这个 Content-Type）。
 6. **多租户数据模型**：所有业务表以 `user_id` 为复合主键的第一列——`app_state(user_id)`、`assessments(user_id,id)`、`assessment_tasks/scores(user_id,assessment_id,…)`、`memory_profile(user_id)`、`memory_summaries/advice/chat_messages(user_id,id)`；`kb_chunks` 仍是全站共享只读；`ai_runs/audit_log` 带可空 `user_id`。
    - 客户端生成的 id（`s_xxx`、`msg_xxx`、`kb-plan-01`）**只在账号内唯一**，不同账号可以重复，因此不需要改写前端 id 规则，也不需要命名空间前缀。
@@ -34,7 +34,7 @@
    - 未配置或失败时**保持原有分级兜底**：模板解读、`code=not_configured`，页面不空白、分数不变。
 8. **检索**：部署默认 `MM_RAG_MODE=keyword`（BM25）。可选的本地 embedding 模型（约 100 MB）与免费实例的临时文件系统、冷启动、磁盘配额冲突，因此不进 Web 依赖。
 9. **健康检查**：`/api/v1/health/live`（不碰数据库，供平台探活）与 `/api/v1/health`（就绪：DB + 迁移号 + pgvector + RAG + AI 配置状态，公开、不含用户数据）。
-10. **桌面版**：`code/desktop/`、`MindMeter.cmd/.vbs` 保留为历史入口，不再维护；Web 是主线（用户已确认“全力转 Web”）。
+10. **桌面版彻底删除**（2026-11-20 清理）：`code/desktop/`、`MindMeter.cmd`、`MindMeter.vbs`、`docs/software/local-runtime.md` 全部移除；同时删掉前端里浏览器直连模型的 legacy（`src/llm/client.js`、`src/llm/degrade.js`、`src/agent/*`）与对应的历史测试脚本（`test_storage.js`、`test_llm_client.js`、`test_agent_run.js`、`test_eval.js`）。Web 是唯一形态，本地开发入口是 `python scripts/e2e_server.py`，见 [本地开发与测试](../software/local-development.md)。
 
 ## 后果
 

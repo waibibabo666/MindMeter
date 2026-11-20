@@ -23,36 +23,43 @@ M1 要交付一条**纯本地**的纵向切片。本计划定义：哪些用代�
 | 层 | 内容 | 工具 | 是否自动 |
 | --- | --- | --- | --- |
 | L1 单元 | 计分公式、路由、存储、校验、分类、检索 | `node scripts/test_*.js` | ✅ |
-| L2 契约 | 文档结构、链接、字段契约、schema | `check_docs.py` / `test_kb.js` | ✅ |
-| L3 端到端 | 打开→同意→四任务→报告→设置→对话→趋势 | Playwright 手工走查 | ❌ 人工 |
-| L4 Agent 评测 | 30 条用例的行为分支 + 四维打分 | `test_eval.js` + 人工 | 半自动 |
+| L2 契约 | 文档结构、链接、字段契约、schema、API 面 | `check_docs.py` / `test_kb.js` / `test_openapi_contract.py` | ✅ |
+| L3 端到端 | 注册/登录闸门→同意→任务→报告→设置→对话→趋势→跨账号隔离 | Playwright（`npm run test:e2e`，8 项） | ✅ 自动化 + 走查截图 |
+| L4 Agent 评测 | 30 条用例的行为分支 + 四维打分 | `tests/backend/test_agent_chat.py` / `test_agent_workflow.py` + 人工 | 半自动 |
 | L5 检索评测 | 20 条查询的 hit@3 | `test_kb.js` | ✅ |
 | L6 性能 | 首屏、计分、检索、AI 超时 | 手工 + 脚本 | 半自动 |
-| L7 安全 | Key 不落日志/导出、无真实用户数据 | `check_secrets.py` | ✅ |
+| L7 安全 | 口令散列与会话散列、Cookie/CSRF 行为、跨账号隔离、Key 不落日志/导出、无真实用户数据 | `check_secrets.py` + `test_auth_api.py` + `test_tenancy.py` + `smoke_web_deploy.py` | ✅ |
 
 ## 四、当前自动化覆盖
 
-10 个测试套件、**152 项检查**，全部纳入 `npm test`：
+11 个前端/纯逻辑套件、**138 项检查**，全部纳入 `npm run check`；另有后端 pytest 91 项（需 pgvector 库）与 Playwright 8 项：
 
 | 套件 | 项数 | 对应验收 |
 | --- | --- | --- |
-| `test_prototype.js` | 7 | 原型 smoke、页面存在性 |
-| `test_app_shell.js` | 12 | 路由、状态、360px、触控区、任务纯逻辑 |
-| `test_storage.js` | 8 | 刷新恢复、导出、清除 |
-| `test_llm_client.js` | 16 | BYOK 配置、超时、降级、Key 不落日志 |
-| `test_report_trend.js` | 11 | 4+4 未测、无总分、共同维度 |
+| `test_prototype.js` | 7 | L1 原型 smoke、页面存在性 |
+| `test_app_shell.js` | 14 | 路由与登录闸门、任务纯逻辑、360px/44px、**网络与密钥边界** |
+| `test_auth.js` | 10 | 用户名/密码规则、错误码文案、Cookie/401 传输行为 |
+| `test_units.js` | 13 | 存储、路由解析、画像、图表等纯逻辑单元 |
+| `test_report_trend.js` | 5 | 未测维度、无总分、共同维度 |
 | `test_scoring.js` | 22 | 金标准、边界、缺失、无总分、性能 |
-| `test_agent.js` | 16 | 分类、固定话术、校验器 |
-| `test_agent_run.js` | 6 | 状态机、兜底链路 |
-| `test_memory.js` | 11 | 记忆上限、删除后不引用 |
+| `test_memory.js` | 13 | 记忆上限、删除后不引用、建议避重 |
 | `test_kb.js` | 13 | 30 条契约、禁用词、hit@3、性能 |
-| `test_eval.js` | 30（+2 结构） | Agent 30 条用例的行为分支 |
+| `test_chat.js` | 12 | 对话 facade：facts、history、降级来源 |
+| `test_games.js` | 24 | 8 维游戏与题库构造 |
+| `test_log.js` | 5 | 日志上限、脱敏、导出、清除 |
 
-> 合计 11 个套件。`npm test` 串行执行全部。
+> 服务端另有：`tests/backend`（账号、会话、限流、注销、跨账号隔离、健康与 OpenAPI 契约、
+> 计分金标准、Agent 分类/固定话术/校验器与图级工作流）91 项；`tests/e2e`（Playwright）8 项；
+> `scripts/smoke_web_deploy.py` 对已部署实例的 19 项冒烟检查。
+>
+> 原 `scripts/test_agent.js`（16 项，测前端 legacy 的 classify/validate/fixedReply）已随
+> `src/agent/*` 一起删除，其独有覆盖——**危机话术必须含 12356 与 120**、越界/无关/澄清的固定文案——
+> 由 `tests/backend/test_agent_workflow.py::test_fixed_safety_replies_carry_the_right_words` 接管，
+> 意图路由与校验器由同文件其余用例覆盖。
 
 ## 五、Agent 评测（30 条用例）
 
-用例文件：`code/frontend/src/eval/agent-cases.json`
+用例文件：`tests/ai_eval/agent-cases.json`（原前端 legacy 用例集，已随 Web 化迁移位置）
 
 ### 5.1 配比
 
@@ -96,14 +103,16 @@ M1 要交付一条**纯本地**的纵向切片。本计划定义：哪些用代�
 
 ## 七、端到端走查（人工）
 
-按 [M1 用户旅程](../mgmt/m1_scope.md) 走一遍，记录截图：
+Web 版走查清单（前 4 步已被 `npm run test:e2e` 覆盖，截图仍手工留档）：
 
-1. 断网打开页面 → 同意页四项勾选
-2. 标准档 4 项任务各做一遍（含练习）
-3. 报告页：4 项分数 + 4 项未测、八轴雷达、无总分
-4. 设置页填 endpoint 后对话；不填时走模板兜底
-5. 复测一次 → 趋势页只比共同维度
-6. 导出 JSON（确认不含 Key）→ 清除数据（确认清空）
+1. 未登录访问 `#/memory`、`#/task/vc` → 只能落在登录页，侧栏/右栏/顶部控件全部收起；
+2. 注册（含 18+ 勾选）→ 同意页 → 标准档任务各做一遍（含练习）；
+3. 报告页：分数 + 未测维度、八轴雷达、无总分；刷新与换设备登录后数据仍在；
+4. 对话：站点配了 Key 时走模型，未配置时模板兜底（`code=not_configured`）；
+5. 复测一次 → 趋势页只比共同维度；
+6. 设置页：模型卡只读（无 Key 输入框）→ 导出 JSON（确认不含 Key）→ 清除数据；
+7. **第二个账号**登录 → 看不到第一个账号的任何数据（404/空列表）；
+8. 改密码 → 另一设备掉线；注销账号 → 用户名可复用且数据为空。
 
 ## 八、性能验收
 
@@ -126,7 +135,7 @@ P-07 编写用例时跑出了三个问题，前两个已修，第三个待定。
 | D-02 | 「未测是什么意思」被判成 `clarify` | `DOMAIN_WORDS` 缺「未测」，短句走了 too-short 规则 | ✅ 已改：`DOMAIN_WORDS` 增加「未测」 |
 | D-03 | 检索为空时回的话是「我不猜」，未出现字面「不知道」 | `NO_KNOWLEDGE_REPLY` 文案 | ⏸ **待定**：M1 验收写的是「明确说不知道」。现文案语义等价但字面不符；改动属 L-05 范围，需 owner 确认后再动 |
 
-> D-03 已记录在案，未擅自改动——文案变更会影响既有测试断言（`test_agent_run.js` 断言含「不猜」）。
+> D-03 已记录在案，未擅自改动——文案变更会影响既有断言（现为 `tests/backend/test_agent_chat.py` 与 `test_agent_workflow.py` 中断言「不猜」的用例；早期的 `test_agent_run.js` 已随前端 legacy 删除）。
 
 ## 十、入口与出口标准
 
@@ -137,9 +146,11 @@ P-07 编写用例时跑出了三个问题，前两个已修，第三个待定。
 
 ### 10.2 出口（可交付）
 
-- [ ] `npm test` 全绿（当前 152 项）
-- [ ] `python scripts/check_docs.py` 通过
-- [ ] `python scripts/check_secrets.py` 通过
+- [ ] `npm run check` 全绿（当前 138 项）
+- [ ] `pytest -q tests/backend` 全绿（有库 90 项；无库时只跑纯逻辑 51 项）
+- [ ] `npm run test:e2e` 全绿（8 项，含跨账号隔离）
+- [ ] `python scripts/check_docs.py` / `check_secrets.py` / `check_frontend_dead_code.py` 通过
+- [ ] 部署后 `python scripts/smoke_web_deploy.py <url>` 19/19
 - [ ] Agent 30 条：行为分支全过 + 四维平均各 ≥ 4.0
 - [ ] RAG 20 条：hit@3 ≥ 80%
 - [ ] E2E 走查截图齐全
@@ -161,3 +172,4 @@ P-07 编写用例时跑出了三个问题，前两个已修，第三个待定。
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
 | 2026-11-07 | v1.0 | 初稿：分层、30 条用例、20 条检索、性能门槛、缺陷 D-01～D-03 |
+| 2026-11-20 | v1.1 | 对齐 Web 实现：套件清单改为 11 个 138 项 + 后端 91 + E2E 8；新增账号/会话/隔离/部署冒烟覆盖；删除 `test_agent.js`（其独有断言迁到 pytest）；用例集位置迁移；走查清单加登录与跨账号步骤 |

@@ -1,180 +1,135 @@
 # Frontend（Web 托管版）
 
-原生 HTML/CSS/JS（ES Module），**无构建步骤**；由本地 FastAPI 同源托管。
+原生 HTML/CSS/JS（ES Module），**无构建步骤**，由同一个 FastAPI 服务同源托管（`app.mount("/")`）。
+没有独立端口、没有 CORS 配置，会话就是浏览器自动带的 `HttpOnly` Cookie。
 
-数据层已经改为本地 API：
+## 分层
 
-- `api.js`：同源 `fetch` + 会话 Cookie（`credentials: same-origin`）；401 广播一次给壳层；
-- `auth.js`：用户名/密码规则、错误码文案、`session` 状态；
-- `boot.js`：先探 `/auth/session`，未登录不预取任何数据；已登录再取 state/sessions/memory/settings；
-- `storage.js` / `store.js`：内存缓存 + API 写入（页面仍可同步读取）；
-- Key 不再进入 localStorage；设置页只显示 `hasKey` / `keyHint`；
-- 报告/对话调用本地后端，不直连模型；
-- 旧版导出的 JSON 可在设置页导入。
-
-计分公式在服务端 `code/backend/app/scoring/`；前端只保留用于对照的旧实现。
+- `api.js`：唯一的网络出口。`fetch` + `credentials: 'same-origin'`；把非 2xx 归一成 `ApiError(code)`；遇到非认证路径的 401 广播一次 `mm:unauthenticated`；
+- `auth.js`：`session` 状态、用户名/密码规则（与服务端同源口径，但**不是安全边界**）、错误码→人话文案；
+- `boot.js`：先探 `GET /auth/session`，未登录不预取任何业务数据；已登录再并发拉 state/sessions/memory/settings；
+- `app.js` + `shell.js`：入口与工作台外壳；`app.js` 里的 `gateRoute` 是路由闸门（未登录只放行 `#/login`、`#/register`）；
+- `storage.js` / `store.js` / `cache.js`：内存缓存 facade + 写入队列；未登录时 `store.js` 只改本地缓存、不发请求（避免每个路由跳转一个 401）；
+- 业务数据一律在服务端 PostgreSQL，**按 `user_id` 隔离**；浏览器 localStorage 只剩设备级偏好（音效、侧栏折叠、游戏练习最佳分、测评前采集的年龄/教育）。
 
 ## 路由
 
-hash 路由，刷新与浏览器返回都不丢状态（`localStorage` + draft）。
+hash 路由；刷新与浏览器返回不丢状态（进度存在服务端 `app_state`）。
 
 | 路由 | 页面 | 说明 |
 | --- | --- | --- |
-| `#/` | 首页 | 开始测评、继续未完成、导出数据、设置、清除数据 |
-| `#/tier` | 档位 | 标准档可用；快测/深度标注未交付 |
-| `#/consent` | 知情同意 | 18+ 与非诊断两条勾选后才能开始 |
-| `#/task/<id>` | 任务 | `vc` / `ps` / `sv` / `am`，逐题存进度 |
-| `#/report` | 结果 | 4 项原始指标 + 4 项未测；无总分、无百分位；AI 解读 |
-| `#/settings` | 设置 | BYOK：endpoint / 模型 / Key，测试连接、清除 Key |
+| `#/login` `#/register` | 账号 | 未登录时唯一可达页面；注册需 18+ 与边界勾选 |
+| `#/` | 首页 | 开始测评、继续未完成、导出、设置、清除数据 |
+| `#/tier` | 档位 | 快测 2 / 标准 8 / 深度 8（`STANDARD_ORDER` 固定顺序） |
+| `#/consent` | 知情同意 | 非诊断与数据说明，勾选后才能开始 |
+| `#/intake` | 开始之前 | 年龄/教育（只填一次）+ 睡眠/疲劳（每次填），不参与计分 |
+| `#/task/<id>` | 任务 | `vc/vf/nc/ps/ir/sv/am/ni`，逐题存进度 |
+| `#/report` | 结果 | 原始指标 + 参考分 + 未测维度；无总分、无百分位；AI 解读卡 |
+| `#/trend` `#/memory` `#/chat` | 趋势 / 记忆 / 对话 | 只比共同维度；对话每账号留最近 20 条 |
+| `#/games` `#/game/<id>` | 游戏中心 | 自由练习，成绩不进报告、不改维度分 |
+| `#/settings` | 设置 | 账号（改密/退出/注销）、站点模型只读、导出导入、清除、日志 |
 
 ## 目录
 
 ```text
 frontend/
-├─ index.html             # 唯一页面，含跳过链接与模块入口
+├─ index.html             # 唯一页面：顶栏、侧栏、#app、右栏、toast
 ├─ package.json           # 仅声明 type: module，供 Node 侧测试
 └─ src/
-   ├─ app.js             # 入口：装配路由与状态
-   ├─ router.js          # hash 路由解析与导航
-   ├─ store.js           # L-01 app shell 状态（版本与降级）
-   ├─ storage.js         # L-03 版本化本地存储（四类 key + 导出/清除）
-   ├─ log.js             # 诊断日志：200 条环形缓冲、脱敏、导出/清除
-   ├─ data.js            # 维度、档位、题库、词对、图案
-   ├─ scoring/           # scoring-v3.1：config / formulas / stats / index
-   ├─ charts/radar.js    # 八维雷达几何与 SVG
-   ├─ trend.js           # 共同维度、变化、7 天提示
-   ├─ ui.js               # 极小 DOM 工具与倒计时
-   ├─ random.js          # 可复现的伪随机
-   ├─ llm/               # client（请求/超时/错误码）、degrade（模板回退）
-   ├─ pages/             # home / tier / consent / task / report / settings
-   ├─ tasks/             # vc / ps / sv / am
+   ├─ app.js             # 入口：路由闸门 + 页面装配 + ctx
+   ├─ router.js          # hash 路由与白名单
+   ├─ shell.js           # 顶栏 chip / 侧栏高亮 / 右栏快捷操作
+   ├─ auth.js            # 会话状态与凭证规则
+   ├─ api.js             # 同源 fetch + Cookie + 错误归一
+   ├─ boot.js            # 启动预取与缓存重置
+   ├─ cache.js store.js storage.js  # 内存缓存、状态写入队列
+   ├─ pages/             # auth home tier consent intake task report trend memory chat games game about settings
+   ├─ tasks/ charts/ games/ scoring/ kb/   # 任务实现、雷达与折线、练习游戏、本地对照计分、知识块
+   ├─ data.js profile.js random.js ui.js icons.js motion.js sound.js ui-prefs.js log.js trend.js
    └─ styles/app.css     # 360px 起、44px 触控区、减少动效
 ```
 
-## 数据层（按账号隔离）
+浏览器直连模型的旧实现（`src/llm/`、`src/agent/`、`src/eval/`）已随桌面/BYOK 形态删除：
+**前端不存在任何携带模型凭证的代码路径**，`check_frontend_dead_code.py` 会持续确认没有不可达模块回来。
 
-业务数据在 PostgreSQL，不再写 localStorage。前端只在内存缓存：
+## 数据层（按账号隔离）
 
 | 缓存 | 服务端来源 | 说明 |
 | --- | --- | --- |
-| `cache.state` | `GET/PUT /api/v1/state` | 路由、档位、进度、草稿 |
-| `cache.sessions` | `GET/POST /api/v1/assessments` | 最多 50 条 |
+| `cache.state` | `GET/PUT /api/v1/state` | 路由、档位、进度、草稿（本账号一份） |
+| `cache.sessions` | `GET/POST /api/v1/assessments` | 每账号最多 50 条 |
 | `cache.memory` | `GET/PUT /api/v1/memory` | 画像/摘要/建议/最近 20 条消息 |
-| `cache.settings` | `GET/PUT /api/v1/settings/ai` | endpoint/model/enabled/hasKey/keyHint，**无 Key** |
+| `cache.settings` | `GET /api/v1/settings/ai` | `endpoint/model/enabled/hasKey/keyHint/readOnly`，**永远没有 Key** |
 
-- `storage.js` 提供同步读取的 facade；写入进入队列，由 `api.js` 发送；
-- `exportData()` 由后端生成，**永远不含 Key**；
-- 旧 `mindmeter.*` localStorage 只在“导入旧数据”时读取用户选择的 JSON，不自动解析浏览器旧数据；
-- 设置页的 Key 输入只在提交瞬间存在，保存后清空。
+- 写入进入队列串行发送，`beforeunload` 时只在已登录状态下 flush；
+- `exportData()` 由后端生成并只含本账号数据；
+- 导入 JSON 与本账号数据合并（相同 id 跳过），导入文件里的 Key 字段被忽略并给出提示。
 
 ## 诊断日志
 
-`src/log.js` 提供统一日志：
+`src/log.js`：`globalThis.__MM_LOG__` 内存环形缓冲（最多 200 条）、**不写 `console`**、导出前脱敏
+（`apiKey`/`authorization`/`password`/`token`/`secret`/`key` 字段、`sk-*`、`Bearer …`、`ghp_*`），刷新即清空。
+服务端日志见 [docs/software/logging.md](../../docs/software/logging.md)。
 
-- 只写 `globalThis.__MM_LOG__` 内存环形缓冲，最多 200 条；
-- **不写 `console`**，避免 Key 被浏览器日志/扩展采集；
-- 入库前脱敏 `apiKey` / `Authorization` / `Bearer` / `sk-*` / `ghp_*`；
-- 设置页可「导出诊断日志 / 清除日志」；导出 JSON 已脱敏；
-- 刷新页面后清空，不落盘。
+## AI 解读的降级契约
 
-排查时可在控制台查看 `__MM_LOG__`，或从设置页导出。
-
-## L-04：BYOK 与降级
-
-设置页把配置写入 `mindmeter.settings.v1`（复用 L-03 的存储层，不另建 key）。
-
-| 字段 | 说明 |
-| --- | --- |
-| Endpoint | 可填基址（自动补 `/chat/completions`），也可填完整地址 |
-| 模型名 | 透传给请求体的 `model` |
-| API Key | 只进 `Authorization` 头，不进 URL、不进 body |
-
-**Key 的处理**：浏览器完全不接触模型 Key（`MM_LLM_API_KEY` 只在服务端）；设置页只读显示模型名与掩码；`exportData()` 也不含 Key；
-点「清除 Key」立即抹掉；「清除本地数据」整体删除。
-
-**错误码**（收敛成有限集合，页面据此决定文案）：
+模型调用只发生在后端（`app/llm.py` + `app/agent`）。错误码由服务端产生，前端按码给文案：
 
 | 码 | 触发 | 处理 |
 | --- | --- | --- |
-| `not_configured` | 缺 endpoint/model/key，或开关关闭 | 直接走模板 |
-| `timeout` | 超过 20s（`AbortController`） | 回退模板 |
-| `network_cors` | fetch 抛 `TypeError`（CORS 未放行 / 断网） | 回退模板并提示检查 CORS |
-| `auth` | 401 / 403 | 回退模板，提示 Key 无效 |
-| `rate_limit` | 429 | 回退模板 |
-| `http` | 其它非 2xx | 回退模板 |
-| `bad_response` | 非 JSON 或缺少 `choices[0].message.content` | 回退模板 |
+| `not_configured` | 站点未配 `MM_LLM_API_KEY`/基址/模型名 | 走模板，设置页显示“未配置” |
+| `timeout` | 超过 `MM_LLM_TIMEOUT_S`（默认 45s） | 回退模板 |
+| `auth` | 模型返回 401/403 | 回退模板，提示站点 Key 无效 |
+| `rate_limit` | 429 | 回退模板，提示稍后再试 |
+| `http` / `network` | 其它非 2xx / 连不上 | 回退模板 |
+| `bad_response` / `truncated` | 响应缺 `choices[0].message.content` 或被 token 上限截断 | 回退模板 |
+| 校验不通过 | 出现禁用词、幻觉数字、缺引用 | 回退该场景模板（`code` 带原因） |
 
-**降级契约**：`explain()` 无论模型侧发生什么，都返回
-`{ text, source: 'llm' | 'template', code, reason }`，且 `text` 永不为空。
-结果页据此显示「LLM / 模板」徽标与原因。
-
-**CORS 说明**：直连前浏览器会发 `OPTIONS` 预检，服务端必须允许当前来源与
-`Authorization` 头；不满足时脚本只能拿到 `TypeError`，因此提示语写成
-「可能是 CORS 未放行或网络不可达」。
-
-**不做**：流式输出、自动重试、模型输出缓存——失败即降级，保证行为可预期。
+**降级契约**：`/chat`、`/reports/{id}/explain` 无论模型侧发生什么都返回
+`{ text, source: 'llm' | 'template', code, reason }` 且 `text` 永不为空；页面据此显示「LLM / 模板」标记。
+浏览器不直连模型，因此不存在 CORS 预检问题（同源）。
 
 ## 运行
 
-无需构建，起任意静态服务器即可（浏览器不允许 `file://` 加载 ES Module）：
+不要单独起静态服务器（那样没有 API 也没有会话）：
 
-```bash
-python -m http.server 8000 --directory code/frontend
-# 打开 http://127.0.0.1:8000/
+```powershell
+python scripts/e2e_server.py     # 库 + 迁移 + 服务，打开 http://127.0.0.1:8100
 ```
 
 ## 测试
 
 ```bash
-node scripts/test_app_shell.js     # 12 项：结构、路由、题库、状态
-node scripts/test_storage.js       # 本地存储：四类 key、24h 过期、20 条、导出不含 Key
-node scripts/test_llm_client.js    # 16 项：错误码、Key 位置、超时、降级
-node scripts/test_log.js           # 5 项：日志上限、脱敏、导出、清除
-node scripts/test_prototype.js     # 7 项：L1 原型未受影响
-# 或根目录 npm test
+npm run test:app-shell   # 结构、路由、题库、闸门与网络边界（禁止 fetch 出现在 api.js 之外）
+npm run test:auth        # 凭证规则、错误码文案、Cookie/401 传输行为
+npm run test:units       # 纯逻辑单元
+npm run test:kb          # 知识块结构与 schema（种子导出：node scripts/export_kb_seed.mjs）
+npm run test:scoring     # 计分对照
+npm run test:memory report log chat games prototype units kb
+# 或 npm run check（含 ESLint + Prettier）；浏览器层：npm run test:e2e
 ```
-
-覆盖：入口文件齐全、无 `fetch`/`XMLHttpRequest`（测评壳不联网）、4 项顺序、
-旋转与选项唯一性、词对再认构造、指标汇总、路由解析、状态读写与损坏数据回退、
-360px 与 44px 触控区等样式约定；以及四类本地 key、draft 24h 过期、memory 20 条、
-导出不含 Key、清除全部、localStorage 不可用降级；BYOK 的错误码、Key 位置与回退契约。
 
 ## L-08：报告与趋势
 
-**报告页**：八维雷达 + 表格。
+**报告页**：八维雷达 + 表格。已测维度画点连线，未测留空标「未测」，**不按 0 计**；
+分数 0–100 整数，**不设总分、不做百分位、没有常模**；已测少于 3 个维度时不画多边形，避免误读成“塌陷”。
+正式分数以服务端 `scoring-v3.1` 为准，`src/scoring/` 只作即时展示与对照（见 `src/scoring/README.md`）。
 
-- 已测维度画点并连线，未测维度留空并标「未测」，**不按 0 计**；
-- 分数为 0–100 整数，**不设总分、不做百分位、没有常模**；
-- 已测少于 3 个维度时不画多边形，避免误读成"塌陷"。
+**趋势页**：取本账号最近两次已完成测评；只比两次都测过的维度；间隔 <7 天提示练习效应但不禁止；不足两次给空态。
 
-**分数来源**：`src/scoring/index.js`（`scoring-v3.1`），公式见 `docs/algorithm/algorithm.md`，
-分母按当前壳的实际题数校准（例如言语理解 6 题而不是 15 题）。详见 `src/scoring/README.md`。
-
-**趋势页**：
-
-- 取本账号最近两次已完成测评（服务端 `sessions`，完成最后一项时写入）；
-- **只比较两次都测过的维度**；只有一边测过的维度单独列出、不参与对比；
-- 间隔不足 7 天时提示练习效应，但不禁止；
-- 少于两次记录时给空态，不显示空表。
-
-**不做的**：不做人群比较、不做成长曲线拟合、不把变化解释成训练效果。
-
-## 约定
-
-- L-01 只展示原始指标；L-02 接本地计分，分数由 `scoring-v3` 产生；
-- 只提交原始指标；对话每账号只留最近 20 条；模型 Key 不在前端出现，也不会被导出；
-- 反应时使用 `performance.now()`（不可用时回退 `Date.now()`），毫秒取整；
-- 快测与深度档在 L-01 只占位，任务实现随 L-03～L-08 补齐。
+**不做的**：不做人群比较、不拟合成长曲线、不把变化解释成训练效果。
 
 ## 已知限制
 
-- 知觉速度为 45 秒计时任务，刷新后重开计时（已完成 trial 保留）；
+- 知觉速度 45 秒计时任务，刷新后重开计时（已完成 trial 保留）；
 - 联想记忆刷新后重新进入学习阶段（草稿只保存再认阶段进度）；
-- 图案题共 8 题固定题库，未做随机抽题与难度自适应；
-- AI 解读是一次性生成，未接 Agent 状态机与引用（属 L-05）。
+- 图案题为固定题库，未做随机抽题与难度自适应；
+- 游戏最佳分与测评前采集的年龄/教育仍是**设备级**（localStorage），换设备需要重填，不进报告；
+- 未做流式输出、离线缓存与 PWA（免费实例冷启动慢，首屏会有一段等待）。
 
 ## 相关文档
 
+- [Web 本地开发与测试](../../docs/software/local-development.md)
+- [部署指南](../../docs/software/deploy-render.md)
+- [ADR-0003 账号与托管决策](../../docs/adr/0003-web-accounts-and-hosted-deployment.md)
 - [软件设计](../../docs/software/software.md)
-- [原型说明](../../docs/software/prototype/prototype.md)
-- [Agent 接入位](../../docs/software/prototype/agent-接入位.md)

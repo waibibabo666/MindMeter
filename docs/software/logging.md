@@ -1,12 +1,15 @@
-# 诊断日志（桌面本地版）
+# 诊断日志（Web 托管版）
 
-> 当前实现同时有前端内存日志（`code/frontend/src/log.js`）和后端脱敏文件日志
-> （`%LOCALAPPDATA%\MindMeter\logs\backend.log`）。后端不记录 prompt/回答/Key；
-> 详见 [本地运行时](local-runtime.md)。
+> 当前实现有两层：前端内存日志（`code/frontend/src/log.js`，200 条、可脱敏导出），
+> 与后端脱敏日志（`app/logging_setup.py`）。托管环境下后端**同时写 stdout**（Render
+> Dashboard 的 Logs 页就是它），文件只在可写时落到 `MM_DATA_DIR/logs/backend.log`
+> （Render 上是 `/tmp/mindmeter`，文件系统临时）。后端不记录 prompt/回答/Key；
+> `GET /api/v1/logs` 默认关闭，需要 `MM_EXPOSE_LOGS=1` 且已登录才返回脱敏后的尾部日志。
+> 见 [本地开发与测试](local-development.md) 与 [部署指南](deploy-render.md)。
 
 ## 目标
 
-本地优先的 M1 没有服务端日志。前端需要一个**不写 console、默认不落盘、可脱敏导出**的诊断日志，用于排查白屏、存储失败、模型调用失败与路由问题。
+浏览器是唯一入口，出问题时我们看不到用户现场。前端需要一个**不写 console、默认不落盘、可脱敏导出**的诊断日志，用于排查白屏、请求失败、模型调用失败与路由问题；服务端日志则承担迁移、会话与模型调用的可观测性。
 
 ## 实现
 

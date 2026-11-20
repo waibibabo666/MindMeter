@@ -15,6 +15,21 @@ const { pathToFileURL } = require('node:url');
 
 const SRC = path.resolve(__dirname, '..', 'code', 'frontend', 'src');
 
+// 数字白名单由服务端 app/agent 负责；这里只需要把 facts 里的数字取出来做断言。
+function numbersOf(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? [value] : [];
+  if (Array.isArray(value)) return value.flatMap(numbersOf);
+  return [];
+}
+
+function collectNumbers(facts) {
+  const out = [];
+  for (const metrics of Object.values(facts || {})) {
+    for (const value of Object.values(metrics || {})) out.push(...numbersOf(value));
+  }
+  return out;
+}
+
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 const assert = (ok, message) => {
@@ -24,7 +39,6 @@ const assert = (ok, message) => {
 async function main() {
   const chat = await import(pathToFileURL(path.join(SRC, 'chat.js')).href);
   const { buildFacts, toHistory, makeMessage, memoryContext, adviceFromReply } = chat;
-  const { collectNumbers } = await import(pathToFileURL(path.join(SRC, 'agent', 'run.js')).href);
 
   test('buildFacts：合并分数与原始指标', () => {
     const facts = buildFacts({

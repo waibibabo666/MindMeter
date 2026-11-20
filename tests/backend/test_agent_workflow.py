@@ -107,6 +107,26 @@ def test_classify_legacy_intents_unchanged():
     assert classify("")["intent"] == INTENT["CLARIFY"]
 
 
+def test_fixed_safety_replies_carry_the_right_words():
+    """固定话术是安全边界本身，不能只测意图、不测内容。
+
+    原 `scripts/test_agent.js`（前端 legacy 的分类/话术用例）删除后，这条断言
+    接管它对 12356 / 120 与“回到报告”措辞的唯一覆盖。
+    """
+    crisis = FIXED_REPLY[INTENT["CRISIS"]]
+    assert "12356" in crisis and "120" in crisis, crisis
+    assert "不是" not in crisis.split("听到")[0]  # 开头是先在意，不是先免责
+
+    boundary = FIXED_REPLY[INTENT["BOUNDARY"]]
+    assert any(word in boundary for word in ("医生", "专业", "评估")), boundary
+
+    unrelated = FIXED_REPLY[INTENT["UNRELATED"]]
+    assert any(word in unrelated for word in ("测评", "报告", "维度")), unrelated
+
+    clarify = FIXED_REPLY[INTENT["CLARIFY"]]
+    assert "？" in clarify, clarify
+
+
 # ---------- validate：派生数字 / 场景策略 / 软校验 ----------
 
 def test_derived_numbers_allowed_but_invented_fail():

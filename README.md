@@ -42,14 +42,14 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 - Agent：LangGraph 小图（classify → retrieve → generate → validate），模型不可用即回退模板；
 - AI：站点统一 LLM API，`MM_LLM_BASE_URL` / `MM_LLM_MODEL` / `MM_LLM_API_KEY` 只在服务端；
 - 计分：服务端 Python `scoring-v3.1` 唯一权威；
-- 部署：`render.yaml`（Blueprint）+ [部署指南](docs/software/deploy-render.md)。
+- 部署：`render.yaml`（Blueprint）+ [部署指南](docs/software/deploy-render.md)；本地一键起服见 [本地开发与测试](docs/software/local-development.md)。
 
-**不再采用**
+**不再采用（相关代码已于 2026-11-20 删除）**
 
 - 浏览器 localStorage 存业务数据；
-- 浏览器直连 LLM API、用户自填 Key（BYOK）；
+- 浏览器直连 LLM API、用户自填 Key（BYOK）：`src/llm/*`、`src/agent/*` 已从前端移除；
 - Windows 凭据管理器（keyring）存 Key；
-- pywebview 桌面壳与 `127.0.0.1` + 每次启动 token 的本地守卫（保留为历史入口，不再维护）；
+- pywebview 桌面壳、`127.0.0.1` + 每次启动 token 的本地守卫：`code/desktop/`、`MindMeter.cmd/.vbs` 已删除；
 - SQLite 过渡方案。
 
 ## 路线图（无固定 deadline）
@@ -77,7 +77,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [ADR-0001](docs/adr/0001-local-desktop-runtime.md) | 桌面本地运行时决策（部分被 ADR-0003 取代） |
 | [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md) | Web 账号体系、多租户数据模型与 Render 托管决策 |
 | [ADR-0002（提议）](docs/adr/0002-agent-positioning-language-contract.md) | 非临床定位与 Agent 语言契约：MoCA 参考三分法、不借诊断权威 |
-| [本地运行时](docs/software/local-runtime.md) | 双击入口、便携 PostgreSQL、启停、日志、排障 |
+| [本地开发与测试](docs/software/local-development.md) | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
 | [迁移报告](docs/software/migration-report.md) | 保留/重写/删除、测试结果、限制 |
 | [软件设计](docs/software/software.md) | 模块总览 |
 | [Agent P0 改造包设计](docs/software/agent-trend-workflow.md) | 统一出口 + 趋势联动详细设计（评审稿） |
@@ -110,19 +110,22 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ```text
 MindMeter/
+├─ render.yaml               # Render Blueprint（Web 服务 + Postgres/pgvector + 迁移 + 探活）
 ├─ docs/
 │  ├─ requirements/        # 问题、功能、非功能、Agent
 │  ├─ research/            # 历史调研、用户故事
 │  ├─ algorithm/           # 8 项计分
-│  ├─ software/            # 技术方案、软件设计
+│  ├─ software/            # 技术方案、部署、本地开发、日志
 │  │  └─ prototype/        # L1 原型骨架（UI 参考）
+│  ├─ adr/                 # 架构决策（0001 桌面、0003 Web 账号与托管）
 │  ├─ mgmt/                # 沟通与风险
 │  └─ retrospection/
 ├─ code/
-│  ├─ backend/            # FastAPI + Agent + RAG + scoring（L2）
-│  ├─ frontend/           # 原生前端（L2）
+│  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG、scoring
+│  ├─ frontend/           # 原生前端（登录/注册 + 测评 + 报告 + 对话）
 │  └─ core_engine/        # L1 JS 计分历史
-├─ tests/                  # 单测/集成/E2E
+├─ scripts/                # 门禁、本地一键起服、冒烟检查、纯逻辑测试
+├─ tests/                  # backend（pytest）/ e2e（Playwright）/ ai_eval（评测集）
 ├─ work_for_submission/    # 课程提交历史快照
 └─ README.md
 ```
@@ -175,7 +178,8 @@ python -m uvicorn app.main:app --reload --port 8000
 ```
 
 - 部署：见 [docs/software/deploy-render.md](docs/software/deploy-render.md)（Render Blueprint 一键）；
-- CI：`.github/workflows/ci.yml`（Node 24：lint/format/前端测试；pgvector 服务上的后端契约；secret scan）；
+- 本地开发与测试矩阵：见 [docs/software/local-development.md](docs/software/local-development.md)；
+- CI：`.github/workflows/ci.yml`（Node 24 lint/format/前端测试；pgvector 服务上的后端契约与浏览器 E2E；secret scan）；
 - 文档/结构：`.github/workflows/structure-check.yml`；
 - 测试说明：[tests/README.md](tests/README.md)。
 

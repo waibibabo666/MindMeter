@@ -126,7 +126,7 @@ def build_trend_payload(db) -> dict:
 
 ## 七、G3 三个确定性修复
 
-1. **历史时序**：`build_messages` 现在把最近 history 拼在当前问题**之后**（agent/\_\_init\_\_.py L308–323），模型看到的顺序是「问题→旧对话」。修正为 `[system, *history, current_user_block]`。legacy JS（[run.js](../../code/frontend/src/agent/run.js)）为 frozen oracle，不跟改。
+1. **历史时序**：`build_messages` 现在把最近 history 拼在当前问题**之后**（agent/\_\_init\_\_.py L308–323），模型看到的顺序是「问题→旧对话」。修正为 `[system, *history, current_user_block]`。（早期作为对照 oracle 的 legacy JS 前端 Agent 已于 2026-11-20 删除，行为回归改由 `tests/backend/test_agent_workflow.py` 承担。）
 2. **引用软失败**：`validate_text` 的 `require_citation` 按 §5.1 分档；同时后端返回前剥掉模型写的「引用：…」尾行，引用统一由 `citations` 数组渲染（前端已有 `citationsLine`），消除正文/卡片重复。
 3. **派生数字白名单**：校验前对 facts 做一次确定性派生展开，仅允许以下四类，杜绝链式运算：
    - 同一维度内 `correct/total` 两两组合的加减差值与整数百分比（四舍五入）；
@@ -156,7 +156,7 @@ def build_trend_payload(db) -> dict:
 3. 校验：「+7 分」通过、「进步了」模板、「44→51」通过、无引用不判死（soft）、报告场景无引用要求。
 4. 统一出口：给 `explain_report` 注入含禁用词/越界数字的假模型输出 → 返回必为模板（现状测试可复现该漏洞，先红后绿）。
 5. history 顺序快照测试：system → 旧→新 history → 当前问题块。
-6. legacy 30 条 JS 用例（`scripts/test_agent.js`）保持绿，作为回归 oracle。
+6. ~~legacy 30 条 JS 用例（`scripts/test_agent.js`）保持绿，作为回归 oracle。~~ 该 oracle 已随前端 legacy 于 2026-11-20 删除；等价回归改由 `tests/backend/test_agent_workflow.py`（意图路由、固定话术含 12356/120、派生数字与校验器）承担。
 7. G5 定位用例：「我就是笨，什么都记不住」→ 重导向模板，`modelCalled=false`；「我是不是有痴呆前兆」→ boundary 优先；危机 + 自责共现 → crisis 优先；「换算成 MoCA 我是不是 21 分」→ 走 EXPLAIN 链路且输出中任何量表数字都被白名单拦下（不在 facts → 模板）；「这个方法没用」→ 不触发重导向（共现正则回归）。
 8. 手工演示脚本（对齐 MM-REQ-007 §十三）：两次测评 → 趋势页 → 点按钮 → 解释差值带练习效应 → 追问「那我要不要多练」→ 引用知识块。
 
@@ -178,7 +178,7 @@ def build_trend_payload(db) -> dict:
 | 「进步/退步」硬规则误杀引用用户原话的回答 | 词表仅 2 项、只作用于 trend 场景正文；模板兜底永远可用，失败模式是「退模板」而非「出错」 |
 | 派生白名单放宽带来误放行 | 派生集合确定性枚举、可单测穷举；链式运算一律不在名单，命中派生计入 AIRun 便于事后审计 |
 | classify 加词影响存量意图用例 | 顺序固定 crisis→boundary→self_blame→trend；先移植 30 条 legacy 断言为后端基线再动词表 |
-| `/chat` 写 AIRun 增加 I/O | 单用户桌面、每问一行，可忽略；写入失败不阻塞响应（try/except 记日志） |
+| `/chat` 写 AIRun 增加 I/O | 每账号每问一行，可忽略；写入失败不阻塞响应（try/except 记日志） |
 | `explain_report` 收编改变降级文案 | 返回结构不变，模板同源（`template_narrative`），前端零改动；回归以测试 4 把关 |
 | 自责共现正则误触发（如「这个方法没用」） | 主语×贬义 4 字窗共现才触发；固定话术本身就是条件解释，误触发不产生错误判断、不调模型；评测集含反例回归 |
 | scope note 软校验形同虚设 | 只用于统计「诚实呈现」话术覆盖率并进 AIRun，不做硬失败；模板路径天然满足，覆盖率有下限保证 |

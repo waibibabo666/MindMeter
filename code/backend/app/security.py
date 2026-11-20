@@ -1,7 +1,8 @@
 """HTTP guard for the hosted web app.
 
-This replaces the desktop ``LocalGuardMiddleware`` (loopback + per-launch
-token), which cannot work on a public host. Two things stay, one thing is new:
+This replaces the retired desktop guard (loopback check + per-launch
+``X-MM-Token``), which cannot work on a public host. Two things stay, one thing
+is new:
 
 * the same security headers and strict same-origin CSP;
 * state-changing ``/api/`` requests must be same-origin and JSON — that plus
@@ -16,11 +17,10 @@ bodies and breaks ``StaticFiles`` streaming (h11 "Too much data").
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from urllib.parse import urlsplit
 
-from fastapi import Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from starlette.datastructures import Headers, MutableHeaders
 
 CSP = (
@@ -110,16 +110,6 @@ class SecurityMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
-
-
-# Kept for the desktop launcher's old import path; the web app does not use it.
-LocalGuardMiddleware = SecurityMiddleware
-
-
-async def enforce_local_request(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:  # pragma: no cover - compatibility shim
-    return await call_next(request)
 
 
 def json_error(status: int, code: str, message: str = "") -> JSONResponse:

@@ -9,13 +9,15 @@
 | 状态 | 目标需求；M0–M3 分阶段实现 |
 | 文档负责人 | song |
 | 评审人 | waibibabo666、xlr268、1213lz |
-| 最后更新 | 2026-10-24 |
+| 最后更新 | 2026-11-20（v3.1：Web 账号与会话口径对齐实现） |
 | 上游文档 | [问题定义与产品描述](problem_definition.md) |
-| 关联文档 | [非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md)、[技术方案](../software/architecture.md)、[Agent 设计](xlragentdesign.md) |
+| 关联文档 | [非功能需求规范](nonfunctional_spec.md)、[算法设计](../algorithm/algorithm.md)、[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)、[部署指南](../software/deploy-render.md)、[Agent 设计](xlragentdesign.md) |
 
 > 本版把 AI 从“可选解读”升级为**核心 Agent**，并引入账号、服务端计分、记忆、RAG 与长期趋势。L1 的“无账号/无后端/BYOK 直连”不再是目标架构。
 >
-> **2026-11-07 M1 范围变更**：M1 先做**纯本地 + 用户自备 LLM API**，不做账号/服务端/数据库；本文的账号、服务端计分、pgvector 等是 L2 目标。M1 范围见 [M1 范围与验收](../mgmt/m1_scope.md)。
+> **2026-11-07 M1 范围变更**（历史）：M1 先做**纯本地 + 用户自备 LLM API**，不做账号/服务端/数据库；该范围已被 [ADR-0001](../adr/0001-local-desktop-runtime.md) 再被 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md) 取代。
+>
+> **2026-11-20 v3.1 当前实现口径**：Web 多用户已上线化（Render 托管）。与本文早期设想的三处差异已在正文对齐——① 账号凭证是**用户名+密码**（不收集邮箱，故无邮件验证/自助找回）；② 会话是**服务端会话表 + HttpOnly Cookie**，不是 JWT/refresh；③ 模型由**站点统一提供**（环境变量），BYOK 与 Key 加密存库取消。
 
 ## 二、目的与范围
 
@@ -23,12 +25,12 @@
 
 **本期做**：
 
-- 邮箱 + 密码账号、JWT 登录；
+- 用户名 + 密码账号、服务端会话（HttpOnly Cookie）登录/登出/注销；
 - 8 项测评：快测 2 / 标准 4 / 深度 8；服务端计分；
 - 八维报告：0–100 参考分、雷达图、2–3 条建议；不设总分、无常模、无百分位；
 - Agent 对话：报告解读、建议、追问、趋势解释；
 - 记忆：最近 20 条消息、用户画像、每次测评摘要、建议接受记录；
-- RAG：本地知识库、pgvector 检索、回答引用；
+- RAG：服务端知识库（PostgreSQL，30 条已审知识块）+ pgvector/关键词检索、回答引用；
 - 长期监测：共同维度趋势、7 天复测提示；
 - 数据导出/删除、账号注销；
 - 4 款补充练习（P2，不阻塞主链路）。
@@ -46,14 +48,14 @@
 
 | 角色 | 说明 |
 | --- | --- |
-| 用户 | 18 岁以上，邮箱注册，可跨设备查看测评与记忆 |
-| 游客 | 可选：先做快测/标准，注册后合并结果（M2 再决定是否做） |
-| 管理员 | 仅内部知识库/内容维护，不查看用户对话；M1 可用脚本，不做后台 |
+| 用户 | 18 岁以上，用户名注册（不收集邮箱与身份信息），可跨设备登录后查看测评与记忆 |
+| 游客 | 不做：未登录只能看登录/注册页（数据按账号隔离是产品前提） |
+| 管理员 | 仅内部知识库/内容维护，不查看用户对话；当前用脚本与数据库操作，不做后台 |
 
 前提：
 
-- 现代浏览器；言语流畅性 ASR 仅 Chrome/Edge；
-- 服务端部署 HTTPS；模型由用户 BYOK，Key 加密存库；
+- 现代浏览器（Chrome/Edge/Safari 最近两版）；言语流畅性 ASR 仅 Chrome/Edge；
+- 服务端部署 HTTPS；**模型由站点统一提供**（`MM_LLM_*` 环境变量），Key 不进数据库、不进浏览器；未配置时全部走模板兜底；
 - 用户已满 18 岁并同意隐私/数据使用说明；
 - 首版仅简体中文。
 
@@ -76,12 +78,12 @@
 
 | ID | 功能 | 优先级 | 验收标准 |
 | --- | --- | --- | --- |
-| F-01 | 注册 | P0 | 邮箱 + 密码；密码 ≥10 位；邮箱格式校验；重复邮箱拒绝；18+ 勾选；不收集姓名/手机号/年龄/学历 |
-| F-02 | 登录/登出 | P0 | 邮箱 + 密码；登录失败限流；JWT access 短期 + refresh 可轮换；登出撤销 refresh |
-| F-03 | 会话保持 | P0 | access 过期自动 refresh；refresh 失效回登录页；不把 token 放 URL |
-| F-04 | 密码重置 | P1 | M2 提供邮件重置；M1 不承诺，需在页面说明“暂不支持自助找回” |
-| F-05 | 注销账号 | P0 | 二次确认；停止服务；30 天内删除或匿名化测评/记忆/对话；邮件/页面告知 |
-| F-06 | 数据导出 | P0 | 导出 JSON：账号、测评、八维分数、记忆摘要、建议记录；不含密码/Key |
+| F-01 | 注册 | P0 | 用户名（2–32 位，字母/数字/点/下划线/中文，归一化小写）+ 密码；密码 ≥10 位且含字母与数字；重复用户名拒绝（409）；18+ 与边界勾选为必选项；**不收集邮箱/姓名/手机号/年龄/学历** |
+| F-02 | 登录/登出 | P0 | 用户名 + 密码；失败统一 401 `invalid_credentials`（不区分用户名/密码）；按 `IP+用户名` 限流（默认 10 次/5 分钟 → 429）；未知用户名也执行一次 PBKDF2 以对齐时序；登出撤销服务端会话行 |
+| F-03 | 会话保持 | P0 | 不透明随机令牌存 `HttpOnly + SameSite=Lax + Secure(auto)` Cookie；数据库只存 `sha256(token)`；30 天滑动续期；会话失效一律 401，前端广播一次并回登录页；**不把 token 放 URL 或 localStorage** |
+| F-04 | 密码修改/重置 | P1 | 已实现改密（需当前密码，改后撤销其他设备会话）；因不收集邮箱，**不提供自助找回**，登录页与设置页明示需联系发起人；邮件重置为 M2 可选项 |
+| F-05 | 注销账号 | P0 | 二次确认 + 当前密码；立即硬删除（`ON DELETE CASCADE` 级联清测评/分数/记忆/对话/AI 运行记录）；“30 天内清除”由 Render 每日数据库快照代替；用户名可被重新注册 |
+| F-06 | 数据导出 | P0 | `GET /export` 返回本账号 JSON：测评、八维分数、记忆摘要、建议、对话、进度；**不含密码、不含 Key**（模型由站点提供，前端从未持有）；`DELETE /data` 只清本账号数据 |
 
 ### 5.2 测评
 
@@ -141,48 +143,50 @@
 
 ## 七、API 草案
 
+下表是当前实现的实际接口面（与 `tests/backend/test_openapi_contract.py` 一一对应）：
+
 | 方法 | 路径 | 说明 | 认证 |
 | --- | --- | --- | --- |
-| POST | `/api/v1/auth/register` | 注册 | 否 |
-| POST | `/api/v1/auth/login` | 登录 | 否 |
-| POST | `/api/v1/auth/refresh` | 刷新 token | Refresh |
-| POST | `/api/v1/auth/logout` | 登出 | 用户 |
-| GET | `/api/v1/me` | 当前用户 | 用户 |
-| DELETE | `/api/v1/me` | 注销 | 用户 + 二次确认 |
-| GET | `/api/v1/me/export` | 导出 JSON | 用户 |
-| POST | `/api/v1/assessments` | 创建测评 | 用户 |
-| POST | `/api/v1/assessments/{id}/submit` | 提交原始指标并计分 | 用户 |
-| GET | `/api/v1/assessments` | 历史列表 | 用户 |
-| GET | `/api/v1/assessments/{id}` | 测评详情 | 本人 |
-| GET | `/api/v1/reports/{id}` | 八维报告 | 本人 |
+| GET | `/api/v1/health/live` | 探活（不碰数据库，供平台健康检查） | 否 |
+| GET | `/api/v1/health` | 就绪：DB/迁移/pgvector/RAG/AI 配置状态 | 否 |
+| POST | `/api/v1/auth/register` | 用户名+密码+18+ 注册，直接建立会话 | 否 |
+| POST | `/api/v1/auth/login` | 登录（失败限流） | 否 |
+| GET | `/api/v1/auth/session` | 当前浏览器是否已登录（启动探测） | 否 |
+| POST | `/api/v1/auth/logout` | 登出并撤销本会话 | 用户 |
+| GET | `/api/v1/auth/me` | 当前用户 | 用户 |
+| POST | `/api/v1/auth/password` | 改密（需当前密码，撤销其他会话） | 用户 |
+| DELETE | `/api/v1/auth/account` | 注销账号（需密码，级联硬删除） | 用户 |
+| GET/PUT | `/api/v1/state` | 本账号进度与 draft | 用户 |
+| POST | `/api/v1/assessments` | 提交原始指标并由服务端计分（同 id 幂等） | 用户 |
+| GET | `/api/v1/assessments`、`/api/v1/assessments/{id}` | 历史列表 / 详情（他人 id 返回 404） | 用户 |
+| GET | `/api/v1/reports/{id}`、`POST .../explain` | 八维报告 / 解读卡（统一出口与校验） | 用户 |
 | GET | `/api/v1/trends` | 共同维度趋势 | 用户 |
-| POST | `/api/v1/threads` | 创建对话 | 用户 |
-| POST | `/api/v1/threads/{id}/messages` | 发消息（M1 非流式） | 用户 |
-| GET | `/api/v1/threads/{id}/messages` | 最近 20 条 | 用户 |
-| GET | `/api/v1/memory/profile` | 画像 | 用户 |
-| PUT | `/api/v1/memory/profile` | 更新画像 | 用户 |
-| GET | `/api/v1/memory/summaries` | 摘要列表 | 用户 |
-| DELETE | `/api/v1/memory` | 清除记忆 | 用户 |
-| PUT | `/api/v1/settings/ai` | 保存 BYOK | 用户 |
-| GET | `/api/v1/health` | 健康检查 | 否 |
+| POST | `/api/v1/chat`、GET/POST `/api/v1/chat/messages` | 对话（非流式）与最近 20 条 | 用户 |
+| GET/PUT/DELETE | `/api/v1/memory`、`/memory/profile`、`/memory/summaries[/{id}]`、`/memory/advice[/{id}]` | 记忆读写与清除 | 用户 |
+| GET | `/api/v1/settings/ai` | 站点模型配置（只读，含掩码提示） | 用户 |
+| POST | `/api/v1/settings/ai/test` | 用站点凭证试跑一次模型 | 用户 |
+| PUT | `/api/v1/settings/ai`、DELETE `/api/v1/settings/ai/key` | **保留路径但一律 403 `ai_managed_by_site`**（BYOK 已取消） | 用户 |
+| GET/POST/DELETE | `/api/v1/export`、`/api/v1/import`、`/api/v1/data` | 本账号导出/导入/清除 | 用户 |
+| GET | `/api/v1/logs` | 脱敏服务端日志尾部，默认 403（需 `MM_EXPOSE_LOGS=1`） | 用户 |
+| — | ~~`/auth/refresh`、`/me/export`、`/threads`~~ | 不采用：会话是 Cookie 不是 refresh 令牌；导出走 `/export`；对话为单线程模型 | — |
 
 ## 八、数据模型（概念级）
 
 | 实体 | 关键字段 | 说明 |
 | --- | --- | --- |
-| User | id、email、password_hash、age_confirmed、created_at、deleted_at | 不存姓名/手机号/年龄/学历 |
-| RefreshToken | user_id、token_hash、expires_at、revoked_at | 可轮换 |
-| Assessment | id、user_id、tier、status、started_at、finished_at、scoring_version | 版本化 |
+| User | id、username（唯一、小写）、password_hash（PBKDF2-SHA256）、created_at、last_login_at | **不存邮箱/姓名/手机号/年龄/学历** |
+| AuthSession | token_hash（sha256，Cookie 里放原文）、user_id、created_at、last_seen_at、expires_at、ip、user_agent | 服务端会话，可撤销；不存明文令牌 |
+| AppState | user_id（主键）、route、tier、order、cursor、results、drafts、updated_at | 每账号一份进行中的测评（断点恢复） |
+| Assessment | id、user_id、mode、status、started_at、finished_at、scoring_version | `(user_id, id)` 复合主键：id 只在账号内唯一 |
 | AssessmentRaw | assessment_id、task_id、raw_json | 原始指标 |
 | AssessmentScore | assessment_id、dim、score、missing | 服务端计分结果 |
-| MemoryProfile | user_id、goals、preferences、constraints、updated_at | 用户可编辑 |
+| MemoryProfile | user_id（主键）、goals、preferences、constraints、updated_at | 用户可编辑 |
 | MemorySummary | user_id、assessment_id、summary、advice_ids、created_at | 不存全文 |
 | AdviceLog | user_id、advice_id、accepted、created_at | 避重 |
-| ChatThread | id、user_id、created_at、updated_at | LangGraph thread |
-| ChatMessage | thread_id、role、content、created_at | 只留最近 20 条 |
-| KnowledgeChunk | id、title、content、dim、source、version、embedding | pgvector |
-| AiRun | user_id、thread_id、model、latency_ms、degraded、validation、created_at | 不记 Key/全文 |
-| AuditLog | actor、action、object、created_at、result | 删除/导出/管理操作 |
+| ChatMessage | user_id、id、role、content、citations、risk、seq | 单线程模型，每账号只留最近 20 条（无 ChatThread 表） |
+| KnowledgeChunk | id、title、content、dim、source、version、embedding | 全站共享只读；pgvector 列存在，Web 默认关键词检索 |
+| AiRun | user_id、assessment_id、model、intent、latency_ms、degraded、validation、created_at | 不记 Key/全文 |
+| AuditLog | user_id、action、object、result、created_at | 登录失败/注册/改密/注销/导入等，不记内容 |
 
 ## 九、业务规则
 
@@ -196,23 +200,25 @@
 | BR-06 | 建议来自固定库；Agent 只改写、不新增方法 |
 | BR-07 | 越界/危机不调模型，走固定话术/资源 |
 | BR-08 | 对话只留最近 20 条 + 摘要；不存原始音频/全文 |
-| BR-09 | BYOK Key 加密存库；不写日志、不进导出 |
-| BR-10 | 删除账号后 30 天内清除；导出不含 Key/密码 |
+| BR-09 | 模型凭证只在服务端环境变量（`MM_LLM_API_KEY`），不入库、不写日志、不进导出、不给浏览器；BYOK 已取消 |
+| BR-10 | 注销账号立即级联删除全部业务数据（“30 天内清除”由每日数据库快照代替）；导出不含 Key/密码 |
+| BR-13 | 业务数据一律按 `user_id` 隔离：跨账号读取返回 404/401，客户端 id 只在账号内唯一 |
 | BR-11 | 趋势只比共同维度；<7 天提示练习效应；不判断进步/退步 |
 | BR-12 | 任何 AI 失败回退模板，报告/趋势不空 |
 
 ## 十、验收标准
 
-- 注册→登录→标准 4 项→报告→对话→摘要→7 天后复测→趋势，全链路可走通；
+- 注册→登录→标准 4 项→报告→对话→摘要→7 天后复测→趋势，全链路可走通（刷新与换设备登录后数据仍在）；
 - 服务端计分与金标准用例一致；同输入同版本同输出；
 - 报告无总分/百分位/误差范围；未测显示“未测”；
+- **多租户隔离**：两个账号互不可见（`tests/backend/test_tenancy.py` 全绿，跨账号 id 读取 404）；
 - Agent 30 条用例：准确/有依据/有用/无越界各 ≥4/5；禁用词 0；幻觉数字 0；
 - RAG hit@3 ≥80%；回答引用率 ≥90%；
 - 记忆：20 条上限、摘要可查、删除后不再被引用；
-- 账号删除 30 天内数据清除；导出完整且不含 Key；
+- 账号注销即时删除；导出完整且不含 Key/密码；
 - API p95 ≤500ms（非 AI）；AI 完整 ≤30s（M1 非流式），失败 ≤2s 回退模板；
 - 移动端 360px 可用；无明显无障碍阻断；
-- 无高危漏洞；Key 不出现在日志/导出/前端源码。
+- 无高危漏洞；Key 不出现在日志/导出/前端源码；口令与令牌在库内均为散列。
 
 ## 十一、非目标
 
@@ -230,3 +236,5 @@
 | --- | --- | --- |
 | 2026-10-24 | v2.0：8 项/三档/无账号/BYOK | 8 维决策 |
 | 2026-10-24 | v3.0：账号/服务端计分/Agent/记忆/RAG/趋势 | L2 产品化 |
+| 2026-11-19 | v3.1：Web 多租户与站点 LLM 落地（ADR-0003），删桌面形态 | 课程项目要可分享链接 |
+| 2026-11-20 | v3.1 对齐实现：用户名+密码、Cookie 会话（无 JWT/refresh）、BYOK 取消、注销即时删除、API 与数据模型表按实际接口重写 | 文档与代码口径一致 |

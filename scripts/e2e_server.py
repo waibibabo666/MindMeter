@@ -1,14 +1,17 @@
-"""Start the hosted web app for Playwright E2E.
+"""Start the hosted web app locally (dev server) or just its disposable database.
 
-Windows: boots the vendored PostgreSQL (trust auth, loopback only) into
-``runtime/e2e``, applies Alembic migrations and starts uvicorn.
-CI/Linux: set ``MM_E2E_DATABASE_URL`` to a pgvector-enabled database.
+    python scripts/e2e_server.py              # 便携 PostgreSQL + 迁移 + uvicorn :8100
+    python scripts/e2e_server.py --db-only    # 只起库并迁移，打印 MM_TEST_DATABASE_URL
+    python scripts/e2e_server.py --stop       # 停掉这个一次性数据库集群
 
-There is no per-launch token any more: the browser under test authenticates
-with the same session cookie a real visitor gets (see tests/e2e/app.spec.js).
+Windows uses the vendored portable PostgreSQL (trust auth, loopback only) in
+``runtime/e2e``. CI/Linux: set ``MM_E2E_DATABASE_URL`` to a pgvector-enabled
+database. The browser under test authenticates with a real session cookie —
+there is no per-launch token any more (see tests/e2e/app.spec.js).
 """
 from __future__ import annotations
 
+import argparse
 import os
 import signal
 import subprocess
@@ -19,7 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "code" / "backend"
 PG_BIN = ROOT / "vendor" / "pgsql" / "bin"
-PGDATA = ROOT / "runtime" / "e2e" / "pgdata"
+CLUSTER = ROOT / "runtime" / "e2e"
+PGDATA = CLUSTER / "pgdata"
 PG_USER = "mm_e2e"
 PG_DATABASE = "mindmeter_e2e"
 PG_PORT = int(os.environ.get("MM_E2E_PG_PORT", "55451"))
@@ -48,6 +52,14 @@ def run(command: list[str], **kwargs) -> subprocess.CompletedProcess:
     return result
 
 
+def pg_bin(name: str) -> str:
+    for suffix in ("", ".exe"):
+        path = PG_BIN / f"{name}{suffix}"
+        if path.exists():
+            return str(path)
+    raise SystemExit(f"缺少便携版 PostgreSQL：请先运行 scripts/fetch_pgsql.ps1（缺 {name}）")
+
+
 def pg_url(database: str = PG_DATABASE, port: int = PG_PORT) -> str:
     return f"postgresql+psycopg://{PG_USER}@127.0.0.1:{port}/{database}"
 
@@ -58,7 +70,7 @@ def init_cluster() -> None:
     PGDATA.parent.mkdir(parents=True, exist_ok=True)
     run(
         [
-            str(PG_BIN / "initdb"),
+            pg_bin("initdb"),
             "-D",
             str(PGDATA),
             "-U",
@@ -73,12 +85,12 @@ def init_cluster() -> None:
 
 
 def start_postgres() -> subprocess.Popen:
-    log_path = ROOT / "runtime" / "e2e" / "postgres.log"
+    log_path = CLUSTER / "postgres.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     handle = log_path.open("a", encoding="utf-8")
     process = subprocess.Popen(
         [
-            str(PG_BIN / "postgres"),
+            pg_bin("postgres"),
             "-D",
             str(PGDATA),
             "-p",
@@ -99,7 +111,7 @@ def start_postgres() -> subprocess.Popen:
     )
     for _ in range(120):
         ready = subprocess.run(
-            [str(PG_BIN / "pg_isready"), "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER],
+            [pg_bin("pg_isready"), "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER],
             capture_output=True,
         )
         if ready.returncode == 0:
@@ -110,16 +122,35 @@ def start_postgres() -> subprocess.Popen:
     raise RuntimeError(f"PostgreSQL not ready in 60s; see {log_path}")
 
 
-def ensure_database() -> None:
-    listed = subprocess.run(
-        [str(PG_BIN / "psql"), "-w", "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER,
-         "-d", "postgres", "-Atc", f"SELECT 1 FROM pg_database WHERE datname='{PG_DATABASE}'"],
+def stop_cluster() -> int:
+    if not (PGDATA / "PG_VERSION").exists():
+        print("没有集群可停：", PGDATA)
+        return 0
+    result = subprocess.run(
+        [pg_bin("pg_ctl"), "-D", str(PGDATA), "-m", "fast", "stop"],
         capture_output=True,
         text=True,
     )
-    if listed.stdout.strip() == "1":
+    print((result.stdout or result.stderr or "").strip())
+    return result.returncode
+
+
+def database_exists() -> bool:
+    listed = subprocess.run(
+        [
+            pg_bin("psql"), "-w", "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER,
+            "-d", "postgres", "-Atc", f"SELECT 1 FROM pg_database WHERE datname='{PG_DATABASE}'",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return listed.stdout.strip() == "1"
+
+
+def ensure_database() -> None:
+    if database_exists():
         return
-    run([str(PG_BIN / "createdb"), "-w", "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER, PG_DATABASE])
+    run([pg_bin("createdb"), "-w", "-h", "127.0.0.1", "-p", str(PG_PORT), "-U", PG_USER, PG_DATABASE])
 
 
 def migrate(url: str) -> None:
@@ -140,9 +171,8 @@ def serve(url: str) -> subprocess.Popen:
             "MM_DATABASE_URL": url,
             "MM_AUTO_MIGRATE": "0",
             "MM_RAG_MODE": "keyword",
-            "MM_DATA_DIR": str(ROOT / "runtime" / "e2e"),
+            "MM_DATA_DIR": str(CLUSTER),
             "MM_COOKIE_SECURE": "false",
-            "PYTHON_KEYRING_BACKEND": "",
         }
     )
     env.pop("PYTHON_KEYRING_BACKEND", None)
@@ -161,17 +191,37 @@ def serve(url: str) -> subprocess.Popen:
         cwd=str(BACKEND),
         env=env,
     )
-    print(f"E2E app on http://127.0.0.1:{PORT} (db: {url})", flush=True)
+    print(f"MindMeter web on http://127.0.0.1:{PORT} (db: {url})", flush=True)
     return process
 
 
+def bring_up_database() -> str:
+    init_cluster()
+    children.append(start_postgres())
+    ensure_database()
+    url = pg_url()
+    migrate(url)
+    return url
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db-only", action="store_true", help="只启动并迁移一次性数据库")
+    parser.add_argument("--stop", action="store_true", help="停止本地数据库集群")
+    args = parser.parse_args()
+
+    if args.stop:
+        return stop_cluster()
+
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
     external = os.environ.get("MM_E2E_DATABASE_URL")
     if external:
         migrate(external)
+        if args.db_only:
+            print(f"MM_TEST_DATABASE_URL={external}")
+            return 0
         children.append(serve(external))
         children[-1].wait()
         return 0
@@ -181,14 +231,11 @@ def main() -> int:
             "MM_E2E_DATABASE_URL is required on non-Windows. "
             "CI must provide a pgvector/pgvector:pg17 service."
         )
-    if not (PG_BIN / "postgres").exists() and not (PG_BIN / "postgres.exe").exists():
-        raise SystemExit("缺少便携版 PostgreSQL：请先运行 scripts/fetch_pgsql.ps1")
 
-    init_cluster()
-    children.append(start_postgres())
-    ensure_database()
-    url = pg_url()
-    migrate(url)
+    url = bring_up_database()
+    print(f"MM_TEST_DATABASE_URL={url}")
+    if args.db_only:
+        return 0
     children.append(serve(url))
     while children[-1].poll() is None:
         time.sleep(1)

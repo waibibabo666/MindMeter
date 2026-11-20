@@ -544,7 +544,7 @@ export const CHUNKS = [
     version: '1.1',
     risk: 'medium',
     review: { status: 'reviewed', by: 'xlr268', date: '2026-11-07' },
-    tags: ['隐私', '本地存储', '数据'],
+    tags: ['隐私', '账号', '数据'],
     param: null,
   },
   {
