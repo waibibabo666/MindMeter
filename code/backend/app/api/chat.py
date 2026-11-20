@@ -285,6 +285,8 @@ def chat(
             "validation": result.get("validation") or [],
             "risk": result.get("risk", "low"),
             "assessmentId": assessment_id,
+            # 路由可观测性：rule=关键词命中，llm=兜底救了这次，scene=报告场景固定。
+            "intentSource": result.get("intentSource", "rule"),
         },
         # `memory` 与 `GET /api/v1/memory` 同形状（memory_payload 一个来源）。
         # 为什么必须返回整份：前端 storage.js 的 writeMemory() 走的是

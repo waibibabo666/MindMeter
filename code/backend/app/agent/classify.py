@@ -104,6 +104,19 @@ EXPLAIN_WORDS = [
     "差",
     "提升",
     "怎么看",
+    # 第 3 轮实测：「这东西准吗」这类对测评本身可靠性的追问没有任何信号词，
+    # 落到模糊区后被模型误判成 support（回了"听起来你最近状态不太好"）。
+    # 它问的是产品/分数，不是自己的情绪 —— 这类必须由关键词接住。
+    "准吗",
+    "准不准",
+    "准不准啊",
+    "可信",
+    "靠谱",
+    "信度",
+    "效度",
+    "误差",
+    "科学吗",
+    "有意义吗",
 ]
 HIGH_DOMAIN_WORDS = [
     "起诉",
@@ -129,6 +142,17 @@ SUPPORT_WORDS = [
     "崩溃",
     "疲惫",
     "很累",
+    # 第 3 轮实测补充：这些是在说自己，不是在问分数，却被判成"指代不清"，
+    # 回一句「你指的是哪一项？」——用户正在表达困扰时这样回答最伤体验。
+    # 「焦虑症/抑郁症」由 BOUNDARY_WORDS 先命中（顺序在前），这里只收不带"症"的说法。
+    "担心自己",
+    "状态不好",
+    "状态很差",
+    "状态一直",
+    "心情",
+    "焦虑",
+    "心态",
+    "emo",
 ]
 SUMMARY_PHRASES = [
     "我的认知",
@@ -248,7 +272,7 @@ GREETING_NO_FACTS = (
 )
 
 NO_KNOWLEDGE_REPLY = (
-    "本地知识库里没有能直接回答这个问题的内容，我不猜。"
+    "站点内置的知识库里没有能直接回答这个问题的内容，我不猜。"
     "你可以换个问法（比如「联想记忆怎么练」），或查看报告里的原始指标。"
 )
 
@@ -427,6 +451,86 @@ def classify(question: str) -> dict:
             "reason": "domain-question",
         }
     return {"intent": INTENT["CLARIFY"], "matched": explain, "reason": "no-domain-no-signal"}
+
+
+# ---------------------------------------------------------------------------
+# 关键词规则 + LLM 兜底的合并策略（纯函数，可离线单测）
+# ---------------------------------------------------------------------------
+
+# 关键词命中这些意图时**不需要**再问模型：要么安全红线已触发（必须关键词优先，
+# 绝不能交给模型裁决），要么信号明确（领域词/趋势语境/建议诉求）。
+CONFIDENT_INTENTS = frozenset(
+    {
+        INTENT["CRISIS"],
+        INTENT["BOUNDARY"],
+        INTENT["HIGH_DOMAIN"],
+        INTENT["SUPPORT"],
+        INTENT["SELF_BLAME"],
+        INTENT["EXPLAIN"],
+        INTENT["TREND"],
+        INTENT["TREND_NO_DATA"],
+        INTENT["SUMMARY"],
+    }
+)
+
+# 只有这些"拿不准"的结果才值得花一次模型调用去救 —— 它们正是用户体感
+# "答非所问 / 要我自己说出维度名"的来源。
+AMBIGUOUS_INTENTS = frozenset({INTENT["CLARIFY"], INTENT["UNRELATED"], INTENT["GREETING"]})
+
+# 模型可以改判到的业务意图（闭集，别的值一律不接受）。
+LLM_ALLOWED_INTENTS = frozenset(
+    {
+        INTENT["EXPLAIN"],
+        INTENT["SUMMARY"],
+        INTENT["TREND"],
+        INTENT["CLARIFY"],
+        INTENT["UNRELATED"],
+        INTENT["BOUNDARY"],
+        INTENT["SUPPORT"],
+        INTENT["SELF_BLAME"],
+    }
+)
+
+
+def needs_llm_fallback(result: dict) -> bool:
+    """关键词结果是否模糊到需要模型兜底。"""
+    return str((result or {}).get("intent")) in AMBIGUOUS_INTENTS
+
+
+def resolve_intent(
+    keyword_result: dict,
+    llm_intent: str | None,
+    *,
+    has_facts: bool = False,
+    has_trend: bool = False,
+) -> tuple[str, str]:
+    """合并关键词与模型判定，返回 (intent, intent_source)。
+
+    四条不变式（顺序即优先级）：
+
+    1. **安全红线不可降级**：危机/越界/高风险领域/疏导/自责由关键词决定，
+       模型无权改判 —— 宁可多拒答，也不能因为模型误判把求助句路由成普通解释。
+    2. **模型只兜模糊**：关键词已经命中领域词/趋势语境/建议诉求时不采纳模型，
+       否则等于把已经正确的答案交给一次额外调用去赌。
+    3. **闭集 + 失败即回退**：模型返回不在白名单里、或调用失败/超时，
+       一律沿用关键词结果，行为与没有这个功能时完全一致。
+    4. **改判必须与可支撑的数据相容**（第 3 轮实测加入）：只有一条测评记录时
+       不许路由到 trend，没有任何测评结果时不许路由到 explain/summary。
+       当时「那个呢」被模型猜成 trend，用户收到"这个账号还没有两次可比的测评"
+       —— 比原来的追问更误导。模型可以猜语义，但不能猜我们有没有那份数据。
+    """
+    keyword_intent = str((keyword_result or {}).get("intent") or INTENT["CLARIFY"])
+    if keyword_intent in CONFIDENT_INTENTS:
+        return keyword_intent, "rule"
+    if not llm_intent or llm_intent not in LLM_ALLOWED_INTENTS:
+        return keyword_intent, "rule"
+    if llm_intent == INTENT["TREND"] and not has_trend:
+        return keyword_intent, "rule"
+    if llm_intent in (INTENT["EXPLAIN"], INTENT["SUMMARY"]) and not has_facts:
+        return keyword_intent, "rule"
+    if llm_intent == keyword_intent:
+        return keyword_intent, "rule"
+    return llm_intent, "llm"
 
 
 def fixed_reply(intent: str) -> str:

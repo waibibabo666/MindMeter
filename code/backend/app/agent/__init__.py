@@ -39,7 +39,10 @@ from .classify import (  # 分类与会场话术只在 classify.py 定义一次�
     dims_in_question,
     fixed_reply,
     is_advice_ask,
+    needs_llm_fallback,
+    resolve_intent,
 )
+from .intent_llm import classify_with_llm
 from .policies import (
     CITATION_PLACEHOLDERS,
     DEFAULT_MAX_CHARS,
@@ -446,6 +449,8 @@ class AgentState(TypedDict, total=False):
     scene: str
     intent: str
     matched: list
+    # 意图来自关键词还是 LLM 兜底（rule | llm | scene）：调路由时最需要这条数据。
+    intentSource: str
     chunks: list
     citations: list
     sources: list
@@ -1060,17 +1065,36 @@ def build_messages(
 
 def _classify_node(state: AgentState) -> dict:
     if state.get("scene") == "report":
-        return {"intent": INTENT["EXPLAIN"], "risk": "low", "matched": []}
-    result = classify(state.get("question", ""))
+        return {"intent": INTENT["EXPLAIN"], "risk": "low", "matched": [], "intentSource": "scene"}
+    keyword = classify(state.get("question", ""))
+    intent, source = keyword["intent"], "rule"
+    matched = list(keyword["matched"])
+
+    # 关键词拿不准时才问模型（危机/越界等安全意图根本不会走到这里）。
+    if needs_llm_fallback(keyword):
+        facts = state.get("facts") or {}
+        # 维度读数与趋势是两份不同的数据：有趋势不代表有本次结果，反之亦然。
+        has_dims = any(dim != "trend" and isinstance(value, dict) for dim, value in facts.items())
+        llm_intent = classify_with_llm(state.get("question", ""), state.get("history"))
+        intent, source = resolve_intent(
+            keyword,
+            llm_intent,
+            has_facts=has_dims,
+            has_trend=isinstance(facts.get("trend"), dict),
+        )
+        if source == "llm":
+            matched = [f"llm:{intent}"]
+
     # TREND 意图自动切换 scene，让校验与模板走趋势策略；其余保持入口 scene。
     update: dict = {
-        "intent": result["intent"],
-        "risk": RISK_BY_INTENT.get(result["intent"], "low"),
-        "matched": result["matched"],
+        "intent": intent,
+        "risk": RISK_BY_INTENT.get(intent, "low"),
+        "matched": matched,
+        "intentSource": source,
     }
-    if result["intent"] == INTENT["TREND"]:
+    if intent == INTENT["TREND"]:
         update["scene"] = "trend"
-    if result["intent"] == INTENT["SUMMARY"]:
+    if intent == INTENT["SUMMARY"]:
         update["scene"] = "summary"
     return update
 
@@ -1358,6 +1382,7 @@ def answer(
         text = TRAILING_CITATION_RE.sub("", text).rstrip()
     return {
         "intent": result.get("intent", INTENT["EXPLAIN"]),
+        "intentSource": result.get("intentSource", "rule"),
         "risk": result.get("risk", "low"),
         "text": text,
         "citations": result.get("citations", []),
