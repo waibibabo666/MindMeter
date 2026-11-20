@@ -2,7 +2,7 @@
   "name": "mindmeter",
   "version": "0.3.6",
   "private": true,
-  "description": "MindMeter web app: FastAPI + PostgreSQL/pgvector + account sessions, deployable to Render",
+  "description": "MindMeter web app: FastAPI + PostgreSQL/pgvector + account sessions, deployable to Railway",
   "scripts": {
     "test": "npm run test:prototype && npm run test:app-shell && npm run test:copy-discipline && npm run test:auth && npm run test:memory && npm run test:report && npm run test:scoring && npm run test:kb && npm run test:units && npm run test:log && npm run test:chat && npm run test:games",
     "test:prototype": "node scripts/test_prototype.js",

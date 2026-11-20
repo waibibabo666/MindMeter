@@ -24,7 +24,7 @@ def live():
 
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
-    """Public readiness probe: Render's health check path points here.
+    """Public readiness probe: the platform health check path points here.
 
     Reports structure, never user data and never the LLM key.
     """

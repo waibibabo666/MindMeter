@@ -32,17 +32,17 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ## 技术架构
 
-**当前（Web 托管版，Render）**
+**当前（Web 托管版，Railway）**
 
 - 服务：单个 FastAPI 服务同源托管 `/api/v1/*` 与前端静态文件（无 CORS、无独立前端服务）；
 - 账号：用户名 + 密码（PBKDF2-SHA256），HttpOnly + SameSite=Lax 会话 Cookie，服务端会话表，30 天滑动续期；
 - 多租户：所有业务表以 `user_id` 为复合主键第一列，`kb_chunks` 全站共享只读；
-- 数据库：Render PostgreSQL 17 + pgvector + Alembic（部署时 `alembic upgrade head`）；
+- 数据库：Railway pgvector 模板（PostgreSQL + pgvector）+ Alembic（启动时 `MM_AUTO_MIGRATE=1` 迁移）；
 - RAG：默认 BM25 关键词检索（`MM_RAG_MODE=keyword`），向量检索能力保留但不进 Web 依赖；
 - Agent：LangGraph 小图（classify → retrieve → generate → validate），模型不可用即回退模板；
 - AI：站点统一 LLM API，`MM_LLM_BASE_URL` / `MM_LLM_MODEL` / `MM_LLM_API_KEY` 只在服务端；
 - 计分：服务端 Python `scoring-v3.2` 唯一权威（与前端引擎逐维一致）；
-- 部署：`render.yaml`（Blueprint）+ [部署指南](docs/software/deploy-render.md)；本地一键起服见 [本地开发与测试](docs/software/local-development.md)。
+- 部署：`Dockerfile` + `railway.json`（Railway）+ [Railway 部署指南](docs/software/deploy-railway.md)；本地一键起服见 [本地开发与测试](docs/software/local-development.md)。
 
 **不再采用（相关代码已于 2026-11-20 删除）**
 
@@ -73,9 +73,9 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [Agent 设计](docs/requirements/xlragentdesign.md) | LangGraph、记忆、RAG、校验、评测 |
 | [算法设计](docs/algorithm/algorithm.md) | 8 项公式、`scoring-v3`、服务端计分 |
 | [技术方案](docs/software/architecture.md) | 历史 L2 方案；当前 Web 形态见 ADR-0003 |
-| [Render 部署指南](docs/software/deploy-render.md) | Blueprint 一键部署、环境变量、LLM 选型、验收与排障 |
+| [Railway 部署指南](docs/software/deploy-railway.md) | Dockerfile 构建、pgvector 数据库、环境变量、验收与排障 |
 | [ADR-0001](docs/adr/0001-local-desktop-runtime.md) | 桌面本地运行时决策（部分被 ADR-0003 取代） |
-| [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md) | Web 账号体系、多租户数据模型与 Render 托管决策 |
+| [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md) | Web 账号体系、多租户数据模型与托管部署决策（原 Render，现 Railway） |
 | [ADR-0002（提议）](docs/adr/0002-agent-positioning-language-contract.md) | 非临床定位与 Agent 语言契约：MoCA 参考三分法、不借诊断权威 |
 | [本地开发与测试](docs/software/local-development.md) | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
 | [迁移报告](docs/software/migration-report.md) | 保留/重写/删除、测试结果、限制 |
@@ -110,7 +110,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 ```text
 MindMeter/
-├─ render.yaml               # Render Blueprint（Web 服务 + Postgres/pgvector + 迁移 + 探活）
+├─ Dockerfile / railway.json # Railway 构建（python:3.13-slim）与部署配置
 ├─ docs/
 │  ├─ requirements/        # 问题、功能、非功能、Agent
 │  ├─ research/            # 历史调研、用户故事
@@ -177,7 +177,7 @@ $env:MM_LLM_API_KEY = "sk-..."           # 不填就走模板兜底
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-- 部署：见 [docs/software/deploy-render.md](docs/software/deploy-render.md)（Render Blueprint 一键）；
+- 部署：见 [docs/software/deploy-railway.md](docs/software/deploy-railway.md)（Railway，合入 main 自动部署）；
 - 本地开发与测试矩阵：见 [docs/software/local-development.md](docs/software/local-development.md)；
 - CI：`.github/workflows/ci.yml`（Node 24 lint/format/前端测试；pgvector 服务上的后端契约与浏览器 E2E；secret scan）；
 - 文档/结构：`.github/workflows/structure-check.yml`；

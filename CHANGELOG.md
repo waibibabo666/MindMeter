@@ -199,7 +199,7 @@
 ## [0.3.0] - 2026-11-19 — Web 托管版（账号 + Render）
 
 架构从“pywebview 桌面单用户”切换为“同源 Web 多用户”，部署目标 Render。
-决策与理由见 [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md)，操作手册见 [部署指南](docs/software/deploy-render.md)。
+决策与理由见 [ADR-0003](docs/adr/0003-web-accounts-and-hosted-deployment.md)，操作手册见 [部署指南](docs/software/deploy-railway.md)。
 
 ### 新增
 

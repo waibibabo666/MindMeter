@@ -1,4 +1,4 @@
-"""用 Render 的生产参数真启一次服务，并跑通关键链路（部署前预检）。
+"""用 Railway 的生产参数真启一次服务，并跑通关键链路（部署前预检）。
 
 覆盖：liveness/readiness、Cookie 属性（HttpOnly/SameSite/Secure 推断）、
 `MM_EXPOSE_LOGS=false` 是否真的拒绝 /logs、服务端计分、报告解读是否走模型、
@@ -8,9 +8,9 @@
     python scripts/check_prod_runtime.py                    # 用本地 e2e 库
     $env:MM_DATABASE_URL="postgresql+psycopg://..."; python scripts/check_prod_runtime.py
 
-注意：这里刻意**不传** `render.yaml` 里的 `--forwarded-allow-ips "*"`。
+注意：这里刻意**不传** `Dockerfile` CMD 里的 `--forwarded-allow-ips "*"`。
 Windows CRT 会按 cwd 把裸 `*` 展开成目录名，uvicorn 收到多余位置参数直接退出；
-Render 用 `sh -c "<startCommand>"` 执行，双引号内的 `*` 不会被展开，线上安全。
+Railway 用 `sh -c "<CMD>"` 执行，双引号内的 `*` 不会被展开，线上安全。
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ for name in ("NO_PROXY", "no_proxy"):
             part for part in value.split(",") if part.strip() not in {"[::1]", "::1", ""}
         )
 
-# 与 render.yaml 一致的环境（除了 Key 用本地 .env.local 里那份）
+# 与 railway.json / Dockerfile 一致的环境（除了 Key 用本地 .env.local 里那份）
 env = dict(os.environ)
 env.update(
     {
@@ -70,10 +70,10 @@ proc = subprocess.Popen(
         sys.executable, "-m", "uvicorn", "app.main:app",
         "--host", "127.0.0.1", "--port", PORT,
         "--proxy-headers",
-        # 注意：这里不传 render.yaml 里的 `"*"`。Windows CRT 会按 cwd 把裸 `*`
+        # 注意：这里不传 Dockerfile CMD 里的 `"*"`。Windows CRT 会按 cwd 把裸 `*`
         # 展开成目录名，uvicorn 收到多余位置参数直接退出 —— 这是本地平台差异。
-        # Render 用 `sh -c "<startCommand>"` 执行，双引号内的 `*` 不会被展开，
-        # 所以线上那条命令是安全的（已在 docs/software/deploy-render.md 记录）。
+        # Railway 用 `sh -c "<CMD>"` 执行，双引号内的 `*` 不会被展开，
+        # 所以线上那条命令是安全的（已在 docs/software/deploy-railway.md 记录）。
         "--forwarded-allow-ips",
         "127.0.0.1",
     ],
@@ -223,7 +223,7 @@ finally:
     except Exception:  # noqa: BLE001
         proc.kill()
 
-print("\n=== Render 生产参数实测 ===")
+print("\n=== Railway 生产参数实测 ===")
 failed = 0
 for name, ok, detail in results:
     flag = "PASS" if ok else "FAIL"

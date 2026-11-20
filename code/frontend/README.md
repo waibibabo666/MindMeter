@@ -133,6 +133,6 @@ npm run test:memory report log chat games prototype units kb
 ## 相关文档
 
 - [Web 本地开发与测试](../../docs/software/local-development.md)
-- [部署指南](../../docs/software/deploy-render.md)
+- [部署指南](../../docs/software/deploy-railway.md)
 - [ADR-0003 账号与托管决策](../../docs/adr/0003-web-accounts-and-hosted-deployment.md)
 - [软件设计](../../docs/software/software.md)

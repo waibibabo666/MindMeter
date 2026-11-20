@@ -9,8 +9,7 @@
 prototype/
 ├─ index.html              L1 本地骨架（无账号/无后端/本地 BYOK）
 ├─ prototype.md            本文件：L1 说明与 L2 差异
-├─ agent-接入位.md         L2 前端→后端 Agent 契约
-└─ 页面流程图v4_legacy.png 旧版流程图（含 8 游戏旧方案，仅参考）
+└─ agent-接入位.md         L2 前端→后端 Agent 契约
 ```
 
 ## L1 演示了什么

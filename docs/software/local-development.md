@@ -1,6 +1,6 @@
 # 本地开发与测试（Web 版）
 
-> 部署到 Render 见 [deploy-render.md](deploy-render.md)；账号与多租户的设计取舍见 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)。
+> 部署到 Railway 见 [deploy-railway.md](deploy-railway.md)；账号与多租户的设计取舍见 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)。
 > 桌面版（pywebview / `MindMeter.cmd` / keyring）已删除，本文是唯一入口。
 
 ## 1. 一次性准备
@@ -10,7 +10,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 # 等价于：pip install -r requirements-dev.txt && npm ci && scripts/fetch_pgsql.ps1
 ```
 
-需要 Node 24+、Python 3.12+。`fetch_pgsql.ps1` 只为本地一键起库/E2E 下载便携 PostgreSQL + pgvector；线上用 Render 的 Postgres，不需要它。
+需要 Node 24+、Python 3.12+。`fetch_pgsql.ps1` 只为本地一键起库/E2E 下载便携 PostgreSQL + pgvector；线上用 Railway 的 pgvector 模板，不需要它。
 
 ## 2. 三种起法
 
@@ -66,7 +66,7 @@ $env:MM_LLM_API_KEY = "sk-..."    # 不填也能跑，AI 走模板兜底
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-本地 HTTP 下 Cookie 不带 `Secure`（`MM_COOKIE_SECURE=auto` 会按 `X-Forwarded-Proto` 判断），所以 `--reload` 与 `127.0.0.1` 都能正常登录；线上经 Render 反代后会自动加上。
+本地 HTTP 下 Cookie 不带 `Secure`（`MM_COOKIE_SECURE=auto` 会按 `X-Forwarded-Proto` 判断），所以 `--reload` 与 `127.0.0.1` 都能正常登录；线上经 Railway 反代后会自动加上。
 
 ## 3. 改哪儿跑什么
 
@@ -78,7 +78,7 @@ python -m uvicorn app.main:app --reload --port 8000
 | 数据模型 / 加表 | 迁移真跑一遍 + 契约测试 | `--db-only` 后 `alembic upgrade head`，再 pytest |
 | Agent / LLM 调用 / 校验 | 图级测试（不需要真 Key） | `python -m pytest -q tests/backend/test_agent_workflow.py` |
 | 知识库内容 | KB 校验 + 种子一致性 | `npm run test:kb && node scripts/export_kb_seed.mjs` |
-| 部署物料（render.yaml/依赖/env） | 部署后冒烟 | `python scripts/smoke_web_deploy.py <url>` |
+| 部署物料（Dockerfile/railway.json/依赖/env） | 部署后冒烟 | `python scripts/smoke_web_deploy.py <url>` |
 | 文档/结构/密钥 | 三个门禁脚本 | `python scripts/check_docs.py`、`python scripts/check_secrets.py`、`python scripts/check_frontend_dead_code.py` |
 
 预期：`npm run check` 12 套全绿；`pytest` 有库 90 passed、无库 51 passed/39 skipped；`smoke_web_deploy.py` 19/19。
@@ -119,15 +119,15 @@ Remove-Item -Recurse -Force runtime\e2e      # 下一次会重新 initdb，等�
 
 浏览器侧只有 `mindmeter.games.v2`（游戏练习最佳分）与 `mindmeter.app.*` 音效/UI 偏好这类**设备级**数据留在 localStorage；测评、分数、记忆、对话、进度一律在服务端按账号存。
 
-## 7. 本地与 Render 的差异（别踩）
+## 7. 本地与 Railway 的差异（别踩）
 
-| 项 | 本地 | Render |
+| 项 | 本地 | Railway |
 | --- | --- | --- |
 | Cookie `Secure` | 关（http） | 由 `--proxy-headers` + `X-Forwarded-Proto` 判定为开 |
 | 日志 | `runtime/*/logs/backend.log` | stdout（Dashboard Logs 页），文件临时 |
 | RAG | 同上，`MM_RAG_MODE=keyword` | 默认 keyword；向量检索需要额外部署 embedding |
 | 限流计数 | 进程内内存 | 单实例有效，多实例不共享 |
-| 启动方式 | `scripts/e2e_server.py` | `render.yaml` 的 preDeploy/startCommand |
+| 启动方式 | `scripts/e2e_server.py` | `Dockerfile` 的 CMD / `railway.json` |
 
 ## 8. 上线前的执行顺序
 
@@ -137,6 +137,6 @@ python scripts/e2e_server.py --db-only; $env:MM_TEST_DATABASE_URL = "..."   # �
 python -m pytest -q tests/backend -rs
 npm run test:e2e
 python scripts/check_docs.py; python scripts/check_secrets.py; python scripts/check_frontend_dead_code.py
-git push                          # 然后在 Render 触发 Blueprint 部署
-python scripts/smoke_web_deploy.py https://<service>.onrender.com
+git push                          # 合入 main 后 Railway 自动部署
+python scripts/smoke_web_deploy.py https://<service>.up.railway.app
 ```

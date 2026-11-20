@@ -33,7 +33,7 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-部署到 Render 见 [docs/software/deploy-render.md](../../docs/software/deploy-render.md)；`MM_AUTO_MIGRATE=1`（默认）会在启动时补跑一次 `alembic upgrade head`，所以手工建服务也不会漏迁移。
+部署到 Railway 见 [docs/software/deploy-railway.md](../../docs/software/deploy-railway.md)；`MM_AUTO_MIGRATE=1`（默认）会在启动时补跑一次 `alembic upgrade head`，所以手工建服务也不会漏迁移。
 
 ## 约定
 

@@ -3,7 +3,7 @@
 The same origin serves the API and the static frontend, so the browser needs
 no CORS and the session cookie stays first-party. Importing this module does
 not connect to a database; ``MM_AUTO_MIGRATE=1`` (the default) runs
-``alembic upgrade head`` once at startup so a fresh Render Postgres works
+``alembic upgrade head`` once at startup so a fresh hosted Postgres works
 without extra dashboard steps — set it to ``0`` when the deploy platform runs
 a dedicated pre-deploy migration command.
 """

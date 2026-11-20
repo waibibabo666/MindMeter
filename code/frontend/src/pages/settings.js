@@ -203,7 +203,7 @@ function buildAiCard() {
   const tip =
     saved.enabled && saved.hasKey
       ? TIP_AI
-      : `${TIP_AI}部署时在 Render 的环境变量里填 MM_LLM_API_KEY 即可启用真实模型；不填也能正常测评。`;
+      : `${TIP_AI}部署时在服务端环境变量里填 MM_LLM_API_KEY 即可启用真实模型；不填也能正常测评。`;
 
   return el('div', { class: 'card' }, [
     titled('h2', 'AI 解读', tip),
