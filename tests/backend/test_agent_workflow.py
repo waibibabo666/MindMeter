@@ -88,6 +88,40 @@ def test_classify_advice_followup_stays_explain():
     assert classify("上次那个建议怎么还没做")["intent"] == INTENT["EXPLAIN"]
 
 
+@pytest.mark.parametrize("question", [
+    "我有什么优点",
+    "我问你我哪方面比较强",
+    "我哪方面比较强",
+    "我擅长什么",
+    "我哪个维度最好",
+    "我有什么不足",
+])
+def test_classify_strength_questions_are_not_clarify_or_trend(question):
+    """第 3 轮实测的两个路由缺陷。
+
+    「我哪方面比较强」曾被强词「比较」整句吃掉路由到趋势，回一段两次分数差值；
+    「我有什么优点 / 我擅长什么」落到 clarify，要用户自己说出维度名。
+    两者都答非所问。现在统一走 summary（只描述本次相对高/低的维度，不做能力评价）。
+    """
+    assert classify(question)["intent"] == INTENT["SUMMARY"]
+
+
+def test_classify_strength_with_trend_context_stays_trend():
+    """有趋势语境时趋势优先，不能被强项分支抢走。"""
+    assert classify("这两次哪项比较强")["intent"] == INTENT["TREND"]
+    assert classify("和上次比分数有什么变化")["intent"] == INTENT["TREND"]
+
+
+def test_bare_compare_is_no_longer_a_trend_trigger():
+    # 注意：`from app.agent import classify` 拿到的是 re-export 的**函数**，
+    # 不是同名模块，所以这里用 importlib 显式取模块。
+    from importlib import import_module
+
+    words = import_module("app.agent.classify")
+    assert "比较" not in words.TREND_STRONG_WORDS
+    assert "比较" in words.TREND_WEAK_WORDS
+
+
 def test_classify_self_blame_and_non_trigger():
     assert classify("我就是笨，什么都记不住")["intent"] == INTENT["SELF_BLAME"]
     assert classify("我脑子不行")["intent"] == INTENT["SELF_BLAME"]
@@ -134,13 +168,14 @@ def test_score_attribution_is_tracked_per_dimension():
     facts = {
         "vc": {"correct": 5, "total": 8, "score": 50},
         "am": {"hits": 4, "falseAlarms": 3, "score": 26},
-        "trend": {"days": 9, "rows": [{"prev": 50, "next": 60, "delta": 10}]},
+        "trend": {"days": 9, "rows": [{"id": "vc", "prev": 50, "next": 60, "delta": 10}]},
     }
     owners = A.dimension_score_owners(facts)
-    assert owners[50.0] == {"言语理解"}
-    assert owners[26.0] == {"联想记忆"}
-    # trend 里的 50/60 是派生数字，不参与归属表
-    assert 10.0 not in owners
+    # 第 3 轮起按维度 id 登记（简称/全称字面差异曾把正确回答拦回模板）
+    assert owners[50.0] == {"vc"}
+    assert owners[26.0] == {"am"}
+    # 趋势行的 prev/next/delta 也登记，否则「vc 50 → 60」里的 50 会被当成别的维度的数
+    assert owners[60.0] == {"vc"} and owners[10.0] == {"vc"}
 
 
 def test_score_from_another_dimension_is_a_hard_failure():
@@ -169,6 +204,48 @@ def test_score_from_another_dimension_is_a_hard_failure():
         score_owners=A.dimension_score_owners(facts),
     )
     assert right["ok"], right["issues"]
+
+
+def test_trend_phrasing_is_not_flagged_as_misattribution():
+    """第 3 轮实测的两个误伤源，都曾把**正确回答**拦回模板。
+
+    ① 校验词表用简称（空间视觉），归属表用全称（空间视觉化），按字符串比对必然不等；
+    ② 趋势句「归纳推理 25 → 50」里的 25 是 ir 的上次分数，
+       归属表只登记本次分数时，25 会被认成自然探索的数字。
+    """
+    facts = {
+        "ir": {"correct": 4, "total": 8, "score": 50},
+        "sv": {"correct": 8, "total": 8, "score": 100},
+        "ni": {"correct": 2, "total": 8, "score": 25},
+        "trend": {
+            "days": 1,
+            "rows": [
+                {"id": "ir", "prev": 25, "next": 50, "delta": 25},
+                {"id": "sv", "prev": 0, "next": 100, "delta": 100},
+            ],
+        },
+    }
+    owners = A.dimension_score_owners(facts)
+    allowed = derived_allowed_numbers(facts)
+    for sentence in (
+        "空间视觉 0 → 100（+100）",
+        "空间视觉化 0 → 100（+100）",
+        "归纳推理 25 → 50（+25）",
+        "自然探索本次 25 分。仅供参考。",
+    ):
+        result = validate_text(
+            sentence, allowed_numbers=allowed, score_owners=owners, policy=policy_for("trend")
+        )
+        assert result["ok"], (sentence, result["issues"])
+
+    # 真错仍然要拦：把 ir 的 50 写到联想记忆句子里
+    wrong = validate_text(
+        "联想记忆 50 分。仅供参考。",
+        allowed_numbers=allowed,
+        score_owners=owners,
+        policy=policy_for("trend"),
+    )
+    assert not wrong["ok"], wrong["issues"]
 
 
 def test_score_attribution_is_conservative():

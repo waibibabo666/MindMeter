@@ -64,6 +64,8 @@ export function button(label, onClick, options = {}) {
 /**
  * 空状态：品牌小图 + 一句标题 + 一句解释 + 可选主行动 + 可选提示。
  * art 传 false 时不画插画——同一页出现多个空状态时避免插画重复。
+ * text 省略时只画标题：板块解释已经在标题旁的浮框里时，空态再复述一遍就是
+ * 同一句话出现两次（人工测试反馈 3 · 模式 2）。
  *
  * 注意形参名：这里刻意用 `hintText` 而不是 `hint`。模块级导出的 `hint()`
  * 组件如果同名会被解构遮蔽（实测踩过一次 TypeError），改名把这颗雷拆掉。
@@ -72,7 +74,7 @@ export function emptyState({ title, text, actionLabel, onAction, hintText, art =
   const children = [];
   if (art) children.push(el('div', { class: 'empty-art', html: MIRROR_SMALL }));
   children.push(el('p', { class: 'empty-state-title', text: title }));
-  children.push(el('p', { class: 'muted', text }));
+  if (text) children.push(el('p', { class: 'muted', text }));
   const node = el('div', { class: 'empty-state' }, children);
   if (actionLabel && onAction) {
     node.appendChild(button(actionLabel, onAction, { variant: 'primary' }));

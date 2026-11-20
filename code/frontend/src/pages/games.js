@@ -10,9 +10,9 @@ const TIP_GAMES =
 
 function badge(item, record) {
   if (!item.ready) return el('span', { class: 'game-badge', text: '即将开放' });
-  if (!record || typeof record.best !== 'number') {
-    return el('span', { class: 'game-badge ok', text: '未玩过' });
-  }
+  // 反馈 3 · 模式 1：没有记录时 24 张卡都贴同一枚「未玩过」，零区分度。
+  // 现在"没有徽章"就表示没玩过，徽章位只留给有信息量的两种状态。
+  if (!record || typeof record.best !== 'number') return null;
   return el('span', { class: 'game-badge ok', text: `最佳 ${record.best}` });
 }
 

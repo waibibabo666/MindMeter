@@ -336,6 +336,44 @@ def test_sedimentation_is_per_account(fresh_client, app_instance):
     assert mine_assessment in summary["id"]  # 摘要 id 按测评隔离，跨账号不撞
 
 
+def test_clear_all_memory_also_clears_conversations(logged_client):
+    """第 3 轮实测的语义缺口：「清除全部记忆」以前不删对话。
+
+    界面写的是"删除后 AI 不会再引用"（A7 隐私透明），实现却把 ChatMessage
+    全留下 —— 承诺与实现不一致。
+    """
+    seed_assessment(logged_client)
+    chat(logged_client, "联想记忆怎么练")
+    before = memory(logged_client)
+    assert before["messages"] and before["summaries"]
+
+    cleared = logged_client.delete("/api/v1/memory")
+    assert cleared.status_code == 200, cleared.text
+
+    after = memory(logged_client)
+    assert after["messages"] == []
+    assert after["summaries"] == []
+    assert after["advice"] == []
+    assert not (after["profile"] or {}).get("confirmed")
+
+
+def test_clear_messages_keeps_summaries_and_advice(logged_client):
+    """对话页的「清空对话」必须是窄语义：只清对话。"""
+    seed_assessment(logged_client)
+    chat(logged_client, "联想记忆怎么练")
+    before = memory(logged_client)
+    assert before["messages"] and before["summaries"]
+
+    result = logged_client.delete("/api/v1/memory/messages")
+    assert result.status_code == 200, result.text
+    assert result.json()["removed"] >= 1
+
+    after = memory(logged_client)
+    assert after["messages"] == []
+    assert after["summaries"] == before["summaries"], "清空对话不该动摘要"
+    assert after["advice"] == before["advice"], "清空对话不该动建议记录"
+
+
 def test_single_message_delete_does_not_clobber_sedimented_rows(logged_client):
     """记忆面板的逐条删除必须是定向的。
 

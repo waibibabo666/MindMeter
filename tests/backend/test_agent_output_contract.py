@@ -169,11 +169,29 @@ def test_ability_rating_sentence_is_hard_blocked():
     assert ability_rating_hits(MODEL_RATING_REPLY)
 
 
-def test_ability_rating_sentence_falls_back_to_template(monkeypatch):
+def test_ability_rating_wording_is_repaired_not_discarded(monkeypatch):
+    """第 3 轮的行为变更：缺陷只在措辞时改写措辞，保留内容。
+
+    旧行为是整条退回模板 —— 于是「我哪方面比较强」这类问题 4/4 次都只能看到模板，
+    用户感受就是"agent 不会回答"。红线只要求不能错分数/结论，措辞可以就地改对。
+    """
     result = run_graph(monkeypatch, "为什么联想记忆低？", RATING_FACTS, MODEL_RATING_REPLY)
+    assert result["source"] == "llm", result
+    assert result["code"] == "wording_repaired", result
+    assert "表现中等" not in result["text"] and "表现较好" not in result["text"]
+    assert "本次分数相对较高" in result["text"]
+    # 关键：改写不能动数字
+    assert "6" in result["text"] and "8" in result["text"] and "71" in result["text"]
+
+
+def test_clinical_words_are_never_repaired(monkeypatch):
+    """临床词不是措辞问题，是真越界：必须整条拦死，不许改写后放行。"""
+    facts = {"am": {"hits": 4, "falseAlarms": 3, "score": 26}}
+    reply = "联想记忆命中 4、虚报 3，得分 26，这可以诊断出注意力的问题。仅供参考。"
+    result = run_graph(monkeypatch, "为什么联想记忆低？", facts, reply)
     assert result["source"] == "template", result
     assert result["code"] == "banned_word"
-    assert "表现中等" not in result["text"]
+    assert "诊断" not in result["text"]
 
 
 def test_rating_adjective_without_an_ability_object_is_allowed():
@@ -558,3 +576,56 @@ def test_greeting_with_results_offers_real_questions():
     assert result["intent"] == "greeting"
     assert "先完成一次测评" not in result["text"]
     assert "我的认知怎么样" in result["text"]
+
+
+# ---------- 第 3 轮实测：免责用法误伤 + 强项问题路由 ----------
+
+
+def test_disclaimer_use_of_clinical_words_is_not_a_violation():
+    """模型写「这不是诊断结论」曾被裸词表判 hard，正确的趋势回答退成模板。
+
+    而系统自己补写的固定声明（`SCOPE_BACKFILL`）含同一个"诊断"却合法 ——
+    等于只许官方免责、不许模型免责。现在两边同一套规则。
+    """
+    allowed = [
+        "这不是诊断结论，只是本次任务的原始表现。仅供参考。",
+        "以上不代表任何疾病或障碍的判断，不与人群比较。仅供参考。",
+        "我们不能给出治疗建议，也不做诊断。仅供参考。",
+        "分数不用于判断任何疾病，也不与人群比较。仅供参考。",
+    ]
+    for sentence in allowed:
+        assert not A.banned_word_hits(sentence, policy_for("chat_explain")), sentence
+
+    blocked = [
+        "这次结果可以诊断出注意力问题。仅供参考。",
+        "建议你接受治疗来改善表现。仅供参考。",
+        "这属于轻度抑郁的表现。仅供参考。",
+        "你的表现符合某种障碍。仅供参考。",
+    ]
+    for sentence in blocked:
+        assert A.banned_word_hits(sentence, policy_for("chat_explain")), sentence
+
+
+def test_banned_negation_window_is_near_the_hit():
+    """否定线索只在命中词附近才算，不能被远处一个"不"字洗白。"""
+    far = "我们不做任何承诺。另外这次结果可以诊断出注意力问题。仅供参考。"
+    assert "诊断" in A.banned_word_hits(far, policy_for("chat_explain"))
+
+
+def test_strength_questions_are_routed_to_summary():
+    """「我哪方面比较强」曾被强词「比较」吃掉路由到趋势，答非所问。"""
+    from importlib import import_module
+
+    words = import_module("app.agent.classify")
+    assert "比较" not in words.TREND_STRONG_WORDS
+    for question in ("我有什么优点", "我哪方面比较强", "我擅长什么", "我有什么不足"):
+        assert A.classify(question)["intent"] == A.INTENT["SUMMARY"], question
+    # 有趋势语境时仍然趋势优先
+    assert A.classify("这两次哪项比较强")["intent"] == A.INTENT["TREND"]
+
+
+def test_summary_prompt_teaches_non_rating_phrasing():
+    """提示词必须教模型怎么回答强项问题，否则它写「表现最好」被自己的红线拦掉。"""
+    prompt = prompt_for("summary")
+    assert "相对较高" in prompt
+    assert "表现最好" in prompt  # 明确点名这个写法会被判死

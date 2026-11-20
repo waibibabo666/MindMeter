@@ -423,3 +423,210 @@ test('登录页在 360px 下也不溢出', async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+/* ------------------------------------------------------------------ *
+ * 人工测试反馈 3 的三条，各自一条端到端断言。
+ * ------------------------------------------------------------------ */
+
+/** 把记忆灌成"历史很长"：20 条对话 + 1 条摘要 + 1 条建议（摘要与建议用来验证没被连带删掉）。 */
+async function seedLongConversation(page) {
+  const at = new Date('2026-11-14T12:00:00Z').toISOString();
+  const messages = [];
+  for (let index = 0; index < 20; index += 1) {
+    messages.push({
+      id: `e2e_clear_msg_${index}`,
+      role: index % 2 === 0 ? 'user' : 'assistant',
+      content: `第 ${index} 条历史消息，用来把消息流撑长。`,
+      at,
+      source: index % 2 === 0 ? undefined : 'template',
+    });
+  }
+  const seeded = await page.request.put('/api/v1/memory', {
+    data: {
+      profile: {},
+      summaries: [{ id: 'e2e_clear_sum', at, tier: 'standard', text: '标准 · 最低项言语理解 50' }],
+      advice: [{ id: 'e2e_clear_adv', at, title: '分散练习', shown: true, done: false }],
+      messages,
+    },
+  });
+  expect(seeded.ok()).toBeTruthy();
+}
+
+/**
+ * 反馈 3 第 1 条：进对话页不必先往下划才找得到输入框；并且有清空对话的入口。
+ * 用 360×640 的小视口测：这是历史上"必须滚动"的那一档。
+ */
+test('对话页：输入框在首屏内，清空对话只删消息', async ({ page }) => {
+  const errors = collectErrors(page);
+  await signIn(page);
+  await seedLongConversation(page);
+
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto('/#/chat');
+  await expect(page.locator('.chat-list .card')).toHaveCount(20);
+
+  const input = page.locator('.chat-input');
+  await expect(input).toBeVisible();
+  // 入场动画（.page > * 的 rise）会把元素临时下移 6px，轮询到落位为止，阈值不放松。
+  await expect
+    .poll(() =>
+      input.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return box.bottom;
+      }),
+    )
+    .toBeLessThanOrEqual(640 + 1);
+  const box = await input.boundingBox();
+  expect(box, '输入框要有 boundingBox').not.toBeNull();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+
+  // 消息容器自己滚到底：不需要用户去翻历史
+  const atBottom = await page
+    .locator('.chat-scroll')
+    .evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 2);
+  expect(atBottom).toBeTruthy();
+
+  // 清空入口：aria-label + 二次确认
+  const clear = page.locator('#chat-clear');
+  await expect(clear).toHaveAttribute('aria-label', /只删对话/);
+  const dialogs = [];
+  page.on('dialog', async (dialog) => {
+    dialogs.push(dialog.message());
+    await dialog.accept();
+  });
+  await clear.click();
+
+  await expect(page.locator('.chat-list .card')).toHaveCount(0);
+  await expect(page.getByText('还没有对话')).toBeVisible();
+  expect(dialogs.join(' ')).toContain('只删对话记录');
+
+  // 服务端真的删干净了，而摘要与建议还在（清空对话走的是逐条单行删除）
+  const after = await page.request.get('/api/v1/memory');
+  expect(after.ok()).toBeTruthy();
+  const memory = await after.json();
+  expect(memory.messages.length).toBe(0);
+  expect(memory.summaries.length).toBe(1);
+  expect(memory.advice.length).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+/** 反馈 3 第 3 条（测试图 05）：三张档位卡逐字重复同一串 8 个维度名 = 无效信息。 */
+test('档位卡：三张文字互异，不再逐字重复 8 个维度名', async ({ page }) => {
+  const errors = collectErrors(page);
+  await signIn(page);
+  await page.goto('/#/tier');
+
+  const cards = page.locator('.tier-card');
+  await expect(cards).toHaveCount(3);
+  const texts = await cards.allTextContents();
+  expect(new Set(texts).size, `三张档位卡文字雷同：${texts.join(' /// ')}`).toBe(3);
+
+  const fullNames = [
+    '言语理解',
+    '知觉速度',
+    '空间视觉化',
+    '联想记忆',
+    '数字运算',
+    '归纳推理',
+    '自然知识',
+    '言语流畅性',
+  ];
+  for (const text of texts) {
+    const hits = fullNames.filter((name) => text.includes(name));
+    expect(hits.length, `档位卡又列出了完整维度名：${hits.join('、')}`).toBe(0);
+    // 卡片上必须是有区分度的具体数字（题量/限时），不是空话
+    expect(text).toMatch(/\d+ 题/);
+    expect(text).toMatch(/\d+ 秒/);
+  }
+
+  // "三档测同样的维度"这句只在页面顶部说一次
+  await expect(page.locator('.hint[data-tip*="同样的 8 个维度"]')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+/** 反馈 3 第 2 条：全站基准字号放大，而且字号只有 app.css 的 --fs-* 一个来源。 */
+test('字号放大：body 16px、辅助文字与标题跟着上调', async ({ page }) => {
+  const errors = collectErrors(page);
+  await signIn(page);
+  // 报告页要有数据，否则它走「还没有结果」空态，测不到表格会不会被放大后的字号挤破。
+  const seeded = await page.request.post('/api/v1/assessments', {
+    data: { session: session('s_font', '2026-11-14T12:00:00Z', 6, 20, 8, 8) },
+  });
+  expect(seeded.ok()).toBeTruthy();
+  await page.goto('/#/');
+
+  const scale = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--fs-body').trim(),
+  );
+  expect(scale, '--fs-body 变量没生效').toBe('16px');
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).fontSize))
+    .toBe('16px');
+  await expect(page.locator('.tiny').first()).toHaveCSS('font-size', '13.5px');
+
+  // 说明页把三类文字都摆在一屏里，最适合验"辅助文字与标题跟着上调"
+  await page.goto('/#/about');
+  await expect(page.locator('.page-title')).toHaveCSS('font-size', '26px');
+  await expect(page.locator('.card-title').first()).toHaveCSS('font-size', '17px');
+  await expect(page.locator('.muted').first()).toHaveCSS('font-size', '14px');
+  await expect(page.locator('.lead')).toHaveCSS('font-size', '15px');
+
+  await page.goto('/#/tier');
+  await expect(page.locator('.tier-metric').first()).toHaveCSS('font-size', '13.5px');
+  await expect(page.locator('.tier-card').first()).toBeVisible();
+
+  // 字号上调后窄屏仍然不许横向溢出（阈值与既有条目一致，没有放松）
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const path of ['/', '/#/tier', '/#/report', '/#/chat', '/#/about', '/#/settings']) {
+    await page.goto('http://127.0.0.1:8100' + path);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} horizontal overflow`).toBeLessThanOrEqual(1);
+  }
+
+  // 八维表字号上调后仍然列不挤破：表格不出横向滚动、单元格文字不被裁掉
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/#/report');
+  const table = page.locator('.page-report > .report-table');
+  await expect(table).toBeVisible();
+  await expect(table.locator('tbody td').first()).toBeVisible();
+  const squeezed = await table.evaluate((node) =>
+    [...node.querySelectorAll('tbody td')].some((cell) => cell.scrollWidth > cell.clientWidth + 1),
+  );
+  expect(squeezed, '有单元格被字号撑出横向滚动').toBe(false);
+  const fits = await table.evaluate(
+    (node) => node.scrollWidth <= node.parentElement.clientWidth + 1,
+  );
+  expect(fits, '八维表宽度超出主区').toBe(true);
+
+  // 说明页的维度表同样不能挤破
+  await page.goto('/#/about');
+  const aboutFits = await page
+    .locator('.report-table')
+    .first()
+    .evaluate((node) => node.scrollWidth <= node.parentElement.clientWidth + 1);
+  expect(aboutFits).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+/** 反馈 3 · 模式 4：报告页八维表里「未测 / 本档未包含」的占位行合并成一行折叠。 */
+test('报告页：未测维度合并成一行，不稀释已测结果', async ({ page }) => {
+  const errors = collectErrors(page);
+  await signIn(page);
+  const created = await page.request.post('/api/v1/assessments', {
+    data: { session: session('s_fold', '2026-11-14T12:00:00Z', 6, 20, 8, 8) },
+  });
+  expect(created.ok()).toBeTruthy();
+
+  await page.goto('/#/report');
+  // 4 个已测行 + 1 行折叠（原来是 4 行有效 + 4 行灰字占位）
+  await expect(page.locator('.page-report > .report-table tbody tr')).toHaveCount(5);
+  const summary = page.locator('.page-report > .report-table .untested-fold summary');
+  await expect(summary).toContainText('未测 4 项');
+
+  await summary.click();
+  await expect(page.getByText('自然知识：本档未包含，不按 0 计。')).toBeVisible();
+  await expect(page.getByText(/8 个维度中测了 4 个/)).toBeVisible();
+  expect(errors).toEqual([]);
+});

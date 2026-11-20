@@ -18,9 +18,13 @@ function bestOf(gameId) {
 function introView(root, item, best, onStart) {
   root.appendChild(
     el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title' }, [item.title, hint(TIP_LOCAL_BEST)]),
+      // 页面 h1 已经是游戏名，卡片标题再写一遍是同义反复（反馈 3 · 模式 2）：
+      // 这里只留玩法说明与本地最佳。
       el('p', { class: 'muted', text: item.desc }),
-      el('p', { class: 'tiny', text: best === null ? '还没有记录' : `本设备最佳：${best} 分` }),
+      el('p', { class: 'tiny' }, [
+        best === null ? '还没有记录' : `本设备最佳：${best} 分`,
+        hint(TIP_LOCAL_BEST),
+      ]),
       el('div', { class: 'row' }, [
         button('开始', onStart, { variant: 'primary' }),
         button('返回游戏中心', () => globalThis.location.assign('#/games'), { variant: 'ghost' }),

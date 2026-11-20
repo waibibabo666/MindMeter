@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MM_", extra="ignore")
 
     app_name: str = "MindMeter"
-    app_version: str = "0.3.4"
+    app_version: str = "0.3.5"
 
     # --- storage -----------------------------------------------------------
     database_url: str = ""

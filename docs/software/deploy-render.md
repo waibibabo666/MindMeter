@@ -103,13 +103,37 @@
 
 ## 5. 验收清单
 
+### 5.1 部署前：用生产参数本地预检（推荐先跑这个）
+
+```powershell
+python scripts/check_prod_runtime.py
+```
+
+它**不是**跑现有 dev 服务，而是用与 `render.yaml` 一致的环境变量（`MM_AUTO_MIGRATE=1`、
+`MM_EXPOSE_LOGS=false`、`MM_COOKIE_SECURE=auto`、`MM_RAG_MODE=keyword`、`MM_DATA_DIR=/tmp` 等价路径）
+另起一个 uvicorn 进程，把关键链路真跑一遍：liveness/readiness、Cookie 属性、
+`/logs` 是否按开关拒绝、服务端计分、报告解读是否走模型、对话是否沉淀记忆、
+**两种清除语义**（`DELETE /memory/messages` 只清对话 vs `DELETE /memory` 清全部四类）、
+同源静态页与模块可达。期望 **11/11**。
+
+> 一个必须知道的本地差异：这个脚本刻意**不传** `--forwarded-allow-ips "*"`。
+> Windows 的 C 运行时会在当前目录展开裸 `*`，uvicorn 收到多余位置参数直接退出
+> （`Error: Got unexpected extra arguments (alembic.ini app pyproject.toml …)`）；
+> Render 用 `sh -c "<startCommand>"` 执行，双引号内的 `*` 不会被展开，**线上那条命令是安全的**。
+> 如果你在 Windows 上手工复制 startCommand 调试，请把 `*` 换成具体 IP 或 `127.0.0.1`。
+
+### 5.2 部署后：冒烟检查
+
 本地或线上都可以跑同一条命令（它会注册临时账号、验证隔离、导出、注销，最后自己清理）：
 
 ```powershell
 python scripts/smoke_web_deploy.py https://<service>.onrender.com
 ```
 
-期望 19/19 全绿，覆盖：liveness/readiness、静态页与安全头、注册 Cookie 属性、会话探测、匿名 401、跨源写拒绝、服务端计分、报告解读（模型或模板兜底）、对话、导出无密钥、**另一账号读不到（404）**、AI 设置只读、`PUT /settings/ai` 403、登出、注销后再登录失败。
+期望 **22/22** 全绿，覆盖：liveness/readiness、静态页与安全头、注册 Cookie 属性、会话探测、匿名 401、
+跨源写拒绝、服务端计分（含**分档题量**：标准档 nc/ir/ni 不得为 null）、报告解读（模型或模板兜底）、
+**配了 Key 时解读必须来自模型**、`settings/ai/test` 必须成功、对话、导出无密钥、
+**另一账号读不到（404）**、AI 设置只读、`PUT /settings/ai` 403、登出、注销后再登录失败。
 
 手工回归（3 分钟）：
 
@@ -160,6 +184,7 @@ python scripts/smoke_web_deploy.py https://<service>.onrender.com
 - [`.python-version`](../../.python-version)：3.13
 - [`docs/software/local-development.md`](local-development.md)：本地起服务与测试矩阵（部署前在本地跑同一套）
 - [`scripts/smoke_web_deploy.py`](../../scripts/smoke_web_deploy.py)：部署后冒烟检查
+- [`scripts/check_prod_runtime.py`](../../scripts/check_prod_runtime.py)：部署前用生产参数本地预检
 - [`scripts/e2e_server.py`](../../scripts/e2e_server.py)：本地一键起库/服务（`--db-only`、`--stop`）
 - [`scripts/check_frontend_dead_code.py`](../../scripts/check_frontend_dead_code.py)：前端不可达模块检查（防止桌面 legacy 回流）
 - [`docs/adr/0003-web-accounts-and-hosted-deployment.md`](../adr/0003-web-accounts-and-hosted-deployment.md)：账号与部署决策

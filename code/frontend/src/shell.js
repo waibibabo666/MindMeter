@@ -255,7 +255,8 @@ export function createShell({ ctx, router }) {
     railNode.appendChild(
       el('p', {
         class: 'rail-note tiny',
-        text: '站点托管 · 按账号隔离 · 导出不含密钥 · 非临床诊断',
+        // 与侧栏 .sidefoot 的口径行错开：这里只写侧栏没有的两条（反馈 3 · 模式 1）。
+        text: '导出不含密钥 · 换设备登录仍是同一份数据',
       }),
     );
   }

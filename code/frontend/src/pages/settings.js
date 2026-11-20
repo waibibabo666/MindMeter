@@ -16,10 +16,11 @@ import { changePassword, deleteAccount, messageFor, passwordIssues, session } fr
 /* 反馈 2：每个板块只留名字，解释收进标题旁的浮框；
    风险与限制、注销后果这类会影响决策的话仍然写在页面上。 */
 const TIP_RELOGIN = '修改后其他设备上的登录状态会全部失效，本设备保持登录。';
+// 反馈 3 · 模式 3：浮框不再复述输入框旁边已经写着的「需要输入当前密码」。
 const TIP_ERASE =
-  '需要输入当前密码；删除是不可恢复的，会连带测评、分数、记忆、对话与运行记录一起清掉。如需留档，请先在「我的数据」里导出。';
-const TIP_AI =
-  '模型由站点统一提供（服务端环境变量），这里只读：浏览器不接收也不保存任何密钥；未配置、超时、限流或鉴权失败时，解读自动回退到内置模板。';
+  '注销是立即级联删除：测评、分数、记忆、对话与运行记录一起清掉。如需留档，请先在「我的数据」里导出。';
+// 「未配置就回退模板」这一条已经写在下面的状态行里，浮框不重复（反馈 3 · 模式 2）。
+const TIP_AI = '模型由站点统一提供（服务端环境变量），这里只读：浏览器不接收也不保存任何密钥。';
 const TIP_DATA =
   '导出的是本账号的完整数据 JSON（测评、分数、记忆、对话、进度），不含任何密钥；导入会按相同 id 跳过，不覆盖已有记录。';
 const TIP_SOUND =
@@ -73,23 +74,23 @@ function accountRow(label, value) {
 }
 
 function buildPasswordCard(ctx) {
+  // placeholder 只补字段标签没有的信息（长度要求），同义反复的删掉（反馈 3 · 模式 3）。
   const current = el('input', {
     class: 'input',
     type: 'password',
     autocomplete: 'current-password',
-    placeholder: '当前密码',
   });
   const next = el('input', {
     class: 'input',
     type: 'password',
     autocomplete: 'new-password',
-    placeholder: `新密码，至少 8 位`,
+    placeholder: `至少 8 位`,
   });
   const confirm = el('input', {
     class: 'input',
     type: 'password',
     autocomplete: 'new-password',
-    placeholder: '再输入一次新密码',
+    placeholder: '再输入一次',
   });
   const status = statusNode();
 
@@ -137,7 +138,7 @@ function buildAccountCard(ctx) {
     class: 'input',
     type: 'password',
     autocomplete: 'current-password',
-    placeholder: '输入当前密码以确认',
+    placeholder: '输入当前密码',
   });
 
   const erase = async () => {

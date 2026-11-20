@@ -136,6 +136,32 @@ async function main() {
     assert(messages[0].id === 'm5', 'oldest messages should be dropped');
   });
 
+  test('清空对话：只删 messages，摘要 / 建议 / 画像都不动', async () => {
+    memory.clearAllMemory();
+    memory.saveSummary({ scores: { vc: 10 } });
+    memory.recordAdvice({ id: 'kb-plan-09', title: '分散练习' });
+    memory.confirmProfile({ goal: '备考' });
+    storage.addMessage({ id: 'c1', role: 'user', content: '为什么联想记忆低' });
+    storage.addMessage({ id: 'c2', role: 'assistant', content: '模板回答' });
+
+    const result = await memory.clearConversation();
+    const view = memory.memoryOverview();
+
+    assert(result.attempted === 2, `应尝试删 2 条，实际 ${result.attempted}`);
+    assert(view.messages.length === 0, `对话应清空，实际 ${view.messages.length} 条`);
+    assert(view.summaries.length === 1, '摘要不该被清空对话删掉');
+    assert(view.advice.length === 1, '建议记录不该被清空对话删掉');
+    assert(view.profileUsable === true, '画像不该被清空对话动到');
+  });
+
+  test('清空对话：没有消息时是空操作，不会误删别的记忆', async () => {
+    memory.clearAllMemory();
+    memory.recordAdvice({ id: 'kb-plan-10', title: '转介通道' });
+    const result = await memory.clearConversation();
+    assert(result.attempted === 0, '没有消息时不该发起删除');
+    assert(memory.memoryOverview().advice.length === 1, '空操作不该动到建议');
+  });
+
   test('汇总：用量统计', () => {
     memory.clearAllMemory();
     memory.saveSummary({ scores: { am: 3 } });

@@ -185,8 +185,33 @@ UNRELATED_WORDS = [
 ]
 # 趋势触发词：强词单独出现即可路由；弱词必须与维度名/分数语境同现，
 # 避免「上次那个建议怎么还没做」这类跟进句被误读成趋势解释。
-TREND_STRONG_WORDS = ["趋势", "对比", "比较", "变化", "复测", "差多少", "有什么不一样"]
-TREND_WEAK_WORDS = ["上次", "涨跌"]
+# 「比较」第 3 轮实测从强词降级：「我哪方面比较强」曾被它整句吃掉路由到趋势，
+# 回一段两次分数差值 —— 答非所问。现在必须与"两次/上次/复测/变化"同现才算趋势。
+TREND_STRONG_WORDS = ["趋势", "对比", "变化", "复测", "差多少", "有什么不一样"]
+
+# 强项/弱项询问（第 3 轮实测缺口）：「我有什么优点」「我擅长什么」「我哪方面比较强」
+# 「我有什么不足」以前全部落到 clarify，要用户自己说出维度名 —— 这是最容易被
+# 当成"agent 不聪明"的一类回答。它们其实有明确意图：本次哪几项相对高/低。
+# 路由到 summary（它只描述"本次分数相对较高的维度"，不做能力评价，
+# 评级措辞仍由 banned_word / mechanism_speculation 在输出侧拦）。
+STRENGTH_WORDS = [
+    "优点",
+    "强项",
+    "擅长",
+    "哪方面强",
+    "比较强",
+    "更强",
+    "最好",
+    "最高",
+    "不足",
+    "短板",
+    "弱项",
+    "最差",
+    "最低",
+    "比较弱",
+    "哪方面弱",
+]
+TREND_WEAK_WORDS = ["上次", "涨跌", "比较", "差别", "差距", "有没有提高", "有没有下降"]
 TREND_CONTEXT_WORDS = [*DIMENSION_WORDS, "分数", "得分", "这次", "两次", "复测"]
 # 自责重导向（ADR-0002 决策 6）：主语与贬义 6 字窗内共现才触发，
 # 「这个方法没用」这类指向物的句子不触发。
@@ -370,6 +395,14 @@ def classify(question: str) -> dict:
             "intent": INTENT["TREND"],
             "matched": [*trend, *hits(text, TREND_WEAK_WORDS)],
             "reason": "trend-word",
+        }
+    # 强项/弱项 → summary（放在趋势之后：「这两次哪项比较强」有趋势语境，仍走趋势）。
+    strength = hits(text, STRENGTH_WORDS)
+    if strength:
+        return {
+            "intent": INTENT["SUMMARY"],
+            "matched": strength,
+            "reason": "strength-question",
         }
     if any(phrase in text for phrase in SUMMARY_PHRASES):
         return {"intent": INTENT["SUMMARY"], "matched": [], "reason": "summary-question"}

@@ -49,26 +49,69 @@ function ciFor(dimId, score, payload, level) {
   return ciHalfWidth(score, n, 0.25);
 }
 
-function reportRows(scored, results, level) {
-  return DIMS.map((dim) => {
-    const score = scored.scores[dim.id];
-    const has = typeof score === 'number';
-    const payload = results[dim.id];
-    const ci = has ? ciFor(dim.id, score, payload, level) : null;
-    const width = has ? Math.max(3, Math.min(100, score)) : 0;
-    return el('tr', { class: has ? '' : 'untested' }, [
-      el('th', { scope: 'row', text: dim.name }),
-      el('td', { class: 'score-cell' }, [
-        el('span', { class: 'score-num', text: has ? String(score) : '未测' }),
-        ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
-        has ? el('div', { class: 'gauge' }, [el('i', { style: `width:${width}%` })]) : null,
-      ]),
-      el('td', {
-        class: 'muted',
-        text: has ? describe(dim.id, payload?.metrics) : '本档未包含',
-      }),
-    ]);
+/**
+ * 八维表的行。
+ *
+ * 人工测试反馈 3 第 3 条（同类问题排查 · 模式 4）：只测了 4 项时，表里一半以上
+ * 是「未测 / 本档未包含」的占位行，有效信息被稀释。现在已测行照常列出，
+ * 未测维度**合并成一行可展开的折叠**——「未测显示为未测」这条口径仍然成立
+ * （LIMITS 与说明页都要求它可见），但不再用 8 行灰字占满首屏。
+ */
+function untestedRow(dim) {
+  return el('tr', { class: 'untested' }, [
+    el('th', { scope: 'row', text: dim.name }),
+    el('td', { class: 'score-cell' }, [el('span', { class: 'score-num', text: '未测' })]),
+    el('td', { class: 'muted', text: '本档未包含' }),
+  ]);
+}
+
+function untestedFold(rows) {
+  const summary = el('summary', {
+    class: 'tiny',
+    text: `未测 ${rows.length} 项：${rows.map((row) => row.name).join(' · ')}`,
   });
+  return el('tr', { class: 'untested-fold' }, [
+    el('td', { colspan: '3' }, [
+      el('details', {}, [
+        summary,
+        el(
+          'ul',
+          { class: 'plain-list' },
+          rows.map((row) => el('li', { text: `${row.name}：本档未包含，不按 0 计。` })),
+        ),
+      ]),
+    ]),
+  ]);
+}
+
+function reportRows(scored, results, level) {
+  const measured = [];
+  const untested = [];
+  for (const dim of DIMS) {
+    const score = scored.scores[dim.id];
+    if (typeof score !== 'number') {
+      untested.push(dim);
+      continue;
+    }
+    const payload = results[dim.id];
+    const ci = ciFor(dim.id, score, payload, level);
+    const width = Math.max(3, Math.min(100, score));
+    measured.push(
+      el('tr', {}, [
+        el('th', { scope: 'row', text: dim.name }),
+        el('td', { class: 'score-cell' }, [
+          el('span', { class: 'score-num', text: String(score) }),
+          ci === null ? null : el('span', { class: 'ci', text: ` ±${ci}` }),
+          el('div', { class: 'gauge' }, [el('i', { style: `width:${width}%` })]),
+        ]),
+        el('td', { class: 'muted', text: describe(dim.id, payload?.metrics) }),
+      ]),
+    );
+  }
+  // 全测或全未测时不折叠：前者没有占位行，后者折叠起来反而更找不到。
+  if (untested.length === 0) return measured;
+  if (measured.length === 0) return untested.map(untestedRow);
+  return [...measured, untestedFold(untested)];
 }
 
 function reportScores(ctx, latest, results, level) {
@@ -164,10 +207,20 @@ function contextCard() {
   ]);
 }
 
+/** 未测行折不折叠，页首那句口径就得跟着变：别写「见最后一行」而最后一行其实没折叠。 */
+function leadCountText(radar) {
+  const rest = radar.total - radar.measuredCount;
+  if (rest === 0) return `8 个维度这次全部测到了。`;
+  if (radar.measuredCount === 0) {
+    return `8 个维度这次都没有可计分的作答，全部显示「未测」（不按 0 计）。`;
+  }
+  return `8 个维度中测了 ${radar.measuredCount} 个，其余 ${rest} 个未测，收在表格最后一行（不按 0 计）。`;
+}
+
 function fullReport(ctx, results, scored, radar, assessmentId, level, cleanup) {
   return [
     el('p', { class: 'lead' }, [
-      `8 个维度中测了 ${radar.measuredCount} 个，其余 ${radar.total - radar.measuredCount} 个显示「未测」。`,
+      leadCountText(radar),
       hint('分数旁边的 ± 是这一次分数的区间：题量越少、限时越短，区间越宽。', { edge: true }),
     ]),
     contextCard(),

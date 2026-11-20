@@ -4,11 +4,17 @@
  * 只做三件事：渲染消息、把问题交给 /api/v1/chat、用返回的消息刷新。
  * 所有安全规则（意图分类、禁用词、数字溯源、引用、回退模板）都在后端
  * LangGraph Agent 里，这里不重复实现。
+ *
+ * 人工测试反馈 3 第 1 条（「没有清空对话的按钮，每次进入都要往下划」）：
+ *   - 加「清空对话」入口（只删 messages，见 memory.js 的 clearConversation 注释）；
+ *   - 消息流改成**有高度上限的滚动容器**，进入页面与每次发完都滚到底部；
+ *   - 输入框那一块 sticky 在视口底部，历史再多也不用先找输入框。
  */
 
 import { button, el, emptyState, hint } from '../ui.js';
 import { api } from '../api.js';
 import { cache } from '../cache.js';
+import { clearConversation } from '../memory.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
 import { buildFacts, takePendingQuestion } from '../chat.js';
 
@@ -20,6 +26,11 @@ function fmtTime(at) {
   const date = new Date(at);
   if (Number.isNaN(date.getTime())) return '';
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+/** 把消息容器停在最后一条：进入页面、发完消息、等待气泡出现时都调用。 */
+function scrollToListBottom(node) {
+  if (node) node.scrollTop = node.scrollHeight;
 }
 
 function citationItems(citations) {
@@ -180,10 +191,11 @@ function profileDraftCard(ctx, host) {
 }
 
 function emptyChat() {
+  // 「Enter 发送，Shift+Enter 换行」已经写在输入框的 placeholder 里，
+  // 空态再复述一遍就是同一句话出现两次（反馈 3 · 模式 2）。
   return emptyState({
     title: '还没有对话',
     text: '可以问「为什么联想记忆低」「知觉速度怎么练」。',
-    hintText: 'Enter 发送，Shift+Enter 换行。',
   });
 }
 
@@ -204,6 +216,10 @@ export function renderChat(root, ctx, options = {}) {
     { class: 'chat-list' },
     messages.length ? messages.map(messageNode) : [emptyChat()],
   );
+  // 反馈 3：消息流是一个有上限的滚动容器，整页不再被历史拉长。
+  // 输入框那一块也放在容器里、sticky 在容器底边：滚到底时它是正文的最后一段
+  // （不会有任何东西被它永久盖住），没滚到底时它钉在视口里始终看得见。
+  const scroller = el('div', { class: 'chat-scroll' }, [list]);
 
   const input = el('textarea', {
     class: 'input chat-input',
@@ -228,6 +244,49 @@ export function renderChat(root, ctx, options = {}) {
     'aria-live': 'polite',
     text: '',
   });
+
+  /* 反馈 3 第 1 条：清空对话的入口。
+     走的是"逐条 DELETE /memory/messages/{id}"，只删 messages；为什么不用
+     DELETE /memory / PUT /memory，理由与代价写在 memory.js 的 clearConversation 上。 */
+  const clearButton = button(
+    messages.length ? `清空对话（${messages.length}）` : '清空对话',
+    onClearConversation,
+    {
+      variant: 'ghost',
+      ariaLabel: '清空本账号的对话记录：只删对话，摘要、建议记录与画像都不删',
+    },
+  );
+  clearButton.id = 'chat-clear';
+
+  async function onClearConversation() {
+    const count = (readMemory().messages || []).length;
+    if (count === 0) {
+      ctx.toast('对话已经是空的');
+      return;
+    }
+    // 二次确认：复用记忆页/设置页的 window.confirm 模式，并把"删什么、留什么"当面说清。
+    if (
+      !window.confirm(`清空这 ${count} 条对话？只删对话记录，摘要、建议记录与画像都不会被删除。`)
+    ) {
+      return;
+    }
+    clearButton.disabled = true;
+    send.disabled = true;
+    status.textContent = '正在清空对话…';
+    const result = await clearConversation();
+    status.textContent = '';
+    if (result.failed > 0) {
+      ctx.toast(`有 ${result.failed} 条没能删除，刷新后可能还会出现`);
+    } else if (!result.refreshed) {
+      ctx.toast('对话已清空，但没能确认服务端状态；刷新后如仍在请再试一次');
+    } else {
+      ctx.toast(`已清空 ${result.attempted} 条对话，摘要与建议保留`);
+    }
+    // 删除后必须重渲染：cache.memory 已由 clearConversation 刷新，不留脏数据。
+    root.replaceChildren();
+    renderChat(root, ctx, { restored: true });
+  }
+
   /* 等待可感知（用户测试表 A6）：一次请求分三个阶段说清楚，
      并在消息流里放一个真的在动的等待气泡，而不是只改一行小字。 */
   const STAGES = [
@@ -264,7 +323,7 @@ export function renderChat(root, ctx, options = {}) {
       el('span', { class: 'pending-text', text: STAGES[0].text }),
     ]);
     listNode.appendChild(bubble);
-    bubble.scrollIntoView({ block: 'nearest' });
+    scrollToListBottom(scroller);
     stageTimers = STAGES.slice(1).map((stage) =>
       setTimeout(() => {
         const node = bubble.querySelector('.pending-text');
@@ -280,6 +339,8 @@ export function renderChat(root, ctx, options = {}) {
     input.value = '';
     autoGrow();
     send.disabled = true;
+    // 发送与清空互斥：否则一次清空会把刚发出去的那条一起删掉。
+    clearButton.disabled = true;
     send.textContent = '…';
     status.textContent = '';
     showPending(question);
@@ -316,15 +377,22 @@ export function renderChat(root, ctx, options = {}) {
     send.disabled = true;
   }
 
+  const composer = el('div', { class: 'chat-composer' }, [
+    el('div', { class: 'row' }, [input, send]),
+    status,
+  ]);
+
   root.appendChild(
-    el('section', { class: 'page', 'aria-labelledby': 'chat-title' }, [
+    el('section', { class: 'page page-chat', 'aria-labelledby': 'chat-title' }, [
       el('p', { class: 'kicker', text: '问问 AI' }),
       el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
       configBanner(ctx, settings),
-      list,
+      el('div', { class: 'chat-toolbar' }, [
+        clearButton,
+        el('p', { class: 'tiny', text: '只删对话记录；摘要、建议记录与画像保留。' }),
+      ]),
+      scroller,
       profileDraftCard(ctx, root),
-      el('div', { class: 'row' }, [input, send]),
-      status,
       el('div', { class: 'row' }, [
         button('返回报告', () => ctx.go('/report'), { variant: 'ghost' }),
         button('我的记忆', () => ctx.go('/memory'), { variant: 'ghost' }),
@@ -333,16 +401,27 @@ export function renderChat(root, ctx, options = {}) {
         'AI 生成 · 仅解释本次结果 · 非诊断。提问会发送给站点配置的模型服务，不要把手机号、身份证号等敏感信息发进来。',
         hint(TIP_CHAT, { edge: true }),
       ]),
+      composer,
     ]),
   );
 
-  // 发完消息后回到输入框、并把最新一条滚进视野；首次进入有记录时也滚到底部。
-  if (restored || messages.length > 0) {
-    autoGrow();
-    if (restored && hasFacts) input.focus();
-    const lastMessage = root.querySelector('.chat-list > :last-child');
-    if (lastMessage) lastMessage.scrollIntoView({ block: 'nearest' });
-  }
+  root.appendChild(
+    el('section', { class: 'page page-chat', 'aria-labelledby': 'chat-title' }, [
+      el('p', { class: 'kicker', text: '问问 AI' }),
+      el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
+      configBanner(ctx, settings),
+      el('div', { class: 'chat-toolbar' }, [
+        clearButton,
+        el('p', { class: 'tiny', text: '只删对话记录；摘要、建议记录与画像保留。' }),
+      ]),
+      scroller,
+    ]),
+  );
+
+  // 反馈 3：进入页面就停在最后一条；发完消息（restored）同样回到底部并把光标放回输入框。
+  autoGrow();
+  scrollToListBottom(scroller);
+  if (restored && hasFacts) input.focus({ preventScroll: true });
 
   // 趋势页等入口带过来的预置问题：进入页面自动发送一次（一次性消费）。
   const pending = takePendingQuestion();

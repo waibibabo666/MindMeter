@@ -104,9 +104,17 @@ def replace_memory(
 
 @router.delete("/memory")
 def clear_memory(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """清除本账号的全部记忆：画像、摘要、建议**和对话**。
+
+    第 3 轮实测发现的语义缺口：这里以前只删 advice/summary 并重置画像，
+    **完全不删 ChatMessage**。于是记忆页那个「清除全部记忆」按下去之后，
+    对话记录一条不少地留在原地 —— 而界面写的是"删除后 AI 不会再引用"，
+    属于对用户承诺与实现不一致（课程测试表 A7 隐私透明）。
+    """
     uid = int(user.id)
     db.execute(delete(MemoryAdvice).where(MemoryAdvice.user_id == uid))
     db.execute(delete(MemorySummary).where(MemorySummary.user_id == uid))
+    db.execute(delete(ChatMessage).where(ChatMessage.user_id == uid))
     row = db.get(MemoryProfile, uid)
     if row is not None:
         row.goal = ""
@@ -116,6 +124,20 @@ def clear_memory(user: User = Depends(auth.require_user), db: Session = Depends(
         row.confirmed_at = None
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/memory/messages")
+def clear_messages(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """只清对话，保留画像/摘要/建议。
+
+    对话页的「清空对话」需要这个语义：以前只能靠前端逐条
+    `DELETE /memory/messages/{id}`（最多 20 次串行往返）实现。
+    路径与单数版 `DELETE /memory/messages/{message_id}` 不冲突。
+    """
+    uid = int(user.id)
+    removed = db.execute(delete(ChatMessage).where(ChatMessage.user_id == uid))
+    db.commit()
+    return {"ok": True, "removed": removed.rowcount or 0}
 
 
 @router.put("/memory/profile")

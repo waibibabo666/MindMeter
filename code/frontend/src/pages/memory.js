@@ -19,16 +19,17 @@ import {
 
 const FIELD_LABEL = { goal: '目标', preference: '偏好', constraint: '约束' };
 
-/* 悬浮解释（反馈 2）：板块名留在页面上，长句收进浮框。 */
+/* 悬浮解释（反馈 2）：板块名留在页面上，长句收进浮框。
+   反馈 3 · 模式 1/2：浮框与空态文案不再互相复述——同一条信息只说一遍，
+   空态只留"这里还没有 X"，解释归浮框；影响决策的规则句仍然常驻页面。 */
 const TIP_PROFILE =
   '画像来自对话里提到的备考、作息与时间安排，只是线索；必须由你确认后 AI 才会引用，用来决定建议的详略，不确认则一直不写入。';
 const TIP_SUMMARY = '每次测评可生成一条，只记录最低项和建议数量，不写能力评价。';
 const TIP_ADVICE = 'AI 引用练习类知识块给出建议后，会在这里留下一条，方便你打勾完成或删除。';
+const TIP_MESSAGES =
+  '想整份清空对话，去「对话」页用「清空对话」按钮：那里只删对话记录，本页的摘要与建议记录都会保留。';
 
-const ACTION_STYLE =
-  'display:inline-flex;align-items:center;min-height:var(--tap);padding:0 var(--space-8);' +
-  'background:none;border:0;color:var(--accent-deep);text-decoration:underline;' +
-  'font-size:12.5px;cursor:pointer';
+/* 条目操作按钮：样式在 app.css 的 .mem-action（字号一律走全站刻度，不在页面里硬编码）。 */
 
 function fmtDate(value) {
   if (!value) return '—';
@@ -38,7 +39,7 @@ function fmtDate(value) {
 }
 
 function actionButton(label, onClick) {
-  return el('button', { type: 'button', style: ACTION_STYLE, text: label, onclick: onClick });
+  return el('button', { type: 'button', class: 'mem-action', text: label, onclick: onClick });
 }
 
 /**
@@ -124,7 +125,6 @@ function summaryCard(view, ctx, rerender) {
     card.appendChild(
       emptyState({
         title: '还没有摘要',
-        text: '每次测评可以生成一条。',
         art: false,
       }),
     );
@@ -169,7 +169,6 @@ function adviceCard(view, ctx, rerender) {
     card.appendChild(
       emptyState({
         title: '还没有建议记录',
-        text: 'AI 给出练习建议后会留在这里。',
         actionLabel: '去对话',
         onAction: () => ctx.go('/chat'),
         art: false,
@@ -209,7 +208,7 @@ export function renderMemory(root, ctx) {
     summaryCard(view, ctx, rerender),
     adviceCard(view, ctx, rerender),
     el('div', { class: 'card' }, [
-      titled('h2', '对话记录', '对话只保留本账号最近这些条，更早的会自动清掉。'),
+      titled('h2', '对话记录', TIP_MESSAGES),
       el('p', {
         class: 'tiny',
         text: `保留最近 ${view.usage.maxMessages} 条，当前 ${view.usage.messages} 条。`,

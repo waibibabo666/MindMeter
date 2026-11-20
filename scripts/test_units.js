@@ -299,6 +299,52 @@ async function main() {
     );
   });
 
+  // ---------- pages/tier：档位卡只放有区分度的数字（人工测试反馈 3 第 3 条） ----------
+  test('tier.tierMetrics：三档文案互不相同，且数字来自 LEVEL_SPEC 而不是写死', async () => {
+    const { TIERS } = await import(href('data.js'));
+    const { LEVEL_SPEC } = await import(href('scoring/levels.js'));
+    const { tierMetrics } = await import(href('pages/tier.js'));
+
+    const rows = TIERS.map((tier) => tierMetrics(tier));
+    const joined = rows.map((row) => row.join(' | '));
+    eq(new Set(joined).size, joined.length, `三张档位卡的文字雷同：${joined.join(' /// ')}`);
+
+    // 数字必须等于 LEVEL_SPEC 的实际值：改了档位参数表，卡片必须跟着变。
+    assert(
+      rows[0].includes(`言语 ${LEVEL_SPEC.quick.vc.items} 题`),
+      `快测卡的言语题量不是 LEVEL_SPEC 的值：${rows[0].join(' / ')}`,
+    );
+    assert(
+      rows[2].includes(`知觉 ${LEVEL_SPEC.deep.ps.seconds} 秒`),
+      `精细卡的知觉限时不是 LEVEL_SPEC 的值：${rows[2].join(' / ')}`,
+    );
+    assert(
+      rows[1].includes(`流畅 ${LEVEL_SPEC.standard.vf.seconds} 秒`),
+      `标准卡的流畅限时不是 LEVEL_SPEC 的值：${rows[1].join(' / ')}`,
+    );
+
+    // 总题量 = LEVEL_SPEC 里所有"题数型"维度之和（限时维度不计）。
+    const total = Object.values(LEVEL_SPEC.quick).reduce(
+      (sum, spec) => sum + (typeof spec.items === 'number' ? spec.items : 0),
+      0,
+    );
+    assert(rows[0][0] === `共 ${total} 题`, `快测总题量应为 共 ${total} 题，实际 ${rows[0][0]}`);
+  });
+
+  test('tier.tierMetrics：只列三档取值互不相同的维度，不再逐字重复八维名单', async () => {
+    const { TIERS } = await import(href('data.js'));
+    const { tierMetrics } = await import(href('pages/tier.js'));
+    for (const tier of TIERS) {
+      const text = tierMetrics(tier).join(' ');
+      // 完整维度名（言语理解 / 空间视觉化 …）一个都不该出现在卡片上：
+      // 那是"三张卡逐字重复同一串维度名"的来源，说明页与「今天的状态」页各列一遍就够。
+      for (const name of ['言语理解', '知觉速度', '空间视觉化', '联想记忆', '数字运算']) {
+        assert(!text.includes(name), `${tier.id} 卡上又出现了完整维度名：${name}`);
+      }
+      assert(text.length <= 60, `${tier.id} 卡的差异行过长（${text.length} 字）`);
+    }
+  });
+
   // ---------- trend ----------
   let passed = 0;
   for (const { name, fn } of tests) {

@@ -246,6 +246,49 @@ test('内容文字不许用最低对比度的装饰色（课程测试表 A9）',
   }
 });
 
+/**
+ * 人工测试反馈 3 第 3 条：「界面中有很多冗杂信息」——逐字重复、同义反复的文案
+ * 是无效信息。这一节把已经处理掉的几处钉成门禁，防止后来的人又加回来。
+ * 注意：它只禁止"重复"，不禁止"合规文案"（上面几条红线优先）。
+ */
+test('冗杂信息门禁：同一句话不在同一屏重复（反馈 3）', () => {
+  const tier = read('src/pages/tier.js');
+  assert(!/DIMS\.find\([^)]*\)\.name/.test(tier), 'tier.js 又在档位卡上拼完整维度名');
+  assert(!/\.join\(' · '\)/.test(tier), 'tier.js 又把维度名串成一行常驻在卡片里');
+  assert(/from '\.\.\/scoring\/levels\.js'/.test(tier), '档位差异数字应来自 scoring/levels.js');
+  assert(/specFor\(/.test(tier), 'tier.js 应该用 specFor() 读 LEVEL_SPEC，不要手写常量');
+  const said = countHits(tier, /同样的 8 个维度/g);
+  assert(said <= 1, `「三档测同样的 8 个维度」在 tier.js 里出现 ${said} 次，只许说一次`);
+
+  const chat = read('src/pages/chat.js');
+  assert(!/hintText:\s*'Enter 发送/.test(chat), '空态又复述了一遍 placeholder 里的按键说明');
+  assert(chat.includes('清空对话'), '对话页少了「清空对话」入口（反馈 3 第 1 条）');
+  assert(/只删对话/.test(chat), '清空对话的确认文案没有说清删除范围');
+  assert(/clearConversation/.test(chat), '清空对话必须走 memory.js 的定向删除');
+
+  const games = read('src/pages/games.js');
+  assert(!/text: '未玩过'/.test(games), '游戏卡又给每张都贴同一枚「未玩过」徽章');
+
+  const report = read('src/pages/report.js');
+  assert(/untestedFold/.test(report), '八维表的未测占位行又回来了（应合并成一行折叠）');
+
+  const settings = read('src/pages/settings.js');
+  assert(
+    !/placeholder: '当前密码'/.test(settings),
+    '字段标签已写「当前密码」，placeholder 不该重复',
+  );
+
+  const game = read('src/pages/game.js');
+  assert(
+    !/card-title' \}, \[item\.title/.test(game),
+    '游戏页 h1 已经是游戏名，卡片标题不该再写一遍',
+  );
+
+  const css = read('src/styles/app.css');
+  assert(/--fs-body/.test(css), '字号刻度变量（--fs-*）被删掉了');
+  assert(/font-size:\s*var\(--fs-body\)/.test(css), 'body 应当使用 --fs-body');
+});
+
 let passed = 0;
 for (const { name, fn } of tests) {
   try {

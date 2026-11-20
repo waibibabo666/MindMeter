@@ -1,6 +1,6 @@
 {
   "name": "mindmeter",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "MindMeter web app: FastAPI + PostgreSQL/pgvector + account sessions, deployable to Render",
   "scripts": {

@@ -74,3 +74,15 @@ python -m uvicorn app.main:app --reload --port 8000
 - 服务端在每轮**有效**对话后自动沉淀 `MemorySummary`（同一测评+同一天 upsert 一条）与本轮实际给出的 `MemoryAdvice`（kb 编号或建议正文哈希去重）；`pii_blocked`、`clarify`、`unrelated`、`greeting`，以及 `crisis/boundary/high_domain/support/self_blame` 这类敏感固定话术**一律不落记忆**。
 - 画像只在用户明确表达目标/偏好/约束、且 `MemoryProfile.confirmed` 已为真时才更新；未确认时只回 `profileSuggested`。
 - 因为 `PUT /api/v1/memory` 是**整份替换**（先删后写），对话页必须采用这里的 `memory` 更新缓存，不能把旧快照 PUT 回来，否则会抹掉服务端刚写的行。
+
+### 记忆清除的三个不同语义（第 3 轮实测后补齐）
+
+| 端点 | 删什么 | 谁在用 |
+| --- | --- | --- |
+| `DELETE /api/v1/memory` | 画像 + 摘要 + 建议 + **对话**（全部四类） | 记忆页「清除全部记忆」、设置页 |
+| `DELETE /api/v1/memory/messages` | **只删对话**，画像/摘要/建议保留 | 对话页「清空对话」 |
+| `DELETE /api/v1/memory/{summaries,advice,messages}/{id}` | 单行删除 | 记忆页逐条删除 |
+
+第 3 轮实测发现第一行以前**不删 `ChatMessage`**：用户点「清除全部记忆」后对话一条不少地留着，
+而界面写的是"删除后 AI 不会再引用" —— 承诺与实现不一致（课程测试表 A7 隐私透明）。
+`DELETE /api/v1/memory/messages` 也是这一轮才补的：以前"只清对话"只能靠前端逐条删（最多 20 次串行往返）。

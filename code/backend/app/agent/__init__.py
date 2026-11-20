@@ -219,12 +219,75 @@ NEGATION_MARKERS = [
 ]
 
 
+# 命中词之前的小窗口里出现否定线索 → 视为免责用法。
+# 逐个补否定词是打补丁（第 3 轮实测：「不代表任何疾病」「不用于诊断」都不在表里），
+# 所以这里按"否定字头"判定：不/未/无/非/别/莫/免/防止/避免/禁止/难以/谈不上。
+_NEGATION_CUE_RE = re.compile(r"[未曾无非别莫]|不能|不会|不要|不该|不应|不算|不作|不做|不与|不跟|不用于|不代表|不是|并非|并不|不等于|不足以|谈不上|没有|避免|禁止|难以")
+NEGATION_WINDOW = 10
+
+
 def _negated_before(sentence: str, hit: str) -> bool:
     index = sentence.find(hit)
     if index < 0:
         return False
-    before = sentence[:index]
-    return any(marker in before for marker in NEGATION_MARKERS)
+    before = sentence[max(0, index - NEGATION_WINDOW) : index]
+    return bool(_NEGATION_CUE_RE.search(before)) or any(
+        marker in before for marker in NEGATION_MARKERS
+    )
+
+
+def banned_word_hits(text: str, rule: dict | None = None) -> list[str]:
+    """禁用词命中，但**免责用法不算**（第 3 轮实测的误伤）。
+
+    真实案例：问「这两次有什么变化」，模型写「这不是诊断结论」——裸词表把"诊断"
+    判成 hard，正确的趋势回答整条退回模板。而系统自己补写的固定声明
+    （`SCOPE_BACKFILL`：「…也不能读成能力高低或诊断」）含同一个词却合法，
+    等于"只许官方免责，不许模型免责"，自相矛盾。
+
+    规则与评级词一致：**同一句里命中词之前出现否定标记 → 视为免责**，放行；
+    没有任何否定语境的「可以诊断出…」仍然 hard。
+    """
+    value = str(text or "")
+    words = [*BANNED_WORDS, *((rule or {}).get("extra_banned") or [])]
+    findings: list[str] = []
+    for word in words:
+        if word not in value:
+            continue
+        offenders = [
+            sentence
+            for sentence in _sentences(value)
+            if word in sentence and not _negated_before(sentence, word)
+        ]
+        if offenders:
+            findings.append(word)
+    return findings
+
+
+RATING_NEUTRAL_POSITIVE = "本次分数相对较高"
+RATING_NEUTRAL_NEGATIVE = "本次分数相对较低"
+_RATING_NEGATIVE_HINTS = ("较差", "较弱", "最差", "较低", "偏低", "不足", "薄弱", "弱")
+
+
+def repair_rating_wording(text: str) -> str:
+    """把能力评级措辞改写成中性表述，保留其余内容。
+
+    第 3 轮实测：问「我哪方面比较强」时模型 4/4 次都写「表现较好」——它在镜像
+    用户的措辞，提示词教不动。以前的处理是整条判死退回模板，于是这个问题**永远**
+    看不到模型答案。但项目红线是"Agent 只能错措辞，不能错分数/结论"：
+    缺陷只在措辞时，正确动作是把措辞改对，而不是把整份内容扔掉。
+
+    边界：只改写评级词本身，不动任何数字与句子结构；改写后仍要重新过整套校验，
+    还有 hard 问题照样退回模板。临床/危机词（诊断、治疗、抑郁…）**不做改写**——
+    那不是措辞问题，是真越界。
+    """
+    value = str(text or "")
+    hits = [hit for hit in ability_rating_hits(value) if hit]
+    if not hits:
+        return value
+    for hit in sorted(hits, key=len, reverse=True):
+        replacement = RATING_NEUTRAL_NEGATIVE if any(k in hit for k in _RATING_NEGATIVE_HINTS) else RATING_NEUTRAL_POSITIVE
+        value = value.replace(hit, replacement)
+    return value
 
 
 def ability_rating_hits(text: str) -> list[str]:
@@ -554,23 +617,70 @@ def extract_numbers(text: str) -> list[dict]:
     ]
 
 
+def _dim_alias_map() -> dict[str, str]:
+    """维度字面 → 维度 id。
+
+    2026-11-20 用户实测第 3 轮暴露的 bug：校验词表用的是简称（`空间视觉`、`言语流畅`），
+    归属表用的是全称（`空间视觉化`），两边按字符串比对 → 模型写「空间视觉化 0 → 100」
+    被判成"100 属于空间视觉化，却写在了空间视觉里"，把**正确回答**拦回模板。
+    现在统一按维度 id 比对，字面只作匹配入口。
+    """
+    aliases: dict[str, str] = {}
+    for dim in DIM_ORDER:
+        full = DIM_NAMES.get(dim, dim)
+        aliases[full] = dim
+    for word in DIMENSION_WORDS:
+        for dim in DIM_ORDER:
+            full = DIM_NAMES.get(dim, dim)
+            if word and (full == word or full.startswith(word)):
+                aliases.setdefault(word, dim)
+    return aliases
+
+
+DIM_ALIAS = _dim_alias_map()
+
+
+def _named_dims(sentence: str) -> set[str]:
+    found: set[str] = set()
+    for surface, dim in DIM_ALIAS.items():
+        if surface in sentence:
+            found.add(dim)
+    return found
+
+
 def dimension_score_owners(facts: dict | None) -> dict[float, set[str]]:
-    """每个参考分属于哪些维度名 —— 用来抓"张冠李戴"。
+    """每个参考分属于哪些维度 id —— 用来抓"张冠李戴"。
 
     实测（接通真实模型后）：问"为什么联想记忆低"，模型会写成
     「联想记忆…正确回忆出5组，得分为50分」，而 5/50 是言语理解的数字。
-    这些数字单独看都在 facts 里，所以旧的 `unsourced_number` 检查放行 ——
-    但结论已经错了。本项目红线是"Agent 只能错措辞，不能错分数/结论"，
-    因此这里只加最窄、零误判的一条规则：**句子点名了某维度，就不许出现
-    只属于别的维度的参考分**。题量类数字（8 题、2900ms）不参与该检查。
+    本项目红线是"Agent 只能错措辞，不能错分数/结论"，所以规则刻意做窄：
+    **句子点名了某维度，就不许出现只属于别的维度的参考分**；题量类数字不参与。
+
+    趋势语境必须把 `prev / next / delta` 都登记进来（第 3 轮实测第二个误伤源）：
+    「归纳推理 25 → 50」里的 25 是 ir 的上次分数，只登记本次分数就会把它
+    认成别的维度的数字，把正确回答拦掉。
     """
     owners: dict[float, set[str]] = {}
+
     for dim, metrics in (facts or {}).items():
         if dim == "trend" or not isinstance(metrics, dict):
             continue
         score = metrics.get("score")
         if isinstance(score, int):
-            owners.setdefault(float(score), set()).add(DIM_NAMES.get(dim, dim))
+            owners.setdefault(float(score), set()).add(dim)
+
+    trend = (facts or {}).get("trend")
+    if isinstance(trend, dict):
+        for row in trend.get("rows") or []:
+            if not isinstance(row, dict):
+                continue
+            dim = row.get("id")
+            if not isinstance(dim, str):
+                continue
+            for key in ("prev", "next", "delta"):
+                value = row.get(key)
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    owners.setdefault(abs(float(value)), set()).add(dim)
     return owners
 
 
@@ -581,17 +691,17 @@ def _sentences(text: str) -> list[str]:
 def _misattributed_scores(value: str, owners: dict[float, set[str]]) -> list[str]:
     findings: list[str] = []
     for sentence in _sentences(value):
-        named = {word for word in DIMENSION_WORDS if word in sentence}
+        named = _named_dims(sentence)
         if not named:
             continue
         for item in extract_numbers(sentence):
             if item["unit"] not in {"", "分"}:
                 continue
-            allowed_dims = owners.get(item["value"])
+            allowed_dims = owners.get(abs(item["value"]))
             if allowed_dims and not (allowed_dims & named):
-                findings.append(
-                    f"{item['raw'].strip()} 属于{'、'.join(sorted(allowed_dims))}，却写在了{'、'.join(sorted(named))}里"
-                )
+                names = "、".join(sorted(DIM_NAMES.get(dim, dim) for dim in allowed_dims))
+                written = "、".join(sorted(DIM_NAMES.get(dim, dim) for dim in named))
+                findings.append(f"{item['raw'].strip()} 属于{names}，却写在了{written}里")
     return findings
 
 
@@ -661,7 +771,7 @@ def validate_text(
     limit = int(rule.get("max_chars", DEFAULT_MAX_CHARS))
     if chars > limit:
         add("too_long", f"回答过长：{chars} 字，上限 {limit} 字")
-    banned = [word for word in [*BANNED_WORDS, *(rule.get("extra_banned") or [])] if word in value]
+    banned = banned_word_hits(value, rule)
     if banned:
         add("banned_word", "命中禁用词：" + "、".join(banned))
     # 能力评级：ADR-0002 的硬红线，命中即 hard（不因为"只说了中等"就放行）。
@@ -1077,12 +1187,15 @@ def _validate_node(state: AgentState) -> dict:
     if not chunks:
         # 知识块为空时不要求引用（facts-only 回答是合法分级，见 §3 RAG 行）。
         rule["require_citation"] = "off"
+    allowed_numbers = derived_allowed_numbers(state.get("facts"))
+    score_owners = dimension_score_owners(state.get("facts"))
+    chunk_ids = {str(chunk.get("id") or "") for chunk in chunks if chunk.get("id")} or None
     result = validate_text(
         state.get("text", ""),
-        allowed_numbers=derived_allowed_numbers(state.get("facts")),
+        allowed_numbers=allowed_numbers,
         policy=rule,
-        score_owners=dimension_score_owners(state.get("facts")),
-        chunk_ids={str(chunk.get("id") or "") for chunk in chunks if chunk.get("id")} or None,
+        score_owners=score_owners,
+        chunk_ids=chunk_ids,
     )
     if result["ok"]:
         soft = [issue["code"] for issue in result["issues"] if issue["severity"] == "soft"]
@@ -1103,6 +1216,38 @@ def _validate_node(state: AgentState) -> dict:
         if soft:
             out["code"] = soft[0]
         return out
+    hard = [issue for issue in result["issues"] if issue["severity"] == "hard"]
+    # 缺陷**只在措辞**（能力评级词）时：改写措辞后重新校验，而不是把整份内容扔掉。
+    # 第 3 轮实测「我哪方面比较强」4/4 次被「表现较好」判死 → 这个问题永远看不到模型答案。
+    # 红线是"Agent 只能错措辞，不能错分数/结论"：能改对措辞就该留下内容。
+    # 数字无依据、跨维度、机制编造、临床词都不参与改写 —— 那些不是措辞问题。
+    if hard and all(str(issue.get("detail", "")).startswith("出现能力评级措辞") for issue in hard):
+        repaired = repair_rating_wording(state.get("text", ""))
+        if repaired != state.get("text", ""):
+            retry = validate_text(
+                repaired,
+                allowed_numbers=allowed_numbers,
+                policy=rule,
+                score_owners=score_owners,
+                chunk_ids=chunk_ids,
+            )
+            if retry["ok"]:
+                issues = list(retry["issues"])
+                issues.append(
+                    {"code": "wording_repaired", "detail": "已把评级措辞改写为中性表述", "severity": "soft"}
+                )
+                soft = [issue["code"] for issue in issues if issue["severity"] == "soft"]
+                # code 固定报 wording_repaired：改写这件事比"缺引用"更有调教价值，
+                # 其余 soft 问题（citation_missing 等）仍完整留在 validation 里。
+                return {
+                    "valid": True,
+                    "text": repaired,
+                    "issues": issues,
+                    "validation": issues,
+                    "code": "wording_repaired",
+                    "repaired": True,
+                    "softCodes": soft,
+                }
     summary = state.get("intent") == INTENT["SUMMARY"] or state.get("scene") == "report"
     facts = state.get("facts") or {}
     has_score = any(
@@ -1115,7 +1260,6 @@ def _validate_node(state: AgentState) -> dict:
         if summary and has_score
         else scene_template(state)
     )
-    hard = [issue for issue in result["issues"] if issue["severity"] == "hard"]
     # code 必须是**第一个 hard issue 的真实 code**（too_long / banned_word /
     # unsourced_number / score_misattributed / empty）。之前一律写死 "invalid"，
     # 用户和前端都看不到"为什么被回退"，调教时也丢掉了最有价值的一条线索。

@@ -5,11 +5,12 @@
  *   - 画像必须由用户确认才写入，未确认前 Agent 不得引用；
  *   - 摘要由一次测评生成，只记录最低项与建议数量，不写能力评价；
  *   - 每条记忆可单独删除，删除后不再被引用；
- *   - 提供按类型删除与清空，供记忆页与设置页使用。
+ *   - 提供按类型删除与清空，供记忆页与设置页使用；
+ *   - 对话页的「清空对话」只删 messages（逐条单行接口），摘要 / 建议 / 画像不动。
  */
 
 import { api } from './api.js';
-import { cache, enqueue } from './cache.js';
+import { cache, enqueue, flushWrites } from './cache.js';
 import { MAX_MESSAGES, addSummary, clearMemory, readMemory } from './storage.js';
 import { DIMS } from './data.js';
 
@@ -142,6 +143,56 @@ export function removeMemory(kind, id) {
 /** 清空全部记忆（画像/摘要/建议/消息），设置页的「清除记忆」用它。 */
 export function clearAllMemory() {
   clearMemory();
+}
+
+/**
+ * 清空对话记录：**只删 messages**，摘要、建议记录与画像一律不动。
+ *
+ * 「清空对话」的语义与通路（人工测试反馈 3 第 1 条）：
+ * 必须是**窄语义** —— 只删对话，画像/摘要/建议记录都保留。
+ *   - `DELETE /memory/messages`（批量，只删对话）是首选通路，一次往返；
+ *     它是为这条反馈补的端点，第 3 轮之前服务端只有单行删除；
+ *   - 打不开批量端点时（旧部署）退回逐条 `DELETE /memory/messages/{id}`；
+ *   - **不能**用 `DELETE /memory`：那是"清除全部记忆"（含摘要、建议、画像），
+ *     语义完全不同；也不能用 `PUT /memory` 全量快照，那会把服务端在对话里
+ *     自动沉淀的摘要与建议抹掉。
+ * 删完一律回读 `GET /memory` 以服务端为准刷新，不留乐观脏数据。
+ *
+ * @returns {Promise<{attempted: number, failed: number, refreshed: boolean}>}
+ */
+export async function clearConversation() {
+  const ids = readMemory()
+    .messages.map((item) => String((item && item.id) || ''))
+    .filter(Boolean);
+  // 先排空既有写队列：否则队列里的整份快照会把这些行又写回来。
+  await flushWrites();
+  cache.memory = Object.assign(readMemory(), { messages: [] });
+
+  let failed = 0;
+  try {
+    await api.del('/memory/messages');
+  } catch (error) {
+    // 旧部署没有批量端点：退回逐条删除，行为与代价和以前一致。
+    for (const id of ids) {
+      try {
+        await api.del(`/memory/messages/${encodeURIComponent(id)}`);
+      } catch (rowError) {
+        failed += 1;
+      }
+    }
+  }
+
+  let refreshed = false;
+  try {
+    const fresh = await api.get('/memory');
+    if (fresh && typeof fresh === 'object') {
+      cache.memory = Object.assign(readMemory(), fresh);
+      refreshed = true;
+    }
+  } catch (error) {
+    // 回读失败：保留乐观空态，由调用方按 failed 提示用户"可能还在"。
+  }
+  return { attempted: ids.length, failed, refreshed };
 }
 
 /** 给记忆页用的汇总视角。 */
