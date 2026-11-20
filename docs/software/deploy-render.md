@@ -103,6 +103,21 @@
 
 ## 5. 验收清单
 
+### 5.0 合并与上线前体检（每条都验证过，可复查）
+
+| 检查项 | 结论 | 怎么自己复核 |
+| --- | --- | --- |
+| 模型 Key 会不会被提交 | **不会**。`.env.local` 未被跟踪，被 `.gitignore` 的 `.env.*` 拦住 | `git ls-files --error-unmatch .env.local` 应报错；`git check-ignore -v .env.local` 应命中 |
+| Render 用哪个 Python | **3.13**（根目录 `.python-version`，可省略补丁号，Render 自动取最新补丁） | `git ls-files .python-version` |
+| CI 测的是不是部署版本 | **是**，三个 job 都 pin 3.13，与 `.python-version` 一致 | `Select-String .github\workflows\ci.yml -Pattern python-version` |
+| CI 后端测试会不会静默跳过 | **不会**，backend job 设了 `MM_TEST_DATABASE_URL` 且服务镜像是 `pgvector/pgvector:pg17` | 看 CI 日志里 pytest 的通过数（应为全量，不是 skipped） |
+| 大体积/二进制有没有进仓库 | **没有**：`vendor/`、`node_modules/`、`runtime/`、验证截图 `after-*.png` 全部忽略 | `git ls-files \| Measure-Object`（约 242） |
+| `startCommand` 里的 `"*"` 会不会出问题 | **线上不会**（Render 用 `sh -c`，双引号内不展开）；Windows 手工复制会炸，见 §5.1 注 | 本地复现：`uvicorn … --forwarded-allow-ips "*"` |
+| develop → main 能不能快进 | **不能**，`origin/main` 有 2 个提交不在 develop 里（`389c209 测试脚本`、`1b27f79 Merge PR#24`）；但 `git merge-tree` 预演**无冲突**，正常 merge 即可 | `git merge-base --is-ancestor origin/main develop` |
+
+> 注意 `389c209` 是直接提交到 main、从未回流 develop 的。合并后 main 会保留它的内容，
+> 但 develop 分支上看不到 —— 建议合并完把 main 反向并回 develop，避免两条线长期分叉。
+
 ### 5.1 部署前：用生产参数本地预检（推荐先跑这个）
 
 ```powershell
