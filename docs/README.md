@@ -13,6 +13,7 @@
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
 | `software/` | [Railway 部署指南](software/deploy-railway.md) | 当前 | Dockerfile 构建；pgvector 模板是成败关键、`DATABASE_URL_PRIVATE` 走内网 |
+| `software/` | [自建服务器部署](software/deploy-selfhost.md) | 当前 | VPS / 阿里云：Docker 与裸机两条路、cookie 与 `X-Forwarded-Proto`、备份与安全清单 |
 | `software/` | [Web 本地开发与测试](software/local-development.md) | 当前 | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
 | `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 部分被取代 | 桌面壳、loopback token、单用户与 keyring 条款由 ADR-0003 取代 |

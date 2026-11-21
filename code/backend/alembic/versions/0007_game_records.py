@@ -1,21 +1,22 @@
 """practice game records, one row per account and game
 
-Revision ID: 0006_game_records
-Revises: 0005_profile
+Revision ID: 0007_game_records
+Revises: 0006_align_kb
 Create Date: 2026-11-21
 
 游戏成绩原来只存在浏览器 localStorage：同一台电脑换账号登录时，两个人会
 看到对方的最佳成绩。账号化之后改为每账号一行；游戏仍然只是练习，不进报告、
 不进趋势、不进导出。
 
-全新库由 0001 的 `create_all` 直接建表，这里的 IF NOT EXISTS 只服务升级库。
+注意链在 0006_align_kb 之后：本条与知识库对齐迁移是并行开发的，两条都从
+0005_profile 分叉会让 alembic 出现两个 head。
 """
 from __future__ import annotations
 
 from alembic import op
 
-revision = "0006_game_records"
-down_revision = "0005_profile"
+revision = "0007_game_records"
+down_revision = "0006_align_kb"
 branch_labels = None
 depends_on = None
 

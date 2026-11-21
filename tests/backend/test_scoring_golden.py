@@ -119,10 +119,11 @@ def test_unknown_level_falls_back_to_standard():
 
 
 def test_timed_dimensions_scale_by_seconds():
-    # 30 秒说 10 个有效词，折算到 60 秒锚点是 20 个 → 50 分
+    # 20 秒说 10 个有效词，折算到 60 秒锚点是 30 个 → 100 分
     quick = score_session({"vf": {"metrics": {"validCount": 10}}}, "quick")["scores"]
-    assert quick["vf"] == 50
-    standard = score_session({"vf": {"metrics": {"validCount": 20}}}, "standard")["scores"]
+    assert quick["vf"] == 100
+    # 30 秒说 10 个，折算到 60 秒锚点是 20 个 → 50 分
+    standard = score_session({"vf": {"metrics": {"validCount": 10}}}, "standard")["scores"]
     assert standard["vf"] == 50
     blocked = score_session({"vf": {"metrics": {"validCount": 20, "unavailable": True}}}, "standard")
     assert blocked["scores"]["vf"] is None

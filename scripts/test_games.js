@@ -52,6 +52,45 @@ async function main() {
   const { svRotate, svMirror } = svGames;
   const data = await import(href(path.join(SRC, 'data.js')));
   const gameStore = await import(href(path.join(SRC, 'games', 'store.js')));
+  const ir = await import(href(path.join(SRC, 'tasks', 'ir.js')));
+  const svMount = await import(href(path.join(SRC, 'tasks', 'svMount.js')));
+
+  /** 计算 24 点式子（递归下降，不执行字符串，避免 code-eval）。 */
+  function evalMath(expr) {
+    const tokens =
+      String(expr)
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/[−–—]/g, '-')
+        .match(/\d+|[+\-*/()]/g) || [];
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const next = () => tokens[pos++];
+    const factor = () => {
+      const token = next();
+      if (token === '(') {
+        const value = sum();
+        next(); // 吃掉 ")"
+        return value;
+      }
+      return Number(token);
+    };
+    const product = () => {
+      let value = factor();
+      while (peek() === '*' || peek() === '/') {
+        value = next() === '*' ? value * factor() : value / factor();
+      }
+      return value;
+    };
+    const sum = () => {
+      let value = product();
+      while (peek() === '+' || peek() === '-') {
+        value = next() === '+' ? value + product() : value - product();
+      }
+      return value;
+    };
+    return sum();
+  }
 
   // ---------- 登记表 ----------
 
@@ -339,6 +378,70 @@ async function main() {
     let changed = 0;
     for (let i = 0; i < base.length; i += 1) if (base[i] !== target[i]) changed += 1;
     eq(changed, 4, '实际不同的格子数');
+  });
+
+  // ---------- 题库正确性（2026-11-21 修复的计分错误） ----------
+
+  test('24 点：每题恰好一个式子成立，且每个式子只用题目给的四个数', () => {
+    for (const item of quizzes.twentyFour.bank) {
+      const nums = (item.prompt.match(/\d+/g) || [])
+        .slice(0, 4)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const solutions = item.options.filter((opt) => Math.abs(evalMath(opt) - 24) < 1e-9);
+      eq(solutions.length, 1, `${item.prompt} 成立的式子数`);
+      for (const opt of item.options) {
+        const used = (String(opt).match(/\d+/g) || []).map(Number).sort((a, b) => a - b);
+        eq(used.join(','), nums.join(','), `「${opt}」用到的数字`);
+      }
+    }
+  });
+
+  test('链式计算：每题的题干与选项答案一致', () => {
+    for (const item of quizzes.chainCalc.bank) {
+      const match = String(item.prompt).match(/从\s*(\d+)\s*开始，依次(.+?)，结果是？/);
+      assert(match, `题干格式不符：${item.prompt}`);
+      let value = Number(match[1]);
+      for (const token of match[2].match(/[+−×÷]\d+/g) || []) {
+        const sign = token[0];
+        const operand = Number(token.slice(1));
+        if (sign === '+') value += operand;
+        else if (sign === '−') value -= operand;
+        else if (sign === '×') value *= operand;
+        else value /= operand;
+      }
+      eq(Number(item.options[item.answer]), value, item.prompt);
+    }
+  });
+
+  test('图形规律（测评）：选项互不相同，答案唯一', () => {
+    const questions = ir.buildQuestions(120, seeded(17));
+    questions.forEach((q, index) => {
+      const keys = q.options.map((cell) => `${cell.shape}:${cell.count}`);
+      eq(new Set(keys).size, 4, `第 ${index} 题应有四个不同选项`);
+      assert(q.answer >= 0 && q.answer < 4, `第 ${index} 题答案下标越界`);
+    });
+  });
+
+  test('空间旋转（测评）：选项不重复，正确项只出现一次', () => {
+    for (let i = 0; i < 200; i += 1) {
+      const q = svMount.buildRotate();
+      const keys = q.options.map((grid) => grid.join(''));
+      eq(new Set(keys).size, 4, `第 ${i} 次选项应互不相同`);
+      assert(q.answer >= 0, `第 ${i} 次答案下标应有效`);
+      const correct = keys[q.answer];
+      eq(keys.filter((key) => key === correct).length, 1, `第 ${i} 次正确项应唯一`);
+    }
+  });
+
+  test('折纸题：答案下标有效，选项不重复', () => {
+    for (const item of quizzes.fold.bank) {
+      eq(new Set(item.options).size, item.options.length, `${item.prompt} 选项重复`);
+      assert(
+        Number.isInteger(item.answer) && item.options[item.answer],
+        `${item.prompt} 答案下标非法`,
+      );
+    }
   });
 
   // ---------- 静态约定 ----------
