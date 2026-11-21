@@ -263,6 +263,48 @@ async function main() {
     }
   });
 
+
+  test('ir：答案不能与左邻/上邻相同，数量不超过 5', async () => {
+    const irModule = await import(href('tasks/ir.js'));
+    const cellKey = (cell) => (cell ? `${cell.shape}${cell.count}` : '?');
+    const rules = ['rowShape', 'colShape', 'diagonal', 'combine', 'alternate', 'mirror'];
+    for (const rule of rules) {
+      for (let seed = 1; seed <= 40; seed += 1) {
+        const question = irModule.buildMatrix(rule, random.mulberry32(seed));
+        const answer = question.options[question.answer];
+        assert(answer, `${rule}: 找不到答案选项`);
+        assert(answer.count >= 1 && answer.count <= 5, `${rule}: 答案数量越界 ${answer.count}`);
+        assert(
+          cellKey(answer) !== cellKey(question.cells[7]),
+          `${rule}: 答案与左邻相同，等于有两个正确答案`,
+        );
+        assert(
+          cellKey(answer) !== cellKey(question.cells[5]),
+          `${rule}: 答案与上邻相同，等于有两个正确答案`,
+        );
+      }
+    }
+  });
+
+  test('sv 折叠：选项要打乱，同一场不重复出题', async () => {
+    const svMount = await import(href('tasks/svMount.js'));
+    const positions = new Set();
+    for (let seed = 1; seed <= 60; seed += 1) {
+      const question = svMount.buildFold(random.mulberry32(seed));
+      eq(question.options.length, 4, '折叠题应有四个选项');
+      eq(new Set(question.options).size, 4, '折叠题选项不应重复');
+      positions.add(question.answer);
+    }
+    assert(positions.size > 1, '折叠题答案位置固定，说明选项没有打乱');
+
+    const used = new Set();
+    const ids = [];
+    for (let i = 0; i < 6; i += 1) {
+      ids.push(svMount.buildFold(random.mulberry32(100 + i), used).id);
+    }
+    eq(new Set(ids).size, 6, `同一场出现了重复折叠题：${ids.join(',')}`);
+  });
+
   test('ui.ticker：倒计时与结束回调只触发一次', async () => {
     const doc = makeDocument();
     const previousDoc = globalThis.document;

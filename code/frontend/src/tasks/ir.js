@@ -8,6 +8,10 @@ import { el, clear } from '../ui.js';
 
 const SHAPES = ['●', '▲', '■', '◆'];
 
+// 单格最多 5 个符号：diagonal / combine 的右下角正好是 5。
+// 原来钳到 4 会把「应为 5」的答案画成 4，与左邻上邻撞车。
+const MAX_COUNT = 5;
+
 function randInt(min, max, random = Math.random) {
   return min + Math.floor(random() * (max - min + 1));
 }
@@ -30,7 +34,7 @@ function buildOptions(answer, shapeA, shapeB, random) {
   // 干扰项要**四个互不相同**：先给"只错数量/只错形状/两样都错"，
   // 数量为 1 时 ±1 会被夹回 1（旧实现因此和正确答案撞车，出现两个正确项），
   // 所以候选按"难度优先"排好后去重，不够再从形状×数量全组合里补。
-  const clampCount = (value) => Math.min(4, Math.max(1, value));
+  const clampCount = (value) => Math.min(MAX_COUNT, Math.max(1, value));
   const cellKey = (value) => `${value.shape}:${value.count}`;
   const otherShape = answer.shape === shapeA ? shapeB : shapeA;
   const ordered = [
@@ -41,7 +45,7 @@ function buildOptions(answer, shapeA, shapeB, random) {
     { shape: otherShape, count: clampCount(answer.count - 1) },
   ];
   for (const shape of [shapeA, shapeB]) {
-    for (let count = 1; count <= 4; count += 1) ordered.push({ shape, count });
+    for (let count = 1; count <= MAX_COUNT; count += 1) ordered.push({ shape, count });
   }
   const options = [answer];
   for (const candidate of ordered) {
@@ -68,7 +72,7 @@ export function buildMatrix(ruleName, random = Math.random) {
 
   const cell = (r, c) => {
     const value = rule(r, c, shapeA);
-    return { shape: value.shape || shapeA, count: Math.min(4, Math.max(1, value.count)) };
+    return { shape: value.shape || shapeA, count: Math.min(MAX_COUNT, Math.max(1, value.count)) };
   };
 
   const cells = [];
@@ -96,7 +100,7 @@ function cellNode(cell, size = 12) {
     node.appendChild(el('span', { class: 'mx-q', text: '?' }));
     return node;
   }
-  const count = Math.min(cell.count, 4);
+  const count = Math.min(cell.count, MAX_COUNT);
   for (let i = 0; i < count; i += 1) {
     node.appendChild(
       el('span', { class: 'mx-sym', style: `font-size:${size}px`, text: cell.shape }),
