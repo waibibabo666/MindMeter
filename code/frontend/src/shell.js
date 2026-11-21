@@ -153,6 +153,32 @@ export function createShell({ ctx, router }) {
     });
   }
 
+  // 顶栏全屏开关：走浏览器全屏 API，不支持时按钮保持隐藏。
+  const fullscreenNode = document.getElementById('toggle-fullscreen');
+  if (fullscreenNode && document.documentElement.requestFullscreen) {
+    fullscreenNode.hidden = false;
+    const syncFullscreen = () => {
+      const on = Boolean(document.fullscreenElement);
+      fullscreenNode.setAttribute('aria-pressed', String(on));
+      fullscreenNode.title = on ? '退出全屏' : '全屏显示';
+      const sr = fullscreenNode.querySelector('.sr-only');
+      if (sr) sr.textContent = on ? '退出全屏' : '全屏显示';
+    };
+    fullscreenNode.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch {
+        ctx.toast('这个浏览器不支持全屏');
+      }
+    });
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    syncFullscreen();
+  }
+
   /** 顶栏与布局骨架：未登录时收掉侧栏/右栏与全部导航控件。 */
   function syncChrome(route, authed) {
     const setupPage = SETUP_PAGES.includes(route.path);

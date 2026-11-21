@@ -16,6 +16,7 @@ import { api } from '../api.js';
 import { cache } from '../cache.js';
 import { clearConversation } from '../memory.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
+import { readUiPrefs } from '../ui-prefs.js';
 import { buildFacts, takePendingQuestion } from '../chat.js';
 
 /* 反馈 2：口径解释收进浮框；高风险提示、回退原因、发送失败提示一律留在页面上。 */
@@ -190,13 +191,37 @@ function profileDraftCard(ctx, host) {
   ]);
 }
 
-function emptyChat() {
+/** 空态里可点的示例问题：点一下填进输入框，不直接发送。 */
+const SAMPLE_QUESTIONS = ['为什么联想记忆低？', '知觉速度怎么练？', '这次结果该怎么读？'];
+
+/** 空态：有测评结果时给可点的示例问题；没有结果时直接引导去测评。 */
+function emptyChat(ctx, hasFacts) {
   // 「Enter 发送，Shift+Enter 换行」已经写在输入框的 placeholder 里，
   // 空态再复述一遍就是同一句话出现两次（反馈 3 · 模式 2）。
-  return emptyState({
+  const node = emptyState({
     title: '还没有对话',
-    text: '可以问「为什么联想记忆低」「知觉速度怎么练」。',
+    text: hasFacts
+      ? '可以点下面的问题，也可以自己写。回答只依据本次结果与本地知识库。'
+      : '完成一次测评后，AI 才能针对你的结果回答。',
+    actionLabel: hasFacts ? undefined : '去测评',
+    onAction: hasFacts ? undefined : () => ctx.go('/tier'),
   });
+  if (!hasFacts) return node;
+  node.appendChild(
+    el(
+      'div',
+      { class: 'chat-samples' },
+      SAMPLE_QUESTIONS.map((question) =>
+        el('button', {
+          class: 'sample-chip',
+          type: 'button',
+          'data-suggest': question,
+          text: question,
+        }),
+      ),
+    ),
+  );
+  return node;
 }
 
 export function renderChat(root, ctx, options = {}) {
@@ -213,8 +238,8 @@ export function renderChat(root, ctx, options = {}) {
   // 不会出现"最需要反馈的时候反而没有反馈"。
   const list = el(
     'div',
-    { class: 'chat-list' },
-    messages.length ? messages.map(messageNode) : [emptyChat()],
+    { class: 'chat-list', role: 'log', 'aria-live': 'polite', 'aria-relevant': 'additions' },
+    messages.length ? messages.map(messageNode) : [emptyChat(ctx, hasFacts)],
   );
   // 反馈 3：消息流是一个有上限的滚动容器，整页不再被历史拉长。
   // 输入框那一块也放在容器里、sticky 在容器底边：滚到底时它是正文的最后一段
@@ -237,6 +262,14 @@ export function renderChat(root, ctx, options = {}) {
   };
   input.addEventListener('input', autoGrow);
 
+  // 示例问题：点一下把问题填进输入框并聚焦，让用户还能改。
+  list.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-suggest]');
+    if (!chip) return;
+    input.value = chip.getAttribute('data-suggest') || '';
+    autoGrow();
+    input.focus();
+  });
   const send = button('发送', null, { variant: 'primary' });
   const status = el('p', {
     class: 'tiny',
@@ -346,12 +379,29 @@ export function renderChat(root, ctx, options = {}) {
     showPending(question);
 
     try {
-      const result = await api.post('/chat', { question }, { timeoutMs: 60000 });
-      cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
-      // 对话会沉淀摘要与建议（服务端写库），这里直接采用服务端返回的那份，
-      // 不再用整份快照 PUT 回去覆盖。
-      if (result.memory) cache.memory = Object.assign(cache.memory, result.memory);
-      if (result.profileSuggested) cache.memory.profileDraft = result.profileSuggested;
+      const prefs = readUiPrefs();
+      if (prefs.streamReply) {
+        // 流式：先把片段打到等待气泡里，完成后从服务端取回完整消息再重渲染。
+        let acc = '';
+        await api.streamChat({ question, useMemory: prefs.memoryInPrompt }, (delta) => {
+          acc += delta;
+          const node = root.querySelector('.chat-pending .pending-text');
+          if (node) node.textContent = acc;
+        });
+        const fresh = await api.get('/memory');
+        cache.memory = Object.assign(cache.memory, fresh);
+      } else {
+        const result = await api.post(
+          '/chat',
+          { question, useMemory: readUiPrefs().memoryInPrompt },
+          { timeoutMs: 60000 },
+        );
+        cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
+        // 对话会沉淀摘要与建议（服务端写库），这里直接采用服务端返回的那份，
+        // 不再用整份快照 PUT 回去覆盖。
+        if (result.memory) cache.memory = Object.assign(cache.memory, result.memory);
+        if (result.profileSuggested) cache.memory.profileDraft = result.profileSuggested;
+      }
       // eslint-disable-next-line sonarjs/no-ignored-exceptions
     } catch (error) {
       // The page stays usable; the toast is the only recovery action here.

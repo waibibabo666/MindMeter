@@ -1,8 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import APIRouter
 
 from . import (
+    ai_runs,
     assessments,
     auth,
     chat,
@@ -27,3 +28,4 @@ api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(settings_api.router, tags=["settings"])
 api_router.include_router(data.router, tags=["data"])
+api_router.include_router(ai_runs.router, tags=["ai"])

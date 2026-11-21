@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     # --- retrieval ---------------------------------------------------------
     rag_mode: str = "keyword"  # auto | vector | keyword
     expose_logs: bool = False  # shared host: never stream server logs to clients
+    # 可选能力（默认关闭，改动不影响既有行为）
+    llm_structured: bool = False  # 让模型输出 JSON，再由代码组装
+    memory_in_prompt: bool = True  # 是否把记忆（画像/摘要/建议）注入回答
 
     @property
     def is_configured(self) -> bool:
