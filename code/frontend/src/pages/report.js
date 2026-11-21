@@ -13,14 +13,14 @@ const STATUS = {
   vc: (m) => `正确 ${fmtNum(m.correct)} / ${fmtNum(m.total)}`,
   ps: (m) => `完成 ${fmtNum(m.trials)} 题 · 正确 ${fmtNum(m.correct)} · 错误 ${fmtNum(m.wrong)}`,
   sv: (m) => `正确 ${fmtNum(m.correct)} / ${fmtNum(m.total)}`,
-  am: (m) => `命中 ${fmtNum(m.hits)} · 虚报 ${fmtNum(m.falseAlarms)}`,
+  am: (m) => `一次点对 ${fmtNum(m.hits)}/${fmtNum(m.trials)} 组 · 重试 ${fmtNum(m.falseAlarms)} 次`,
 };
 
 const DETAIL = {
   vc: (m) => `正确率 ${fmtPct(m.accuracy)} · 平均反应时 ${fmtMs(m.meanRtMs)}`,
   ps: (m) => `${fmtNum(m.seconds)} 秒内 · 平均反应时 ${fmtMs(m.meanRtMs)}`,
   sv: (m) => `正确率 ${fmtPct(m.accuracy)}`,
-  am: (m) => `正确率 ${fmtPct(m.accuracy)} · 漏报 ${fmtNum(m.misses)}`,
+  am: (m) => `目标 ${fmtNum(m.trials)} 组 · 重试 ${fmtNum(m.falseAlarms)} 次`,
 };
 
 function fmtPct(value) {

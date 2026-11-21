@@ -37,6 +37,17 @@ function alternateDir(list) {
   return out;
 }
 
+/** 打乱每题选项并重算答案下标：题库里 82% 的答案本来都在第一个。 */
+function mixOptions(item, random) {
+  const entries = item.options.map((text, index) => ({ text, right: index === item.answer }));
+  const mixed = shuffle(entries, random);
+  return {
+    ...item,
+    options: mixed.map((entry) => entry.text),
+    answer: mixed.findIndex((entry) => entry.right),
+  };
+}
+
 /** 按档位组卷；题库不足时按可用数量截断。 */
 export function buildVcPaper(level = 'standard', random = Math.random) {
   const plan = VC_PAPER_PLAN[level] || VC_PAPER_PLAN.standard;
@@ -80,7 +91,7 @@ export function buildVcPaper(level = 'standard', random = Math.random) {
   for (const layer of ['vocab', 'text', 'relation']) {
     paper.push(...queues[layer]);
   }
-  return paper;
+  return paper.map((item) => mixOptions(item, random));
 }
 
 export function summarizeVc(answers) {

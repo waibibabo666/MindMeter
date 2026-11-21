@@ -16,11 +16,11 @@ def test_readiness_is_public_without_session(client, needs_db):
     body = response.json()
     assert body["status"] == "ok"
     assert body["db"]["connected"] is True
-    assert body["db"]["migration"] in {"0004_hosted_copy", "0005_profile"}
+    assert body["db"]["migration"] in {"0005_profile", "0006_align_kb"}
     version = str(body["db"]["pgvector"] or "")
     parts = tuple(int(part) for part in version.split(".")[:3])
     assert parts >= (0, 8, 6), f"unexpected pgvector version: {version}"
-    assert body["rag"]["chunks"] == 30
+    assert body["rag"]["chunks"] == 42
     assert isinstance(body["ai"]["enabled"], bool)
     assert isinstance(body["users"], int)
 

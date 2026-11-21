@@ -24,7 +24,7 @@ def test_has_reading_and_suggestion_sections():
     text = template_narrative(FACTS)
     assert "可以试试" in text
     assert "kb-plan-01" in text  # 通用建议必须带知识库引用
-    assert "虚报" in text  # 联想记忆的读法说明
+    assert "重试" in text  # 联想记忆（PAL）的读法说明
 
 
 def test_avoids_diagnosis_and_total_score_wording():

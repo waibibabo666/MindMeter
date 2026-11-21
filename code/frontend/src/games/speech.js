@@ -6,7 +6,7 @@
  */
 import { el, clear, now } from '../ui.js';
 
-const LIMIT_MS = 60000;
+// 20 个有效词对应 100 分；限时长度由档位决定（30/60/90 秒），计分时按秒数换算。
 const TARGET_VALID = 20;
 
 function recognitionCtor() {
@@ -39,6 +39,8 @@ function createSpeechGame(config) {
     title,
     desc,
     mount(root, ctx) {
+      // 限时按档位走：快测 20 秒、标准 30 秒、精细 45 秒；游戏中心默认 30 秒。
+      const limitMs = Math.max(5, Number(ctx.spec && ctx.spec.seconds) || 30) * 1000;
       const Ctor = recognitionCtor();
       if (!Ctor) {
         notice(root, title);
@@ -86,7 +88,7 @@ function createSpeechGame(config) {
         } catch {
           /* 已经停了 */
         }
-        ctx.finish(scoreSpeech(said.size), { valid: said.size, seconds: LIMIT_MS / 1000 });
+        ctx.finish(scoreSpeech(said.size), { valid: said.size, seconds: limitMs / 1000 });
       };
 
       const recognition = new Ctor();
@@ -131,7 +133,7 @@ function createSpeechGame(config) {
       }, 12000);
 
       const timer = globalThis.setInterval(() => {
-        const left = Math.max(0, LIMIT_MS - (now() - startedAt));
+        const left = Math.max(0, limitMs - (now() - startedAt));
         if (closed) return;
         if (left <= 0) {
           finish();

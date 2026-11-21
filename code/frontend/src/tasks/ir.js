@@ -25,6 +25,41 @@ const RULES = {
   mirror: (r, c) => ({ shape: SHAPES[c % 3], count: 3 - r }),
 };
 
+/** 生成四个互不相同的选项：正确答案 + 三个干扰项。 */
+function buildOptions(answer, shapeA, shapeB, random) {
+  // 干扰项要**四个互不相同**：先给"只错数量/只错形状/两样都错"，
+  // 数量为 1 时 ±1 会被夹回 1（旧实现因此和正确答案撞车，出现两个正确项），
+  // 所以候选按"难度优先"排好后去重，不够再从形状×数量全组合里补。
+  const clampCount = (value) => Math.min(4, Math.max(1, value));
+  const cellKey = (value) => `${value.shape}:${value.count}`;
+  const otherShape = answer.shape === shapeA ? shapeB : shapeA;
+  const ordered = [
+    { shape: answer.shape, count: clampCount(answer.count + 1) },
+    { shape: answer.shape, count: clampCount(answer.count - 1) },
+    { shape: otherShape, count: answer.count },
+    { shape: otherShape, count: clampCount(answer.count + 1) },
+    { shape: otherShape, count: clampCount(answer.count - 1) },
+  ];
+  for (const shape of [shapeA, shapeB]) {
+    for (let count = 1; count <= 4; count += 1) ordered.push({ shape, count });
+  }
+  const options = [answer];
+  for (const candidate of ordered) {
+    if (options.length === 4) break;
+    const value = { shape: candidate.shape, count: clampCount(candidate.count) };
+    if (cellKey(value) === cellKey(answer)) continue;
+    if (options.some((item) => cellKey(item) === cellKey(value))) continue;
+    options.push(value);
+  }
+  for (let i = options.length - 1; i > 0; i -= 1) {
+    const j = randInt(0, i, random);
+    const tmp = options[i];
+    options[i] = options[j];
+    options[j] = tmp;
+  }
+  return options;
+}
+
 /** 生成一题的九宫格与答案；行规则与列规则交叉，避免「看一行就够」。 */
 export function buildMatrix(ruleName, random = Math.random) {
   const rule = RULES[ruleName] || RULES.rowShape;
@@ -41,22 +76,7 @@ export function buildMatrix(ruleName, random = Math.random) {
     for (let c = 0; c < 3; c += 1) cells.push(r === 2 && c === 2 ? null : cell(r, c));
   }
   const answer = cell(2, 2);
-  const otherShape = answer.shape === shapeA ? shapeB : shapeA;
-
-  // 三个干扰项各错一半：只错数量 / 只错形状 / 数量形状都错且更像
-  const distractors = [
-    { shape: answer.shape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-    { shape: otherShape, count: answer.count },
-    { shape: otherShape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-  ];
-
-  const options = [answer, ...distractors];
-  for (let i = options.length - 1; i > 0; i -= 1) {
-    const j = randInt(0, i, random);
-    const tmp = options[i];
-    options[i] = options[j];
-    options[j] = tmp;
-  }
+  const options = buildOptions(answer, shapeA, shapeB, random);
   return { cells, options, answer: options.indexOf(answer), rule: ruleName };
 }
 

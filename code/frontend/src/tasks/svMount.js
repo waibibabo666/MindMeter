@@ -67,12 +67,19 @@ export function buildRotate() {
   const correct = rotate90(base);
   const pool = [rotate90(correct), rotate90(rotate90(correct)), mirrorGrid(base)];
   const options = [correct];
-  for (const candidate of pool) {
-    if (options.some((grid) => same(grid, candidate))) continue;
-    options.push(candidate);
-    if (options.length === 4) break;
+  // 去重必须覆盖"随机补位"：旧实现 while (options.length < 4) push(randomPattern())，
+  // 随机图案一旦和已有选项撞车，就会出现两张相同的图（等于两个正确答案）。
+  const add = (grid) => {
+    if (options.length === 4) return;
+    if (options.some((item) => same(item, grid))) return;
+    options.push(grid);
+  };
+  for (const candidate of pool) add(candidate);
+  let guard = 0;
+  while (options.length < 4 && guard < 200) {
+    guard += 1;
+    add(randomPattern());
   }
-  while (options.length < 4) options.push(randomPattern());
   const list = shuffle(options);
   return {
     kind: 'rotate',
@@ -84,17 +91,17 @@ export function buildRotate() {
 
 const FOLD_BANK = [
   {
-    q: '正方形纸对折一次，在折边处剪一个洞，展开后有几个洞？',
+    q: '正方形纸对折一次，在折边内侧剪一个洞（不跨过折痕），展开后有几个洞？',
     options: ['1 个', '2 个', '3 个', '4 个'],
     answer: 1,
   },
   {
-    q: '正方形纸沿中线对折两次（两个方向），在折角处剪一刀，展开后有几个洞？',
+    q: '正方形纸沿中线对折两次（两个方向），剪去折角（即纸的中心），展开后有几个洞？',
     options: ['1 个', '2 个', '4 个', '8 个'],
-    answer: 2,
+    answer: 0,
   },
   {
-    q: '正方形纸对折两次后打一个洞，展开后洞的个数是？',
+    q: '正方形纸对折两次后，在非折痕处打一个洞，展开后洞的个数是？',
     options: ['2 个', '3 个', '4 个', '6 个'],
     answer: 2,
   },
