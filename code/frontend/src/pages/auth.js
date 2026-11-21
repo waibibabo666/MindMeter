@@ -26,6 +26,28 @@ function input(id, type, autocomplete, placeholder) {
   });
 }
 
+/** 密码框：右侧带「显示 / 隐藏」开关，减少输错密码的来回。 */
+function passwordControl(id, autocomplete, placeholder, fieldName) {
+  const box = input(id, 'password', autocomplete, placeholder);
+  if (fieldName) box.dataset.field = fieldName;
+  const toggle = el('button', {
+    class: 'pw-toggle',
+    type: 'button',
+    'aria-label': '显示密码',
+    'aria-pressed': 'false',
+    text: '显示',
+  });
+  toggle.addEventListener('click', () => {
+    const show = box.type === 'password';
+    box.type = show ? 'text' : 'password';
+    toggle.textContent = show ? '隐藏' : '显示';
+    toggle.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
+    toggle.setAttribute('aria-pressed', String(show));
+    box.focus();
+  });
+  return el('span', { class: 'input-wrap' }, [box, toggle]);
+}
+
 function statusNode(id) {
   return el('p', { id: `${id}-status`, class: 'auth-status', role: 'status', text: '' });
 }
@@ -112,8 +134,7 @@ export function renderLogin(root, ctx) {
   const status = statusNode('login');
   const username = input('login-username', 'text', 'username', '例如 mind.demo');
   username.dataset.field = 'username';
-  const password = input('login-password', 'password', 'current-password', '登录密码');
-  password.dataset.field = 'password';
+  const password = passwordControl('login-password', 'current-password', '登录密码', 'password');
 
   form.appendChild(field('用户名', username));
   form.appendChild(field('密码', password));
@@ -160,15 +181,13 @@ export function renderRegister(root, ctx) {
     '2–32 位，字母/数字/点/下划线/中文',
   );
   username.dataset.field = 'username';
-  const password = input(
+  const password = passwordControl(
     'register-password',
-    'password',
     'new-password',
     '至少 8 位，含字母与数字',
+    'password',
   );
-  password.dataset.field = 'password';
-  const confirm = input('register-confirm', 'password', 'new-password', '再输入一次');
-  confirm.dataset.field = 'confirm';
+  const confirm = passwordControl('register-confirm', 'new-password', '再输入一次', 'confirm');
   const { box: adult, label: adultLabel } = checkbox('register-adult', [
     el('span', {
       text: '我已满 18 岁，并理解这只是自我观察工具，不是诊断。',
