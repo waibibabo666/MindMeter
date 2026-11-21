@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -191,6 +193,35 @@ def append_message(
     return {"id": row.id}
 
 
+def _iter_text_chunks(text: str, size: int = 12):
+    """把最终回答切成小块，供 SSE 逐段下发（前端做打字机效果）。"""
+    value = str(text or "")
+    for start in range(0, len(value), size):
+        yield value[start : start + size]
+
+
+@router.post("/chat/stream")
+def chat_stream(
+    payload: dict = Body(...),
+    user: User = Depends(auth.require_user),
+    db: Session = Depends(get_db),
+):
+    """可选：先走完同样的生成/校验，再把回答分块推给前端。
+
+    生成逻辑与 `/chat` 完全一致（消息也会落库），只是传输方式不同；
+    因此前端切流式不需要改后端行为。
+    """
+    result = chat(payload=payload, user=user, db=db)
+    text = str((result.get("reply") or {}).get("text") or "")
+
+    def event_stream():
+        for chunk in _iter_text_chunks(text):
+            yield f"data: {json.dumps({'delta': chunk}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
 @router.post("/chat")
 def chat(
     payload: dict = Body(...),
@@ -201,8 +232,10 @@ def chat(
     question = str(payload.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "empty_question")
+    # 用户可在设置里关闭"记忆影响回答"：关闭后本次请求不注入画像/摘要/建议。
+    use_memory = payload.get("useMemory", True)
     facts, assessment_id, tier = _facts(db, uid)
-    memory = _memory_context(db, uid)
+    memory = _memory_context(db, uid) if use_memory is not False else None
     history = _history(db, uid)
 
     # PII is redacted before storage and never forwarded to a model.

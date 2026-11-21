@@ -7,6 +7,7 @@
  *    改密码、退出登录、注销账号（级联删除）、导出与导入。
  */
 import { el, button, clear, hint, titled } from '../ui.js';
+import { readUiPrefs, writeUiPrefs } from '../ui-prefs.js';
 import { api } from '../api.js';
 import { readSettings } from '../storage.js';
 import { clearLogs, exportLogs, getLogs, log } from '../log.js';
@@ -26,6 +27,7 @@ const TIP_DATA =
 const TIP_SOUND =
   '按钮和选项点击时播放一声轻微提示音；在当前页面实时合成，不加载音频文件、不联网。';
 const TIP_LOG = '前端日志只存在当前页面内存，最多 200 条，刷新即清；导出前会脱敏，不包含密钥。';
+const TIP_AI_RUNS = '最近 10 次 AI 调用的延迟与模板回退次数；只显示指标，不含对话内容。';
 
 const RISKS = [
   '模型服务由站点统一配置，Key 只存在于服务端环境变量：不进浏览器、不进数据库、不进日志与导出 JSON。',
@@ -293,10 +295,87 @@ function buildSoundToggle() {
   });
 }
 
+function buildMemoryToggle() {
+  return el('input', {
+    id: 'set-memory',
+    type: 'checkbox',
+    checked: readUiPrefs().memoryInPrompt ? 'checked' : null,
+    onchange: (event) => {
+      const prefs = readUiPrefs();
+      prefs.memoryInPrompt = Boolean(event.target.checked);
+      writeUiPrefs(prefs);
+    },
+  });
+}
+
+function buildStreamToggle() {
+  return el('input', {
+    id: 'set-stream',
+    type: 'checkbox',
+    checked: readUiPrefs().streamReply ? 'checked' : null,
+    onchange: (event) => {
+      const prefs = readUiPrefs();
+      prefs.streamReply = Boolean(event.target.checked);
+      writeUiPrefs(prefs);
+    },
+  });
+}
+
 function buildExperienceCard() {
   return el('div', { class: 'card' }, [
     titled('h2', '体验', TIP_SOUND),
     el('label', { class: 'check' }, [buildSoundToggle(), el('span', { text: '点击音效' })]),
+    el('label', { class: 'check' }, [
+      buildMemoryToggle(),
+      el('span', { text: '允许 AI 参考我的记忆（画像/摘要）' }),
+    ]),
+    el('p', {
+      class: 'tiny',
+      text: '关闭后，AI 只依据本次测评回答；记忆数据仍保留，只是不再参与生成。',
+    }),
+    el('label', { class: 'check' }, [
+      buildStreamToggle(),
+      el('span', { text: '流式输出（实验，回答逐段出现）' }),
+    ]),
+  ]);
+}
+
+function buildAiRunsCard() {
+  const stats = el('p', { class: 'tiny', text: '读取中…' });
+  const recent = el('div', { class: 'tiny' });
+
+  async function load() {
+    try {
+      const data = await api.get('/ai/runs?limit=10');
+      const rate = Math.round((data.degradedRate || 0) * 100);
+      const avg = data.avgLatencyMs === null ? '—' : data.avgLatencyMs;
+      const p95 = data.p95LatencyMs === null ? '—' : data.p95LatencyMs;
+      stats.textContent = `共 ${data.total} 次 · 模板回退 ${rate}% · 平均 ${avg} ms · p95 ${p95} ms`;
+      recent.replaceChildren(
+        ...(data.recent || []).slice(0, 6).map((run) => {
+          const time = run.at ? run.at.slice(11, 16) : '—';
+          const tag = run.degraded ? ' · 模板' : '';
+          const model = run.model ? ` · ${run.model}` : '';
+          return el('p', {
+            class: 'tiny',
+            text: `${time} · ${run.intent || '—'} · ${run.latencyMs ?? '—'} ms${model}${tag}`,
+          });
+        }),
+      );
+      if (!data.recent || data.recent.length === 0) {
+        recent.replaceChildren(el('p', { class: 'tiny', text: '还没有运行记录。' }));
+      }
+    } catch {
+      stats.textContent = '暂时读不到运行记录（可能未登录或服务未就绪）。';
+    }
+  }
+
+  load();
+  return el('div', { class: 'card' }, [
+    titled('h2', 'AI 运行', TIP_AI_RUNS),
+    stats,
+    recent,
+    el('div', { class: 'row' }, [button('刷新', load, { variant: 'ghost' })]),
   ]);
 }
 
@@ -369,6 +448,7 @@ export function renderSettings(root, ctx) {
         buildAccountCard(ctx),
         buildPasswordCard(ctx),
         buildAiCard(),
+        buildAiRunsCard(),
         buildDataCard(ctx, draw),
         buildExperienceCard(),
         buildRiskCard(),

@@ -96,6 +96,48 @@ async function request(path, options = {}) {
   }
 }
 
+/** 解析一条 SSE 片段：返回 'delta' | 'done' | 'skip'。 */
+function handleSseEvent(part, onDelta) {
+  const line = part.trim();
+  if (!line.startsWith('data:')) return 'skip';
+  const data = line.slice(5).trim();
+  if (data === '[DONE]') return 'done';
+  try {
+    const parsed = JSON.parse(data);
+    if (parsed && typeof parsed.delta === 'string') {
+      onDelta(parsed.delta);
+      return 'delta';
+    }
+  } catch {
+    // 单段解析失败不影响后续片段
+  }
+  return 'skip';
+}
+
+/** 流式对话：逐段回调 delta，结束返回 true；失败抛错（调用方回退到普通 /chat）。 */
+async function streamChat(body, onDelta) {
+  const response = await fetch(`${boot.apiBase}/chat/stream`, {
+    method: 'POST',
+    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'same-origin',
+  });
+  if (response.status === 401) announce401('/chat/stream');
+  if (!response.ok || !response.body) throw normalizeError(new Error('stream_unavailable'));
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+    if (parts.some((part) => handleSseEvent(part, onDelta) === 'done')) return true;
+  }
+  return true;
+}
+
 export const api = {
   get: (path, options) => request(path, { ...options, method: 'GET' }),
   post: (path, body, options) =>
@@ -104,4 +146,5 @@ export const api = {
   patch: (path, body, options) => request(path, { ...options, method: 'PATCH', body }),
   del: (path, body, options) => request(path, { ...options, method: 'DELETE', body }),
   request,
+  streamChat,
 };

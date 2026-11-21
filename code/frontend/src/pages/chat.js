@@ -16,6 +16,7 @@ import { api } from '../api.js';
 import { cache } from '../cache.js';
 import { clearConversation } from '../memory.js';
 import { readMemory, readSessions, readSettings } from '../storage.js';
+import { readUiPrefs } from '../ui-prefs.js';
 import { buildFacts, takePendingQuestion } from '../chat.js';
 
 /* 反馈 2：口径解释收进浮框；高风险提示、回退原因、发送失败提示一律留在页面上。 */
@@ -378,12 +379,29 @@ export function renderChat(root, ctx, options = {}) {
     showPending(question);
 
     try {
-      const result = await api.post('/chat', { question }, { timeoutMs: 60000 });
-      cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
-      // 对话会沉淀摘要与建议（服务端写库），这里直接采用服务端返回的那份，
-      // 不再用整份快照 PUT 回去覆盖。
-      if (result.memory) cache.memory = Object.assign(cache.memory, result.memory);
-      if (result.profileSuggested) cache.memory.profileDraft = result.profileSuggested;
+      const prefs = readUiPrefs();
+      if (prefs.streamReply) {
+        // 流式：先把片段打到等待气泡里，完成后从服务端取回完整消息再重渲染。
+        let acc = '';
+        await api.streamChat({ question, useMemory: prefs.memoryInPrompt }, (delta) => {
+          acc += delta;
+          const node = root.querySelector('.chat-pending .pending-text');
+          if (node) node.textContent = acc;
+        });
+        const fresh = await api.get('/memory');
+        cache.memory = Object.assign(cache.memory, fresh);
+      } else {
+        const result = await api.post(
+          '/chat',
+          { question, useMemory: readUiPrefs().memoryInPrompt },
+          { timeoutMs: 60000 },
+        );
+        cache.memory.messages = Array.isArray(result.messages) ? result.messages : [];
+        // 对话会沉淀摘要与建议（服务端写库），这里直接采用服务端返回的那份，
+        // 不再用整份快照 PUT 回去覆盖。
+        if (result.memory) cache.memory = Object.assign(cache.memory, result.memory);
+        if (result.profileSuggested) cache.memory.profileDraft = result.profileSuggested;
+      }
       // eslint-disable-next-line sonarjs/no-ignored-exceptions
     } catch (error) {
       // The page stays usable; the toast is the only recovery action here.

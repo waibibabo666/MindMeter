@@ -28,6 +28,7 @@ from ..rag import retrieve as retrieve_kb
 from ..templates import metric_clauses, reading_sentence, template_narrative, template_trend
 from .classify import (  # 分类与会场话术只在 classify.py 定义一次，这里转出用到的名字
     DIMENSION_WORDS,
+    DIM_MEASURES,
     DOMAIN_WORDS,
     FIXED_REPLY,
     GREETING_NO_FACTS,
@@ -39,10 +40,13 @@ from .classify import (  # 分类与会场话术只在 classify.py 定义一次�
     dims_in_question,
     fixed_reply,
     is_advice_ask,
+    is_explain_what_ask,
     needs_llm_fallback,
     resolve_intent,
 )
 from .intent_llm import classify_with_llm
+from .misconceptions import build_correction, should_correct
+from .structured import STRUCTURED_INSTRUCTION, parse_structured
 from .policies import (
     CITATION_PLACEHOLDERS,
     DEFAULT_MAX_CHARS,
@@ -316,6 +320,27 @@ NUMBER_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(分|次|题|个|秒|毫秒|ms|%|岁|
 # 而 "2.5 秒" 这类前面是空格或汉字的点分小数仍然照常校验。
 VERSION_NUMBER_RE = re.compile(r"(?<=[A-Za-z_\-])\d+(?:\.\d+)+")
 TRAILING_CITATION_RE = re.compile(r"\n*引用\s*[:\uFF1A][^\n]*\s*$")
+
+# 绝对化表述：模型会把「错了几题」写成「全部错误」「完全不会」。
+# 这是措辞失真（比幻觉轻，但同样误导），由 _validate_node 对照 facts 拦截。
+ABSOLUTE_CLAIM_RE = re.compile(
+    r"(?:全部|全都|完全|一律|全都)(?:错误|做错|答错|没对|不对|不会)"
+    r"|一个都没对|一道都没对|全错"
+)
+
+
+def has_positive_correct(facts: dict | None) -> bool:
+    """facts 里是否存在"答对/命中"这类正计数；用于判断绝对化表述是否失真。"""
+    if not isinstance(facts, dict):
+        return False
+    for metrics in facts.values():
+        if not isinstance(metrics, dict):
+            continue
+        for key in ("correct", "encCorrect", "catCorrect", "hits"):
+            value = metrics.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                return True
+    return False
 # 全角数字/小数点/百分号与半角同值：不归一就会切错 token（"１．８７" 里根本没有
 # 半角数字，于是整个数字对校验器隐形 —— 那是放行幻觉数字的口子，不是宽松度）。
 FULLWIDTH_DIGITS = {ord(c): str(index) for index, c in enumerate("０１２３４５６７８９")}
@@ -887,7 +912,22 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
         )
 
     parts: list[str] = []
-    if advice_ask:
+    if is_explain_what_ask(str(question or "")) and not advice_ask:
+        # 「这项测什么」→ 先讲任务形式，再给本次数字；不给练习建议。
+        # 但如果同时含「建议/下一步/明天」这类诉求（"我明天建议测什么"），
+        # 仍然按建议走——那是在问下一步做什么。
+        targets = asked or focus
+        explained = [
+            f"{DIM_NAMES[dim]}测的是{DIM_MEASURES[dim]}"
+            for dim in targets
+            if dim in DIM_MEASURES
+        ]
+        if explained:
+            parts.append("；".join(explained) + "。")
+            parts.append("")
+        parts.append("本次相关维度的记录是：")
+        parts.extend(lines)
+    elif advice_ask:
         targets = asked or weak_dims(data) or focus
         parts.append("下一步可以这样安排：")
         for dim in targets[:2]:
@@ -1104,7 +1144,9 @@ def _retrieve_node(state: AgentState) -> dict:
     if db is None:
         return {"chunks": []}
     if state.get("intent") == INTENT["SUMMARY"]:
-        chunks = retrieve_context(db, state.get("facts") or {}, limit=8)
+        chunks = retrieve_context(
+        db, state.get("facts") or {}, limit=8, question=str(state.get("question") or "")
+    )
     else:
         chunks = retrieve_kb(db, state.get("question", ""), limit=3)
     return {
@@ -1176,17 +1218,30 @@ def _generate_node(state: AgentState) -> dict:
                 facts,
                 chunks,
                 state.get("history") or [],
-                state.get("memory"),
+                state.get("memory") if settings.memory_in_prompt else None,
                 scene,
             )
         )
+        if settings.llm_structured:
+            # 结构化输出：在 system 里追加 JSON 约束；解析失败自动回退纯文本。
+            messages = [
+                *messages,
+                {"role": "system", "content": STRUCTURED_INSTRUCTION},
+            ]
         reply = call_llm_with_fallback(
             config,
             messages,
             max_tokens=3000 if summary else settings.llm_max_tokens,
         )
         latency = int((time.monotonic() - started) * 1000)
-        return {"text": reply.text, "source": "llm", "code": "ok", "model": reply.model, "latency_ms": latency}
+        text = reply.text
+        if settings.llm_structured:
+            parsed = parse_structured(
+                reply.text, [str(chunk.get("id") or "") for chunk in chunks]
+            )
+            if parsed:
+                text = parsed["text"]
+        return {"text": text, "source": "llm", "code": "ok", "model": reply.model, "latency_ms": latency}
     except LLMError as exc:
         return {
             "text": fallback,
@@ -1221,6 +1276,23 @@ def _validate_node(state: AgentState) -> dict:
         score_owners=score_owners,
         chunk_ids=chunk_ids,
     )
+    # 绝对化表述校验：事实里有答对项，却写「全部错误/完全不会」→ 硬失败，走模板。
+    # 真实模型实测把「知觉速度错了 3 题」写成「全部错误」，这类失真必须拦。
+    if ABSOLUTE_CLAIM_RE.search(state.get("text", "")) and has_positive_correct(
+        state.get("facts")
+    ):
+        result = {
+            "ok": False,
+            "issues": [
+                *result["issues"],
+                {
+                    "code": "absolute_claim",
+                    "detail": "出现「全部错误/完全不会」等绝对化描述，但原始指标里有答对项",
+                    "severity": "hard",
+                },
+            ],
+            "chars": len(state.get("text", "")),
+        }
     if result["ok"]:
         soft = [issue["code"] for issue in result["issues"] if issue["severity"] == "soft"]
         issues = list(result["issues"])
@@ -1371,6 +1443,22 @@ def answer(
         ],
         "risk": "low",
     }
+    # 概念纠偏：命中常见误解时给一句确定性纠正，直接返回，不调用模型。
+    # 次数上限写在 misconceptions 模块里（一次对话最多 2 次）。
+    if scene == DEFAULT_SCENE:
+        correction = should_correct(question, history)
+        if correction:
+            reply, kb_id = correction
+            return {
+                "intent": INTENT["EXPLAIN"],
+                "intentSource": "rule",
+                "risk": "low",
+                "text": build_correction(reply, kb_id),
+                "citations": [kb_id],
+                "sources": [],
+                "source": "template",
+                "code": "correction",
+            }
     token = _DB.set(db)
     try:
         result = _GRAPH.invoke(state, {"configurable": {"thread_id": "local"}})

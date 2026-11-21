@@ -99,7 +99,14 @@ def facts_block(facts: dict) -> str:
     return "\n".join(lines) or "（本次没有可解读的指标）"
 
 
-def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
+def retrieve_context(
+    db: Session, facts: dict, limit: int = 8, question: str | None = None
+) -> list[dict]:
+    """按弱项维度 + **用户原话** 检索知识块。
+
+    旧版只看 facts 的弱项，问「睡眠会影响吗」「工作记忆是什么」时命不中
+    对应的 factor / 概念块；现在把问题本身和它点到的维度也作为查询。
+    """
     weak = weak_dims(facts)
     queries = []
     for dim in weak:
@@ -116,6 +123,18 @@ def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
     }
     queries += [extra[dim] for dim in weak if dim in extra]
     queries += [f"{DIM_NAMES[dim]} 分数怎么读" for dim in weak[:1]]
+    # 用户点名的维度（含口语说法）优先补查询，避免只答弱项。
+    # 懒导入：agent.classify 是叶子模块，放函数里可避免 analysis ↔ agent 的循环导入。
+    asked = []
+    if question:
+        from .agent.classify import dims_in_question
+
+        asked = dims_in_question(question)
+    for dim in asked:
+        queries.extend([f"{DIM_NAMES[dim]} 测什么", f"{DIM_NAMES[dim]} 分数怎么读"])
+    # 原话直接作为一条查询：概念/因素类问题靠它命中。
+    if question:
+        queries.append(str(question).strip()[:40])
     queries += ["练习效应", "睡眠会影响成绩吗", "复测怎么比较", "未测是什么意思"]
     found: dict[str, dict] = {}
     for query in queries:
@@ -132,8 +151,27 @@ def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
     return ordered[:limit]
 
 
+# Prompt 预算：知识块只取命中的前 3 块、每块截断，问题截断，整体再兜一层字符上限。
+# 目的：控制 token 与延迟，避免长对话把上下文撑爆。
+MAX_CHUNKS_IN_PROMPT = 3
+MAX_CHUNK_CHARS = 120
+MAX_QUESTION_CHARS = 80
+MAX_PROMPT_CHARS = 1800
+
+
+def _clip(text: object, limit: int) -> str:
+    value = str(text or "").strip().replace("\n", " ")
+    return value if len(value) <= limit else value[: limit - 1] + "…"
+
+
 def build_messages(facts: dict, chunks: list[dict], question: str | None = None) -> list[dict]:
-    kb = "\n".join(f"{c['id']} · {c['title']}：{c['text']}" for c in chunks) or "（无）"
+    selected = (chunks or [])[:MAX_CHUNKS_IN_PROMPT]
+    kb = (
+        "\n".join(
+            f"{c['id']} · {c['title']}：{_clip(c.get('text'), MAX_CHUNK_CHARS)}" for c in selected
+        )
+        or "（无）"
+    )
     user = [
         "本次原始指标：",
         facts_block(facts),
@@ -141,7 +179,7 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
         "可引用知识块：",
         kb,
     ]
-    if chunks:
+    if selected:
         # 引用行的真实编号来源（和 chat 侧同源）：逐条给出「引用：编号 · 标题」，
         # 不写出来模型就会抄占位说明。
         user.extend(
@@ -151,15 +189,18 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
                 "也不要把「知识块编号」「标题」这些说明词抄进回答）：\n"
                 + "\n".join(
                     f"引用：{chunk.get('id')} · {chunk.get('title', '')}".rstrip(" ·")
-                    for chunk in chunks[:3]
+                    for chunk in selected
                 ),
             ]
         )
     if question:
-        user.extend(["", f"用户问题：{question}"])
+        user.extend(["", f"用户问题：{_clip(question, MAX_QUESTION_CHARS)}"])
+    body = "\n".join(user)
+    if len(body) > MAX_PROMPT_CHARS:
+        body = body[: MAX_PROMPT_CHARS - 1] + "…"
     return [
         {"role": "system", "content": ANALYSIS_PROMPT},
-        {"role": "user", "content": "\n".join(user)},
+        {"role": "user", "content": body},
     ]
 
 
