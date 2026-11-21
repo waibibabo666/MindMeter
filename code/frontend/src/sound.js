@@ -3,8 +3,8 @@
  *
  * 两类声音：
  * - 界面点击：五声音阶依次取音，像轻敲玻璃；
- * - 测评答题：每个任务一套独立音色（言语/知觉/空间/记忆各不同），
- *   但同一任务里不管选哪个选项、答对答错，声音完全一样——绝不泄露对错。
+ * - 测评答题：八个维度各一套独立音色（音区、波形、余音都不同），
+ *   同一维度里不管选哪个选项、答对答错，声音完全一样——绝不泄露对错。
  *
  * 浏览器不允许自动播放，音频上下文在第一次点击时才创建。
  */
@@ -13,11 +13,18 @@ const STORAGE_KEY = 'mindmeter.sound.v1';
 
 const UI_NOTES = [523.25, 587.33, 659.25, 783.99, 880];
 
-const TASK_TONES = {
+// 八个维度各占一个音区/音色，互不重复：
+// vc 中高音区 · ps 高音区 · sv 中低音区 · am 中音区 · nc 中高音区三角波
+// ir 低音区 · ni 最高音区 · vf 最低音区三角波
+export const TASK_TONES = {
   vc: { type: 'sine', notes: [523.25, 587.33, 659.25], decay: 0.34, gain: 0.05 },
   ps: { type: 'triangle', notes: [783.99, 880, 987.77], decay: 0.16, gain: 0.04 },
   sv: { type: 'sine', notes: [392, 440, 493.88], decay: 0.4, gain: 0.05 },
   am: { type: 'sine', notes: [440, 493.88, 587.33], decay: 0.5, gain: 0.045, octave: true },
+  nc: { type: 'triangle', notes: [587.33, 659.25, 739.99], decay: 0.18, gain: 0.042 },
+  ir: { type: 'sine', notes: [349.23, 440, 523.25], decay: 0.3, gain: 0.045 },
+  ni: { type: 'sine', notes: [1046.5, 1318.51, 1567.98], decay: 0.22, gain: 0.032 },
+  vf: { type: 'triangle', notes: [293.66, 349.23, 440], decay: 0.28, gain: 0.05 },
 };
 
 let context = null;
@@ -106,7 +113,7 @@ export function playClick() {
   play({ type: 'sine', notes: UI_NOTES, decay: 0.28, gain: 0.05 }, 'ui');
 }
 
-/** 测评答题音：按任务给不同音色，同一任务内不区分对错。 */
+/** 测评答题音：八个维度各一套独立音色，同一维度内不区分对错。 */
 export function playAnswer(taskId) {
   play(TASK_TONES[taskId] || TASK_TONES.vc, taskId || 'vc');
 }
