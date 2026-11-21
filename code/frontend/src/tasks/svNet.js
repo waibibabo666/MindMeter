@@ -41,7 +41,7 @@ export function buildNetCubeQuestion(random = Math.random) {
     net: { top, left, front, right, back, bottom },
     options,
     answer: options.indexOf(correct),
-    q: '下面哪个立方体，是由左边的展开图折成的？',
+    q: '下面哪个立方体，是由左边的展开图折成的？（颜色朝外）',
   };
 }
 
