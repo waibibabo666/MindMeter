@@ -396,6 +396,23 @@ async function main() {
     });
   });
 
+  test('图形规律：数量规律不被截断（diagonal/combine 的 5 个也要出）', () => {
+    // 这两条规则在右下角会算出 5 个；以前数据层和渲染层都截断到 4，
+    // 导致题干规律指向「5 个」，选项里却只有「4 个」。
+    for (const rule of ['diagonal', 'combine']) {
+      for (let i = 0; i < 20; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(500 + i));
+        const answer = q.options[q.answer];
+        eq(answer.count, 5, `${rule} 第 ${i} 题答案数量`);
+        const counts = q.cells.filter(Boolean).map((cell) => cell.count);
+        assert(counts.includes(4), `${rule} 题干应能看到 4 个的格子`);
+        for (const opt of q.options) {
+          assert(opt.count >= 1 && opt.count <= 5, `${rule} 选项数量越界`);
+        }
+      }
+    }
+  });
+
   test('空间旋转（测评）：选项不重复，正确项只出现一次', () => {
     for (let i = 0; i < 200; i += 1) {
       const q = svMount.buildRotate();

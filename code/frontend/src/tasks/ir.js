@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 归纳推理：瑞文式 3×3 图形矩阵。
  *
  * 六种规则轮换出题：数量递增、数量递减、形状循环、位置轮换、叠加、交替。
@@ -30,7 +30,7 @@ function buildOptions(answer, shapeA, shapeB, random) {
   // 干扰项要**四个互不相同**：先给"只错数量/只错形状/两样都错"，
   // 数量为 1 时 ±1 会被夹回 1（旧实现因此和正确答案撞车，出现两个正确项），
   // 所以候选按"难度优先"排好后去重，不够再从形状×数量全组合里补。
-  const clampCount = (value) => Math.min(4, Math.max(1, value));
+  const clampCount = (value) => Math.min(5, Math.max(1, value));
   const cellKey = (value) => `${value.shape}:${value.count}`;
   const otherShape = answer.shape === shapeA ? shapeB : shapeA;
   const ordered = [
@@ -68,7 +68,7 @@ export function buildMatrix(ruleName, random = Math.random) {
 
   const cell = (r, c) => {
     const value = rule(r, c, shapeA);
-    return { shape: value.shape || shapeA, count: Math.min(4, Math.max(1, value.count)) };
+    return { shape: value.shape || shapeA, count: Math.min(5, Math.max(1, value.count)) };
   };
 
   const cells = [];
@@ -96,7 +96,7 @@ function cellNode(cell, size = 12) {
     node.appendChild(el('span', { class: 'mx-q', text: '?' }));
     return node;
   }
-  const count = Math.min(cell.count, 4);
+  const count = Math.min(cell.count, 5);
   for (let i = 0; i < count; i += 1) {
     node.appendChild(
       el('span', { class: 'mx-sym', style: `font-size:${size}px`, text: cell.shape }),
