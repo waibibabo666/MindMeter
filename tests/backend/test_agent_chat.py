@@ -43,9 +43,13 @@ def test_fixed_replies_do_not_leak_between_turns(logged_client):
     assert "咨询医生" in first["reply"]["text"]
 
     second = chat(logged_client, "帮我写代码")
-    assert second["reply"]["intent"] == "unrelated"
+    # 第 4 轮起「跑代码/改文件」是独立的 off_task 意图（固定话术），
+    # 与 unrelated 同属"离题但低风险"，这里两者都接受。
+    assert second["reply"]["intent"] in {"unrelated", "off_task"}
     assert second["reply"]["risk"] == "low"
-    assert "只解释本次测评" in second["reply"]["text"]
+    assert ("只解释本次测评" in second["reply"]["text"]) or (
+        "只做这次测评" in second["reply"]["text"]
+    )
     assert "疾病" not in second["reply"]["text"]
 
 

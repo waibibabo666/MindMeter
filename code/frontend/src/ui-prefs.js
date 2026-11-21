@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 界面偏好：侧栏 / 右栏是否收起，快捷操作列表是否折叠。
  *
  * 存在 localStorage（纯显示偏好，不进数据库、不参与导出）。
@@ -7,7 +7,15 @@
 
 const KEY = 'mindmeter.ui.v1';
 
-const DEFAULTS = { navCollapsed: false, railCollapsed: false, railMin: false };
+const DEFAULTS = {
+  navCollapsed: false,
+  railCollapsed: false,
+  railMin: false,
+  // 是否允许 AI 在回答时参考记忆（画像/摘要/建议）；默认开启，可随时关闭。
+  memoryInPrompt: true,
+  // 流式输出（实验）：开启后回答逐段出现，失败自动回退普通请求。
+  streamReply: false,
+};
 
 function store() {
   try {
@@ -26,6 +34,8 @@ export function readUiPrefs() {
       navCollapsed: Boolean(parsed && parsed.navCollapsed),
       railCollapsed: Boolean(parsed && parsed.railCollapsed),
       railMin: Boolean(parsed && parsed.railMin),
+      memoryInPrompt: parsed && parsed.memoryInPrompt === false ? false : true,
+      streamReply: Boolean(parsed && parsed.streamReply),
     };
   } catch {
     return { ...DEFAULTS };
