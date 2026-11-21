@@ -37,13 +37,20 @@ function makeDocument() {
     innerHTML: '',
     dataset: {},
     attributes: {},
+    style: {},
     children: [],
     listeners: {},
     setAttribute(name, value) {
       this.attributes[name] = value;
     },
     addEventListener(type, handler) {
-      this.listeners[type] = handler;
+      if (!this.listeners[type]) this.listeners[type] = [];
+      this.listeners[type].push(handler);
+    },
+    /** 派发事件：同类型的监听按注册顺序全部调用（浏览器行为）。 */
+    dispatch(type, event = {}) {
+      const list = this.listeners[type] || [];
+      list.forEach((fn) => fn({ type, target: this, ...event }));
     },
     appendChild(child) {
       this.children.push(child);
@@ -191,7 +198,7 @@ async function main() {
       eq(node.textContent, 'body', 'text');
       eq(node.dataset.id, 'x', 'dataset');
       eq(node.attributes['aria-label'], 'label', '普通属性');
-      eq(node.listeners.click, handler, '事件绑定');
+      assert((node.listeners.click || []).includes(handler), '事件绑定');
       assert(!('hidden' in node.attributes), 'false 值不应写入属性');
       assert(!('missing' in node.attributes), 'null 值不应写入属性');
       eq(node.children.length, 1, '只保留字符串子节点');
@@ -218,6 +225,39 @@ async function main() {
       const t2 = ui.now();
       assert(Number.isFinite(t1) && Number.isFinite(t2), 'now 应返回数字');
       assert(t2 >= t1, 'now 应单调不减');
+    } finally {
+      globalThis.document = previous;
+    }
+  });
+
+  test('展开图：拖动立方体不算作答，单击才算', async () => {
+    const doc = makeDocument();
+    const previous = globalThis.document;
+    globalThis.document = doc;
+    try {
+      const { buildNetCubeQuestion, renderNetQuestion } = await import(href('tasks/svNet.js'));
+      const item = buildNetCubeQuestion(() => 0.5);
+      const picked = [];
+      const view = renderNetQuestion(item, (index) => picked.push(index));
+
+      const byClass = (node, name) =>
+        (node.children || []).find((child) => child.className === name);
+      const body = byClass(view.node, 'net-body');
+      const options = byClass(body, 'cube-options');
+      const card = options.children[0];
+      const stage = card.children[0];
+
+      // 拖动：按下 → 移动 60px → 松开 → 浏览器补一个 click（冒泡到卡片）
+      stage.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 1 });
+      stage.dispatch('pointermove', { clientX: 60, clientY: 0, pointerId: 1 });
+      stage.dispatch('pointerup', { pointerId: 1 });
+      stage.dispatch('click', {});
+      card.dispatch('click', {});
+      eq(picked.length, 0, '转动之后不应提交答案');
+
+      // 纯点击：应恰好提交一次（曾因两个 click 处理器各提交一次而重复）
+      card.dispatch('click', {});
+      eq(picked.length, 1, '单击应恰好提交一次');
     } finally {
       globalThis.document = previous;
     }
