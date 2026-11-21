@@ -4,6 +4,7 @@
  * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
  */
 import { button, el, clear, hint } from '../ui.js';
+import { playFinish } from '../sound.js';
 import { STANDARD_ORDER, TASK_META } from '../data.js';
 import { specFor } from '../scoring/levels.js';
 import { vcTask } from '../tasks/vc.js';
@@ -110,6 +111,7 @@ export function renderTask(root, ctx, taskId) {
   const draft = (state.drafts && state.drafts[taskId]) || null;
   let current = draft ? Object.assign({}, draft) : null;
   let cleanup = () => {};
+  let finished = false;
 
   const taskCtx = {
     draft,
@@ -120,7 +122,11 @@ export function renderTask(root, ctx, taskId) {
       ctx.patchDraft(taskId, current);
     },
     finish: (payload, detail) => {
+      if (finished) return;
+      finished = true;
       cleanup();
+      // 整项完成音：每个维度一套两音收尾（不区分对错）。
+      playFinish(taskId);
       // New task modules call finish(null, metrics); older vc calls finish(payload).
       if (detail && typeof detail === 'object') {
         const metrics = Object.assign({}, detail);

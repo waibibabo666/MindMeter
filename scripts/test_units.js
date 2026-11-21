@@ -433,22 +433,27 @@ async function main() {
   test('音效：八个维度各有一套独立音色，不重复', () => {
     const ids = DIMS.map((dim) => dim.id);
     eq(ids.length, 8, '维度数');
-    const seenNotes = new Set();
-    const seenSignature = new Set();
-    for (const id of ids) {
-      const tone = sound.TASK_TONES[id];
-      assert(tone, `${id} 缺少音色配置`);
-      assert(Array.isArray(tone.notes) && tone.notes.length >= 2, `${id} 音符太少`);
-      const notesKey = tone.notes.join(',');
-      assert(!seenNotes.has(notesKey), `${id} 的音符与其它维度重复：${notesKey}`);
-      seenNotes.add(notesKey);
-      const signature = `${tone.type}|${notesKey}|${tone.decay}`;
-      assert(!seenSignature.has(signature), `${id} 的音色签名重复`);
-      seenSignature.add(signature);
-      assert(tone.gain > 0 && tone.gain <= 0.1, `${id} 音量越界：${tone.gain}`);
-      assert(tone.decay > 0 && tone.decay <= 1, `${id} 余音越界：${tone.decay}`);
-      for (const freq of tone.notes) {
-        assert(freq >= 200 && freq <= 2000, `${id} 频率越界：${freq}`);
+    for (const [label, tones] of [
+      ['答题音', sound.TASK_TONES],
+      ['完成音', sound.FINISH_TONES],
+    ]) {
+      const seenNotes = new Set();
+      const seenSignature = new Set();
+      for (const id of ids) {
+        const tone = tones[id];
+        assert(tone, `${id} 缺少${label}配置`);
+        assert(Array.isArray(tone.notes) && tone.notes.length >= 2, `${id} ${label}音符太少`);
+        const notesKey = tone.notes.join(',');
+        assert(!seenNotes.has(notesKey), `${id} 的${label}与其它维度重复：${notesKey}`);
+        seenNotes.add(notesKey);
+        const signature = `${tone.type}|${notesKey}|${tone.decay}`;
+        assert(!seenSignature.has(signature), `${id} 的${label}签名重复`);
+        seenSignature.add(signature);
+        assert(tone.gain > 0 && tone.gain <= 0.1, `${id} ${label}音量越界：${tone.gain}`);
+        assert(tone.decay > 0 && tone.decay <= 1, `${id} ${label}余音越界：${tone.decay}`);
+        for (const freq of tone.notes) {
+          assert(freq >= 200 && freq <= 2000, `${id} ${label}频率越界：${freq}`);
+        }
       }
     }
   });
@@ -456,7 +461,10 @@ async function main() {
   test('音效：没有音频设备时静默降级', () => {
     // Node 里没有 AudioContext，调用不应抛错，也不影响点击本身。
     sound.playClick();
-    for (const dim of DIMS) sound.playAnswer(dim.id);
+    for (const dim of DIMS) {
+      sound.playAnswer(dim.id);
+      sound.playFinish(dim.id);
+    }
   });
 
   // ---------- trend ----------

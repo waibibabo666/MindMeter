@@ -13,9 +13,17 @@ const STORAGE_KEY = 'mindmeter.sound.v1';
 
 const UI_NOTES = [523.25, 587.33, 659.25, 783.99, 880];
 
-// 八个维度各占一个音区/音色，互不重复：
-// vc 中高音区 · ps 高音区 · sv 中低音区 · am 中音区 · nc 中高音区三角波
-// ir 低音区 · ni 最高音区 · vf 最低音区三角波
+// 整项完成时的两音收尾：同样八个维度各一套，和答题音一起保证“每维不重样”。
+export const FINISH_TONES = {
+  vc: { type: 'sine', notes: [523.25, 783.99], decay: 0.5, gain: 0.04 },
+  ps: { type: 'triangle', notes: [880, 1174.66], decay: 0.3, gain: 0.038 },
+  sv: { type: 'sine', notes: [392, 587.33], decay: 0.55, gain: 0.045 },
+  am: { type: 'sine', notes: [440, 659.25], decay: 0.6, gain: 0.042, octave: true },
+  nc: { type: 'triangle', notes: [659.25, 987.77], decay: 0.35, gain: 0.04 },
+  ir: { type: 'sine', notes: [349.23, 523.25], decay: 0.45, gain: 0.042 },
+  ni: { type: 'sine', notes: [1046.5, 1567.98], decay: 0.3, gain: 0.03 },
+  vf: { type: 'triangle', notes: [293.66, 440], decay: 0.4, gain: 0.045 },
+};
 export const TASK_TONES = {
   vc: { type: 'sine', notes: [523.25, 587.33, 659.25], decay: 0.34, gain: 0.05 },
   ps: { type: 'triangle', notes: [783.99, 880, 987.77], decay: 0.16, gain: 0.04 },
@@ -69,8 +77,8 @@ function nextNote(notes, key) {
 }
 
 /** 一个极短的正弦/三角波包络；octave 为真时叠一层八度泛音做钟琴感。 */
-function blip(audio, tone, freq) {
-  const now = audio.currentTime;
+function blip(audio, tone, freq, offset = 0) {
+  const now = audio.currentTime + offset;
   const osc = audio.createOscillator();
   const env = audio.createGain();
   osc.type = tone.type;
@@ -113,9 +121,26 @@ export function playClick() {
   play({ type: 'sine', notes: UI_NOTES, decay: 0.28, gain: 0.05 }, 'ui');
 }
 
+/** 依次播放一组音（用于整项完成的收尾音）。 */
+function playSequence(tone) {
+  if (!isSoundOn()) return;
+  try {
+    const audio = getContext();
+    if (!audio) return;
+    tone.notes.forEach((freq, index) => blip(audio, tone, freq, index * 0.11));
+  } catch {
+    // 音频不可用时静默降级。
+  }
+}
+
 /** 测评答题音：八个维度各一套独立音色，同一维度内不区分对错。 */
 export function playAnswer(taskId) {
   play(TASK_TONES[taskId] || TASK_TONES.vc, taskId || 'vc');
+}
+
+/** 整项完成音：八个维度各一套两音收尾，同样不区分对错。 */
+export function playFinish(taskId) {
+  playSequence(FINISH_TONES[taskId] || FINISH_TONES.vc);
 }
 
 /** 给按钮、链接、可点卡片挂上音效；测评页内用答题音。 */
