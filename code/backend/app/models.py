@@ -350,3 +350,32 @@ class KBChunk(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+# ---------------------------------------------------------------------------
+# Practice games
+# ---------------------------------------------------------------------------
+
+
+class GameRecord(Base):
+    """Per-account practice-game records.
+
+    Games are practice, not assessment: they never enter a report or trend.
+    The row is still owned by an account (rather than browser localStorage)
+    because a shared browser must not show one account's records to another.
+    """
+
+    __tablename__ = "game_records"
+
+    user_id: Mapped[int] = user_pk()
+    game_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    best: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default=sa_text("0")
+    )
+    plays: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=sa_text("0")
+    )
+    last_score: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default=sa_text("0")
+    )
+    last_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
