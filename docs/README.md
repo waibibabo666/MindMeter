@@ -13,6 +13,7 @@
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前桌面版见本地运行时 |
 | `software/` | [本地运行时](software/local-runtime.md) | 当前 | 双击入口、便携 PostgreSQL、启停、日志、排障 |
+| `software/` | [部署指南](software/deployment.md) | 当前（已实测） | Linux 云服务器部署：阿里云 ECS 实测步骤、三处本地限制的绕过、发布检查单 A–G、排障 |
 | `software/` | [迁移报告](software/migration-report.md) | 当前 | 保留/重写/删除、测试结果、已知限制 |
 | `adr/` | [ADR-0001 本地桌面运行时](adr/0001-local-desktop-runtime.md) | 已接受 | 取代 m1_scope 的“无后端”范围 |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
