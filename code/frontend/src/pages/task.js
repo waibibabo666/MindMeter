@@ -3,7 +3,7 @@
  *
  * 三档共用这一套流程，区别只在 ctx.spec（题量 / 限时）。
  */
-import { el, clear, hint } from '../ui.js';
+import { button, el, clear, hint } from '../ui.js';
 import { STANDARD_ORDER, TASK_META } from '../data.js';
 import { specFor } from '../scoring/levels.js';
 import { vcTask } from '../tasks/vc.js';
@@ -47,7 +47,7 @@ const RUNNERS = Object.assign({}, TASK_RUNNERS, GAME_RUNNERS);
 
 /* 反馈 2：这一行只留最短的一句，口径解释收进浮框；做题指令在各任务模块里，照常常驻。 */
 const TIP_COLLECT =
-  '本页只采集原始指标（正确数、反应时、命中与虚报），分数在全部完成后统一折算；计时与进度已保存到本账号，刷新可继续。';
+  '本页只采集原始指标（正确数、反应时、一次点对与重试），分数在全部完成后统一折算；计时与进度已保存到本账号，刷新可继续。';
 const TIP_GAME =
   '本项为游戏化测量，结束后按同一套公式折算成这一维度的分数，不额外加分；进度已保存到本账号。';
 
@@ -92,6 +92,17 @@ export function renderTask(root, ctx, taskId) {
     el('p', { class: 'tiny' }, [
       isGame ? '本项为游戏化测量，结束后统一计分。' : '进度已保存，刷新页面可以接着做。',
       hint(isGame ? TIP_GAME : TIP_COLLECT, { edge: true }),
+    ]),
+    el('div', { class: 'row' }, [
+      button(
+        '跳过这一项（记为未测）',
+        () => {
+          if (!globalThis.confirm('跳过会把这一项记为未测，不影响其他维度。确定跳过？')) return;
+          cleanup();
+          ctx.finishTask(taskId, { taskId, skipped: true });
+        },
+        { variant: 'ghost' },
+      ),
     ]),
   ]);
   root.appendChild(section);

@@ -277,7 +277,7 @@ def test_metric_clauses_skip_every_missing_field():
     ]
     assert metric_clauses("ps", {"correct": 14}) == ["答对 14 题"]
     assert metric_clauses("ps", {}) == []
-    assert metric_clauses("am", {"hits": None, "falseAlarms": 3}) == ["再认虚报 3 个"]
+    assert metric_clauses("am", {"hits": None, "falseAlarms": 3}) == ["重试 3 次"]
     assert metric_clauses("vc", {"total": 8, "correct": None}) == ["共 8 题"]
     # 0 是合法读数，不能被当成"缺测"跳过
     assert metric_clauses("vc", {"total": 0, "correct": 0}) == ["答对 0 题"]

@@ -116,18 +116,24 @@ def metric_clauses(dim: str, metrics: dict | None) -> list[str]:
             elif trials is not None:
                 clauses.append(f"完成 {_fmt(trials)} 题")
     elif dim == "am":
+        # 联想记忆现行任务是 PAL（图案—位置配对）：一次点对数 / 重试次数。
+        # 旧记录里可能只有 hits/falseAlarms（词对再认时代），按同一口径表述，避免文案自相矛盾。
         first_try = _num(data.get("firstTry"))
         targets = _num(data.get("targets"))
+        errors = _num(data.get("errors"))
         hits = _num(data.get("hits"))
         false_alarms = _num(data.get("falseAlarms"))
         if first_try is not None and targets is not None and targets > 0:
-            clauses.append(f"首次配对成功 {_fmt(first_try)}/{_fmt(targets)} 组")
-        if hits is not None and false_alarms is not None:
-            clauses.append(f"再认命中 {_fmt(hits)} 个、虚报 {_fmt(false_alarms)} 个")
-        elif hits is not None:
-            clauses.append(f"再认命中 {_fmt(hits)} 个")
-        elif false_alarms is not None:
-            clauses.append(f"再认虚报 {_fmt(false_alarms)} 个")
+            clauses.append(f"一次点对 {_fmt(first_try)}/{_fmt(targets)} 组")
+            if errors is not None:
+                clauses.append(f"重试 {_fmt(errors)} 次")
+        elif hits is not None or false_alarms is not None:
+            if hits is not None and false_alarms is not None:
+                clauses.append(f"一次点对 {_fmt(hits)} 组、重试 {_fmt(false_alarms)} 次")
+            elif hits is not None:
+                clauses.append(f"一次点对 {_fmt(hits)} 组")
+            else:
+                clauses.append(f"重试 {_fmt(false_alarms)} 次")
     else:
         correct = _num(data.get("correct"))
         total = _num(data.get("total"))
@@ -180,9 +186,9 @@ def _facts(dim: str, metrics: dict) -> list[str]:
             "空间视觉化 · 在平面里比对旋转后的图形",
         ],
         "am": [
-            "联想记忆 · 先记词对再判断是否出现过",
-            "联想记忆 · 词对配对后再认判断",
-            "联想记忆 · 配对与再认两段一起看",
+            "联想记忆 · 先记图案与位置的配对",
+            "联想记忆 · 配对练习后再点位置",
+            "联想记忆 · 图案与位置一起看",
         ],
     }.get(dim, [f"{DIM_NAMES.get(dim, dim)} · 本次原始记录"])
     return [f"{prefix}：{body}" for prefix in lead]
@@ -240,10 +246,10 @@ def _reading(dim: str, metrics: dict) -> str:
         return "旋转判断有几题没对上，可以先在脑内把图转完再选。"
     false_alarms = _num(data.get("falseAlarms"))
     if false_alarms is None:
-        return "再认的命中与虚报要成对看；这次没记全，先补齐记录再谈。"
+        return "位置记忆的一次点对数与重试次数要一起看；这次没记全，先补齐记录再谈。"
     if false_alarms >= 3:
-        return "再认有时靠「眼熟」而不是真的记得，虚报多说明有几题被熟悉感带偏了。"
-    return "虚报很少，说明这次判断更多靠「确实记得」，而不是靠眼熟。"
+        return "重试多说明这几组图案与位置的配对还没记牢，不代表「记性差」。"
+    return "重试很少，说明这次图案与位置的配对大多一次就对上了。"
 
 
 def _error_rate(dim: str, metrics: dict) -> float | None:

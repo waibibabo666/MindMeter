@@ -52,7 +52,6 @@ async function main() {
   const controls = await import(pathToHref(path.join(APP_DIR, 'src', 'controls.js')));
   const sv = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'sv.js')));
   const ps = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'ps.js')));
-  const am = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'am.js')));
   const vc = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'vc.js')));
 
   test('入口文件与模块齐全', () => {
@@ -175,6 +174,23 @@ async function main() {
     assert(summary.meanRtMs === 2000, 'vc mean rt wrong');
   });
 
+  test('言语组卷：选项被打乱，答案下标跟着变', () => {
+    // 题库里 82% 的答案原本落在第一个选项，组卷时必须打乱并重算下标。
+    const positions = new Set();
+    for (let round = 0; round < 30; round += 1) {
+      const paper = vc.buildVcPaper('standard');
+      assert(paper.length >= 8, `expect 8 items, got ${paper.length}`);
+      for (const item of paper) {
+        assert(item.options.length === 4, `bad option count: ${item.id}`);
+        assert(new Set(item.options).size === 4, `duplicate options: ${item.id}`);
+        const right = item.options[item.answer];
+        assert(typeof right === 'string' && right.length > 0, `bad answer index: ${item.id}`);
+        positions.add(item.answer);
+      }
+    }
+    assert(positions.size >= 3, `答案位置仍集中在 ${[...positions].join(',')}`);
+  });
+
   test('旋转：四次 90° 回到原图，180° 两次等价', () => {
     const base = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     assert(JSON.stringify(sv.rotate(base, 360)) === JSON.stringify(base), '360 should be identity');
@@ -219,28 +235,17 @@ async function main() {
     assert(summary.meanRtMs === 700, 'ps mean rt wrong');
   });
 
-  test('联想记忆：8 旧 8 新，错配不能等于原配', () => {
-    const trials = am.buildRecognition();
-    assert(trials.length === 16, 'expect 16 trials');
-    assert(trials.filter((t) => t.isOld).length === 8, 'expect 8 old pairs');
+  test('联想记忆：图案—位置配对（PAL）生成与计分', async () => {
+    const pal = await import(pathToHref(path.join(APP_DIR, 'src', 'tasks', 'amPal.js')));
+    const trials = pal.buildPalTrials(6);
+    assert(trials.length === 6, 'expect 6 trials');
+    assert(new Set(trials.map((t) => t.box)).size === 6, 'boxes must be distinct');
+    assert(new Set(trials.map((t) => t.shape)).size === 6, 'shapes must be distinct');
 
-    const origin = new Set(data.AM_PAIRS.map(([l, r]) => `${l}|${r}`));
-    for (const trial of trials.filter((t) => !t.isOld)) {
-      assert(
-        !origin.has(`${trial.left}|${trial.right}`),
-        `foil equals an original pair: ${trial.left}-${trial.right}`,
-      );
-    }
-
-    const summary = am.summarizeAm([
-      { isOld: true, answer: true },
-      { isOld: true, answer: false },
-      { isOld: false, answer: true },
-      { isOld: false, answer: false },
-    ]);
-    assert(summary.hits === 1 && summary.misses === 1, 'hit/miss wrong');
-    assert(summary.falseAlarms === 1 && summary.correctRejections === 1, 'fa/cr wrong');
-    assert(summary.accuracy === 0.5, 'accuracy wrong');
+    // 六选一：全对 100，全错 0，一半按 1/6 基线校正
+    assert(pal.scorePal(6, 6) === 100, 'all first-try should be 100');
+    assert(pal.scorePal(0, 6) === 0, 'none should be 0');
+    assert(Math.round(pal.scorePal(3, 6)) === 40, 'half corrected should be 40');
   });
 
   test('入口：计分统一、渲染有兜底、不写 console', () => {
