@@ -263,7 +263,6 @@ async function main() {
     }
   });
 
-
   test('ir：答案不能与左邻/上邻相同，数量不超过 5', async () => {
     const irModule = await import(href('tasks/ir.js'));
     const cellKey = (cell) => (cell ? `${cell.shape}${cell.count}` : '?');
