@@ -1,7 +1,31 @@
 """Hosted health/transport contract: what is public, what is guarded, what headers ship."""
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from conftest import unique_username
+
+VERSIONS_DIR = Path(__file__).resolve().parents[2] / "code" / "backend" / "alembic" / "versions"
+
+
+def migration_heads() -> set[str]:
+    """推导迁移头：没有被任何 down_revision 指向的 revision。
+
+    以前这里写死了版本号，每加一次迁移这个测试就挂；改成从目录推导后，
+    只要 /health 报的是当前头，就说明迁移确实跑完了。
+    """
+    revisions: set[str] = set()
+    parents: set[str] = set()
+    for path in sorted(VERSIONS_DIR.glob("[0-9]*.py")):
+        text = path.read_text(encoding="utf-8")
+        found = re.search(r'^revision\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        parent = re.search(r'^down_revision\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        if found:
+            revisions.add(found.group(1))
+        if parent:
+            parents.add(parent.group(1))
+    return revisions - parents
 
 
 def test_liveness_needs_no_database(client):
@@ -16,7 +40,7 @@ def test_readiness_is_public_without_session(client, needs_db):
     body = response.json()
     assert body["status"] == "ok"
     assert body["db"]["connected"] is True
-    assert body["db"]["migration"] in {"0005_profile", "0006_align_kb"}
+    assert body["db"]["migration"] in migration_heads()
     version = str(body["db"]["pgvector"] or "")
     parts = tuple(int(part) for part in version.split(".")[:3])
     assert parts >= (0, 8, 6), f"unexpected pgvector version: {version}"

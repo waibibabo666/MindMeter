@@ -66,7 +66,7 @@ function netNode(net) {
 }
 
 /** 一个可拖动的彩色立方体。 */
-function cubeOption(colors, onTurn) {
+function cubeOption(colors, onTurn, onSelect) {
   const cube = el('div', { class: 'cube' });
   for (const face of FACES) {
     cube.appendChild(
@@ -112,8 +112,19 @@ function cubeOption(colors, onTurn) {
   const stop = () => {
     dragging = false;
   };
+  // pointer capture 会把 click 截在立方体上，卡片收不到，这里补一个
+  stage.addEventListener('click', () => {
+    if (consumeMoved()) return;
+    onSelect();
+  });
   stage.addEventListener('pointerup', stop);
   stage.addEventListener('pointerleave', stop);
+
+  function consumeMoved() {
+    const value = moved;
+    moved = false;
+    return value;
+  }
 
   return {
     node: stage,
@@ -140,10 +151,13 @@ export function renderNetQuestion(item, onPick) {
   const options = el('div', { class: 'cube-options' });
 
   item.options.forEach((colors, i) => {
-    const cube = cubeOption(colors, (turns) => {
-      totalTurns += 1;
-      if (turns === 1) totalTurns += 0;
-    });
+    const cube = cubeOption(
+      colors,
+      () => {
+        totalTurns += 1;
+      },
+      () => onPick(i),
+    );
     const card = el('button', { class: 'cube-option', type: 'button' }, [cube.node]);
     card.addEventListener('click', (event) => {
       // 拖动结束后浏览器会补一个 click，这里吞掉，避免误提交

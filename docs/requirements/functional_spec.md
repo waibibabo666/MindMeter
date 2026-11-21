@@ -169,6 +169,7 @@
 | PUT | `/api/v1/settings/ai`、DELETE `/api/v1/settings/ai/key` | **保留路径但一律 403 `ai_managed_by_site`**（BYOK 已取消） | 用户 |
 | GET/POST/DELETE | `/api/v1/export`、`/api/v1/import`、`/api/v1/data` | 本账号导出/导入/清除 | 用户 |
 | GET | `/api/v1/logs` | 脱敏服务端日志尾部，默认 403（需 `MM_EXPOSE_LOGS=1`） | 用户 |
+| GET/POST/DELETE | `/api/v1/games`、`POST /api/v1/games/{id}` | 本账号的游戏最佳成绩（只升不降；游戏不参与报告与趋势） | 用户 |
 | — | ~~`/auth/refresh`、`/me/export`、`/threads`~~ | 不采用：会话是 Cookie 不是 refresh 令牌；导出走 `/export`；对话为单线程模型 | — |
 
 ## 八、数据模型（概念级）

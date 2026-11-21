@@ -8,6 +8,7 @@ from . import (
     auth,
     chat,
     data,
+    games,
     health,
     memory,
 )
@@ -24,6 +25,7 @@ api_router.include_router(auth.router, tags=["auth"])
 # Authenticated: every one of these reads and writes rows scoped to the session user.
 api_router.include_router(state.router, tags=["state"])
 api_router.include_router(assessments.router, tags=["assessments"])
+api_router.include_router(games.router, tags=["games"])
 api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(chat.router, tags=["chat"])
 api_router.include_router(settings_api.router, tags=["settings"])

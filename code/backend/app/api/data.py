@@ -40,6 +40,7 @@ USER_TABLES = (
     "chat_messages",
     "ai_runs",
     "assessments",  # cascades assessment_tasks / assessment_scores
+    "game_records",  # practice games, never part of a report
 )
 
 

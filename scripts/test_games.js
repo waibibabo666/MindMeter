@@ -225,33 +225,60 @@ async function main() {
 
   // ---------- 存储 ----------
 
-  test('游戏记录：最高分只升不降，且独立于测评存储', () => {
-    const map = new Map();
-    globalThis.localStorage = {
-      getItem: (k) => (map.has(k) ? map.get(k) : null),
-      setItem: (k, v) => map.set(k, String(v)),
-      removeItem: (k) => map.delete(k),
+  test('游戏记录：按账号存后端，最高分只升不降', async () => {
+    // 用一个内存假后端替代 fetch：验证 store 走的是 /api/v1/games，而不是 localStorage。
+    const rows = new Map();
+    const calls = [];
+    const json = (payload) => ({ ok: true, status: 200, json: async () => payload });
+    globalThis.fetch = async (target, options = {}) => {
+      const method = options.method || 'GET';
+      const pathname = String(target);
+      calls.push(`${method} ${pathname}`);
+      if (method === 'GET' && pathname.endsWith('/games')) {
+        return json({ records: Object.fromEntries(rows) });
+      }
+      if (method === 'DELETE' && pathname.endsWith('/games')) {
+        rows.clear();
+        return json({ ok: true });
+      }
+      const hit = pathname.match(/\/games\/([^/]+)$/);
+      if (method === 'POST' && hit) {
+        const id = decodeURIComponent(hit[1]);
+        const score = JSON.parse(options.body || '{}').score;
+        const prev = rows.get(id) || { best: 0, plays: 0, lastScore: 0, lastAt: '' };
+        const next = {
+          best: Math.max(prev.best, score),
+          plays: prev.plays + 1,
+          lastScore: score,
+          lastAt: '2026-11-21T00:00:00Z',
+        };
+        rows.set(id, next);
+        return json({ records: { [id]: next } });
+      }
+      return { ok: false, status: 404, json: async () => ({ detail: 'not_found' }) };
     };
-    gameStore.clearGames();
 
-    gameStore.recordGame('schulte', 80);
-    eq(gameStore.readGames().records.schulte.best, 80, '首次记录');
-    gameStore.recordGame('schulte', 55);
-    eq(gameStore.readGames().records.schulte.best, 80, '低分不覆盖');
-    eq(gameStore.readGames().records.schulte.plays, 2, '局数累加');
-    eq(gameStore.readGames().records.schulte.lastScore, 55, '最近一局');
+    await gameStore.clearGames();
 
-    gameStore.recordGame('schulte', 120);
-    eq(gameStore.readGames().records.schulte.best, 100, '上限截断');
+    await gameStore.recordGame('schulte', 80);
+    eq((await gameStore.readGames()).records.schulte.best, 80, '首次记录');
+    await gameStore.recordGame('schulte', 55);
+    eq((await gameStore.readGames()).records.schulte.best, 80, '低分不覆盖');
+    eq((await gameStore.readGames()).records.schulte.plays, 2, '局数累加');
+    eq((await gameStore.readGames()).records.schulte.lastScore, 55, '最近一局');
 
-    // 只写游戏自己的 key，不碰测评数据
-    const keys = [...map.keys()];
-    eq(keys.length, 1, '只应写一个 key');
-    assert(keys[0].includes('games'), '写入的应是游戏 key');
+    await gameStore.recordGame('schulte', 120);
+    eq((await gameStore.readGames()).records.schulte.best, 100, '上限截断');
 
-    gameStore.clearGames();
-    eq(Object.keys(gameStore.readGames().records).length, 0, '清除后为空');
-    delete globalThis.localStorage;
+    assert(
+      calls.every((call) => call.includes('/api/v1/games')),
+      '游戏记录必须走 /api/v1/games 接口',
+    );
+    assert(!calls.some((call) => call.includes('localStorage')), '不应再依赖 localStorage');
+
+    await gameStore.clearGames();
+    eq(Object.keys((await gameStore.readGames()).records).length, 0, '清除后为空');
+    delete globalThis.fetch;
   });
 
   // ---------- 纯逻辑（题库 / 视觉 / 语音） ----------
