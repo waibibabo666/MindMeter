@@ -25,6 +25,23 @@ const RULES = {
   mirror: (r, c) => ({ shape: SHAPES[c % 3], count: 3 - r }),
 };
 
+function pickDistractors(answer, otherShape, random) {
+  const pool = [];
+  for (const shape of [answer.shape, otherShape]) {
+    for (let count = 1; count <= 4; count += 1) {
+      if (shape === answer.shape && count === answer.count) continue;
+      pool.push({ shape, count });
+    }
+  }
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = randInt(0, i, random);
+    const tmp = pool[i];
+    pool[i] = pool[j];
+    pool[j] = tmp;
+  }
+  return pool.slice(0, 3);
+}
+
 /** 生成一题的九宫格与答案；行规则与列规则交叉，避免「看一行就够」。 */
 export function buildMatrix(ruleName, random = Math.random) {
   const rule = RULES[ruleName] || RULES.rowShape;
@@ -43,12 +60,7 @@ export function buildMatrix(ruleName, random = Math.random) {
   const answer = cell(2, 2);
   const otherShape = answer.shape === shapeA ? shapeB : shapeA;
 
-  // 三个干扰项各错一半：只错数量 / 只错形状 / 数量形状都错且更像
-  const distractors = [
-    { shape: answer.shape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-    { shape: otherShape, count: answer.count },
-    { shape: otherShape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-  ];
+  const distractors = pickDistractors(answer, otherShape, random);
 
   const options = [answer, ...distractors];
   for (let i = options.length - 1; i > 0; i -= 1) {
