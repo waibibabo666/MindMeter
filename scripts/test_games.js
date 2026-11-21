@@ -54,6 +54,7 @@ async function main() {
   const gameStore = await import(href(path.join(SRC, 'games', 'store.js')));
   const ir = await import(href(path.join(SRC, 'tasks', 'ir.js')));
   const svMount = await import(href(path.join(SRC, 'tasks', 'svMount.js')));
+  const psTasks = await import(href(path.join(SRC, 'tasks', 'ps.js')));
 
   /** 计算 24 点式子（递归下降，不执行字符串，避免 code-eval）。 */
   function evalMath(expr) {
@@ -410,6 +411,36 @@ async function main() {
           assert(opt.count >= 1 && opt.count <= 5, `${rule} 选项数量越界`);
         }
       }
+    }
+  });
+
+  test('图形规律：干扰项形状必须出现在题干里', () => {
+    // 干扰项用了题干没出现过的图形，等于送分；旧实现会拿随机 shapeA/shapeB 补位。
+    for (const rule of ['rowShape', 'colShape', 'diagonal', 'combine', 'alternate', 'mirror']) {
+      for (let i = 0; i < 40; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(700 + i));
+        const gridShapes = new Set(q.cells.filter(Boolean).map((cell) => cell.shape));
+        for (const opt of q.options) {
+          assert(
+            gridShapes.has(opt.shape),
+            `${rule} 第 ${i} 题干扰项形状「${opt.shape}」不在题干里`,
+          );
+        }
+      }
+    }
+  });
+
+  test('知觉速度：编码题答案下标有效且指向正确数字串', () => {
+    // 旧实现用数组引用做 indexOf，选项是拷贝，答案恒为 -1（编码题永远判错）。
+    for (let i = 0; i < 100; i += 1) {
+      const table = psTasks.makeTable();
+      const item = psTasks.buildEncoding(table, 1 + (i % 3));
+      assert(
+        item.answer >= 0 && item.answer < item.options.length,
+        `第 ${i} 题答案下标 ${item.answer}`,
+      );
+      const expected = item.shapes.map((entry) => String(entry.digit)).join('');
+      eq(item.options[item.answer].join(''), expected, `第 ${i} 题答案内容`);
     }
   });
 

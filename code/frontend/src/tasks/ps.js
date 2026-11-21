@@ -112,7 +112,9 @@ export function buildEncoding(table, difficulty, random = Math.random) {
     options.push(candidate);
   }
   const list = shuffle(options, random);
-  return { kind: 'encode', shapes: picked, options: list, answer: list.indexOf(answer) };
+  // 选项是数字数组的拷贝，不能按引用 indexOf（原实现恒为 -1，编码题永远判错）。
+  const answerIndex = list.findIndex((option) => option.join('') === key);
+  return { kind: 'encode', shapes: picked, options: list, answer: answerIndex };
 }
 
 /** 分类题：判断图形是两种相近颜色中的哪一种。 */
