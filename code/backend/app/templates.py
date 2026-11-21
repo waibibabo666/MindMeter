@@ -22,7 +22,7 @@ DIM_NAMES = {
     "ir": "归纳推理",
     "sv": "空间视觉化",
     "am": "联想记忆",
-    "ni": "自然探索",
+    "ni": "自然知识",
 }
 DIM_ORDER = ["vc", "vf", "nc", "ps", "ir", "sv", "am", "ni"]
 SUPPORT_DIMS = {"vc", "ps", "sv", "am"}
