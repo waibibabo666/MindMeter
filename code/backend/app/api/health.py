@@ -17,14 +17,14 @@ router = APIRouter()
 
 @router.get("/health/live")
 def live():
-    """Liveness only: no database, no model. A platform health check belongs here
-    so a cold Postgres restart does not make the service look dead."""
+    """仅存活检查：不碰数据库、不碰模型。平台健康检查应指向这里，
+    这样 Postgres 冷重启不会让服务看起来已死。"""
     return {"status": "alive", "version": settings.app_version}
 
 
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
-    """Public readiness probe: the platform health check path points here.
+    """公开就绪探针：平台健康检查路径指向这里。
 
     Reports structure, never user data and never the LLM key.
     """

@@ -1,4 +1,4 @@
-# MindMeter 功能需求规范
+﻿# MindMeter 功能需求规范
 
 ## 一、文档信息
 
@@ -140,11 +140,11 @@
 | 标准 | 言语理解、知觉速度、空间视觉化、联想记忆 | 13 分钟 |
 | 深度 | 8 项全部 | 28 分钟 |
 
-任务参数见 [算法设计](../algorithm/algorithm.md) 与 [功能需求 L1 任务表]（历史），实现时集中在 `backend/app/scoring/config.py`。
+任务参数见 [算法设计](../algorithm/algorithm.md) 与 [功能需求 L1 任务表]（历史），实现时集中在 `code/core_engine/scoring/config.py`。
 
 ## 七、API 草案
 
-下表是当前实现的实际接口面（与 `tests/backend/test_openapi_contract.py` 一一对应）：
+下表是当前实现的实际接口面（与 `tests/integration/test_openapi_contract.py` 一一对应）：
 
 | 方法 | 路径 | 说明 | 认证 |
 | --- | --- | --- | --- |
@@ -213,7 +213,7 @@
 - 注册→登录→标准 4 项→报告→对话→摘要→7 天后复测→趋势，全链路可走通（刷新与换设备登录后数据仍在）；
 - 服务端计分与金标准用例一致；同输入同版本同输出；
 - 报告无总分/百分位/误差范围；未测显示“未测”；
-- **多租户隔离**：两个账号互不可见（`tests/backend/test_tenancy.py` 全绿，跨账号 id 读取 404）；
+- **多租户隔离**：两个账号互不可见（`tests/integration/test_tenancy.py` 全绿，跨账号 id 读取 404）；
 - Agent 30 条用例：准确/有依据/有用/无越界各 ≥4/5；禁用词 0；幻觉数字 0；
 - RAG hit@3 ≥80%；回答引用率 ≥90%；
 - 记忆：20 条上限、摘要可查、删除后不再被引用；

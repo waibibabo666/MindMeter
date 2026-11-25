@@ -26,10 +26,10 @@ MAX_SESSIONS_PER_USER = 50
 
 
 def persist_session(db: Session, user_id: int, session: dict) -> dict:
-    """Store one finished assessment for `user_id` and return its payload.
+    """为 ``user_id`` 保存一次已完成的测评并返回其载荷。
 
-    Client ids are only unique per account, so a replay of the same id from the
-    same account is idempotent and from another account is just a new row.
+    客户端 id 只在账号内唯一：同一账号重复提交同一 id 是幂等的，
+    其他账号提交同一 id 则只是一条新记录。
     """
     if not isinstance(session, dict):
         raise HTTPException(400, "invalid_session")
@@ -86,7 +86,7 @@ def persist_session(db: Session, user_id: int, session: dict) -> dict:
         )
     db.flush()
 
-    # Preserve the UI's max-50 sessions contract, per account.
+    # 保持前端「每账号最多 50 次测评」的契约。
     old_ids = list(
         db.scalars(
             select(Assessment.id)

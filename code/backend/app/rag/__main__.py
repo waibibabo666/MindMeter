@@ -1,4 +1,4 @@
-"""CLI: python -m app.rag ingest [--force]"""
+"""CLI：``python -m app.rag ingest [--force]``"""
 from __future__ import annotations
 
 import argparse

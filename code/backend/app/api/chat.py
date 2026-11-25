@@ -1,27 +1,17 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import auth
 from ..agent import answer
-from ..agent.insights import after_turn
 from ..db import get_db
-from ..models import (
-    AIRun,
-    AppState,
-    Assessment,
-    ChatMessage,
-    MemoryAdvice,
-    MemoryProfile,
-    MemorySummary,
-    User,
-)
+from ..memory import MemoryStore
+from ..models import AIRun, AppState, Assessment, User
 from ..privacy import find_sensitive, redact
 from ..serializers import (
     assessment_to_session,
@@ -31,23 +21,6 @@ from ..serializers import (
 from ..trend import build_trend_payload
 
 router = APIRouter()
-
-KEEP_MESSAGES = 20
-HISTORY_MESSAGES = 6
-
-
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def _next_seq(db: Session, user_id: int) -> int:
-    current = db.scalar(
-        select(ChatMessage.seq)
-        .where(ChatMessage.user_id == user_id)
-        .order_by(ChatMessage.seq.desc())
-        .limit(1)
-    )
-    return int(current or 0) + 1
 
 
 def _facts(db: Session, user_id: int) -> tuple[dict, str | None, str | None]:
@@ -75,94 +48,6 @@ def _facts(db: Session, user_id: int) -> tuple[dict, str | None, str | None]:
     return facts, row.id, row.mode
 
 
-def _memory_context(db: Session, user_id: int) -> dict:
-    profile_row = db.get(MemoryProfile, user_id)
-    profile = None
-    if profile_row is not None and profile_row.confirmed:
-        profile = {
-            "goal": profile_row.goal,
-            "preference": profile_row.preference,
-            "constraint": profile_row.constraint,
-            "confirmed": True,
-        }
-    latest = db.scalar(
-        select(MemorySummary)
-        .where(MemorySummary.user_id == user_id)
-        .order_by(MemorySummary.at.desc())
-        .limit(1)
-    )
-    advice = list(
-        db.scalars(
-            select(MemoryAdvice)
-            .where(MemoryAdvice.user_id == user_id)
-            .order_by(MemoryAdvice.at.desc())
-            .limit(5)
-        ).all()
-    )
-    return {
-        "profile": profile,
-        "summaryText": latest.text if latest else None,
-        "advice": [
-            {"id": item.id, "title": item.title, "done": item.done} for item in reversed(advice)
-        ],
-    }
-
-
-def _history(db: Session, user_id: int) -> list[dict]:
-    rows = list(
-        db.scalars(
-            select(ChatMessage)
-            .where(ChatMessage.user_id == user_id)
-            .order_by(ChatMessage.seq.desc())
-            .limit(HISTORY_MESSAGES)
-        ).all()
-    )
-    return [{"role": row.role, "content": row.content} for row in reversed(rows)]
-
-
-def _append(
-    db: Session,
-    user_id: int,
-    role: str,
-    content: str,
-    *,
-    source=None,
-    citations=None,
-    code=None,
-    risk=None,
-) -> ChatMessage:
-    seq = _next_seq(db, user_id)
-    row = ChatMessage(
-        user_id=user_id,
-        id=f"msg_{int(_now().timestamp() * 1000)}_{seq}",
-        role=role,
-        content=content,
-        source=source,
-        citations=citations or [],
-        code=code,
-        risk=risk,
-        at=_now(),
-        seq=seq,
-    )
-    db.add(row)
-    db.flush()
-    keep = list(
-        db.scalars(
-            select(ChatMessage.id)
-            .where(ChatMessage.user_id == user_id)
-            .order_by(ChatMessage.seq.desc())
-            .limit(KEEP_MESSAGES)
-        ).all()
-    )
-    if keep:
-        db.execute(
-            delete(ChatMessage).where(
-                ChatMessage.user_id == user_id, ChatMessage.id.not_in(keep)
-            )
-        )
-    return row
-
-
 @router.get("/chat/messages")
 def messages(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     return {"schemaVersion": 1, "messages": memory_payload(db, int(user.id))["messages"]}
@@ -174,14 +59,11 @@ def append_message(
     user: User = Depends(auth.require_user),
     db: Session = Depends(get_db),
 ):
-    uid = int(user.id)
     role = "assistant" if payload.get("role") == "assistant" else "user"
     content = str(payload.get("content") or "")
     if not content:
         raise HTTPException(400, "empty_message")
-    row = _append(
-        db,
-        uid,
+    row = MemoryStore(db, user).append(
         role,
         content,
         source=payload.get("source"),
@@ -234,14 +116,15 @@ def chat(
         raise HTTPException(400, "empty_question")
     # 用户可在设置里关闭"记忆影响回答"：关闭后本次请求不注入画像/摘要/建议。
     use_memory = payload.get("useMemory", True)
+    store = MemoryStore(db, user)
     facts, assessment_id, tier = _facts(db, uid)
-    memory = _memory_context(db, uid) if use_memory is not False else None
-    history = _history(db, uid)
+    memory = store.context() if use_memory is not False else None
+    history = store.history()
 
-    # PII is redacted before storage and never forwarded to a model.
+    # PII 在入库前脱敏，且绝不会发给模型。
     sensitive = find_sensitive(question)
     if sensitive:
-        _append(db, uid, "user", redact(question))
+        store.append("user", redact(question))
         result = {
             "intent": "privacy",
             "risk": "high",
@@ -257,14 +140,12 @@ def chat(
             "code": "pii_blocked",
         }
     else:
-        # Persist the user turn before the model call so a crash still leaves the question.
-        _append(db, uid, "user", question)
+        # 先落库用户提问再调模型，崩溃时至少留下问题。
+        store.append("user", question)
         db.commit()
         result = answer(db, question, facts, history, memory)
 
-    _append(
-        db,
-        uid,
+    store.append(
         "assistant",
         result.get("text", ""),
         source=result.get("source"),
@@ -290,9 +171,7 @@ def chat(
     # 核心功能：一次有效对话结束后，服务端自己把摘要/建议沉淀进记忆表。
     # 任何一步出错都不能把已经成功的对话回答打挂，所以整体吞掉并记在响应标记里。
     try:
-        sedimented = after_turn(
-            db,
-            user,
+        sedimented = store.sediment(
             question=question,
             reply=result,
             facts=facts,

@@ -74,31 +74,28 @@ code/
 ├─ backend/
 │  ├─ app/
 │  │  ├─ main.py
-│  │  ├─ api/              # auth, assessments, reports, threads, memory, settings, health
-│  │  ├─ core/             # config, security, db, crypto, logging
-│  │  ├─ models/           # SQLAlchemy
-│  │  ├─ schemas/          # Pydantic
-│  │  ├─ scoring/          # config.py, formulas.py, engine.py
-│  │  ├─ agent/            # graph.py, state.py, nodes/, prompts.py, validation.py
-│  │  ├─ rag/              # embed.py, retrieve.py, ingest.py
-│  │  └─ memory/           # service.py
+│  │  ├─ api/              # auth, assessments, memory, settings, health
+│  │  ├─ config.py / db.py / security.py / logging_setup.py / privacy.py / llm.py
+│  │  ├─ models.py         # SQLAlchemy
+│  │  ├─ serializers.py / analysis.py / templates.py
+│  │  ├─ agent/            # graph, state, validation, render, classify, policies, insights
+│  │  ├─ rag/              # base (Protocol), bm25, vector
+│  │  └─ memory.py         # MemoryStore：上下文 / 历史 / 沉淀
 │  ├─ alembic/
-│  ├─ tests/
 │  ├─ Dockerfile
 │  └─ pyproject.toml
 ├─ frontend/
 │  ├─ index.html
 │  └─ src/
-│     ├─ api.js            # fetch + JWT refresh
+│     ├─ api.js            # fetch
 │     ├─ auth.js
 │     ├─ pages/            # login, register, report, chat, memory, trend, settings
 │     ├─ tasks/            # 8 tasks
 │     ├─ asr/              # Web Speech API
 │     └─ styles/
-└─ core_engine/            # L1 JS 计分（历史；L2 以 backend/app/scoring 为准）
+└─ core_engine/
+   └─ scoring/            # 计分引擎 scoring-v3.2（backend/app/scoring 为兼容 stub）
 ```
-
-> `core_engine` 不再参与 L2 计分；保留只用于对照 L1 原型。正式计分在 `backend/app/scoring/`。
 
 ## 六、数据模型
 

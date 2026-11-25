@@ -1,9 +1,4 @@
-"""Small PII guard for chat input.
-
-The product deliberately does not collect phone numbers or national IDs. If a
-user pastes one, we redact it before storage and do not send the turn to a
-model. This is a safety net, not a general DLP system.
-"""
+"""聊天输入的轻量 PII 防护。"""
 from __future__ import annotations
 
 import re

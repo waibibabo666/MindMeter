@@ -1,4 +1,4 @@
-# 测试与评测计划（P-07）
+﻿# 测试与评测计划（P-07）
 
 ## 一、文档信息
 
@@ -25,7 +25,7 @@ M1 要交付一条**纯本地**的纵向切片。本计划定义：哪些用代�
 | L1 单元 | 计分公式、路由、存储、校验、分类、检索 | `node scripts/test_*.js` | ✅ |
 | L2 契约 | 文档结构、链接、字段契约、schema、API 面 | `check_docs.py` / `test_kb.js` / `test_openapi_contract.py` | ✅ |
 | L3 端到端 | 注册/登录闸门→同意→任务→报告（含趋势）→设置→对话（含清空）→跨账号隔离 | Playwright（`npm run test:e2e`，15 项） | ✅ 自动化 + 走查截图 |
-| L4 Agent 评测 | 30 条用例的行为分支 + 四维打分 | `tests/backend/test_agent_chat.py` / `test_agent_workflow.py` + 人工 | 半自动 |
+| L4 Agent 评测 | 30 条用例的行为分支 + 四维打分 | `tests/integration/test_agent_chat.py` / `test_agent_workflow.py` + 人工 | 半自动 |
 | L5 检索评测 | 20 条查询的 hit@3 | `test_kb.js` | ✅ |
 | L6 性能 | 首屏、计分、检索、AI 超时 | 手工 + 脚本 | 半自动 |
 | L7 安全 | 口令散列与会话散列、Cookie/CSRF 行为、跨账号隔离、Key 不落日志/导出、无真实用户数据 | `check_secrets.py` + `test_auth_api.py` + `test_tenancy.py` + `smoke_web_deploy.py` | ✅ |
@@ -48,13 +48,13 @@ M1 要交付一条**纯本地**的纵向切片。本计划定义：哪些用代�
 | `test_games.js` | 24 | 8 维游戏与题库构造 |
 | `test_log.js` | 5 | 日志上限、脱敏、导出、清除 |
 
-> 服务端另有：`tests/backend`（账号、会话、限流、注销、跨账号隔离、健康与 OpenAPI 契约、
+> 服务端另有：`tests/integration`（账号、会话、限流、注销、跨账号隔离、健康与 OpenAPI 契约、
 > 计分金标准、Agent 分类/固定话术/校验器与图级工作流、派生数字白名单、输出契约、记忆沉淀）275 项；`tests/e2e`（Playwright）15 项；
 > `scripts/smoke_web_deploy.py` 对已部署实例的 22 项冒烟检查（含「配了 Key 时解读必须走模型」）。
 >
 > 原 `scripts/test_agent.js`（16 项，测前端 legacy 的 classify/validate/fixedReply）已随
 > `src/agent/*` 一起删除，其独有覆盖——**危机话术必须含 12356 与 120**、越界/无关/澄清的固定文案——
-> 由 `tests/backend/test_agent_workflow.py::test_fixed_safety_replies_carry_the_right_words` 接管，
+> 由 `tests/unit/test_agent_workflow.py::test_fixed_safety_replies_carry_the_right_words` 接管，
 > 意图路由与校验器由同文件其余用例覆盖。
 
 ## 五、Agent 评测（30 条用例）
@@ -135,7 +135,7 @@ P-07 编写用例时跑出了三个问题，前两个已修，第三个待定。
 | D-02 | 「未测是什么意思」被判成 `clarify` | `DOMAIN_WORDS` 缺「未测」，短句走了 too-short 规则 | ✅ 已改：`DOMAIN_WORDS` 增加「未测」 |
 | D-03 | 检索为空时回的话是「我不猜」，未出现字面「不知道」 | `NO_KNOWLEDGE_REPLY` 文案 | ⏸ **待定**：M1 验收写的是「明确说不知道」。现文案语义等价但字面不符；改动属 L-05 范围，需 owner 确认后再动 |
 
-> D-03 已记录在案，未擅自改动——文案变更会影响既有断言（现为 `tests/backend/test_agent_chat.py` 与 `test_agent_workflow.py` 中断言「不猜」的用例；早期的 `test_agent_run.js` 已随前端 legacy 删除）。
+> D-03 已记录在案，未擅自改动——文案变更会影响既有断言（现为 `tests/integration/test_agent_chat.py` 与 `test_agent_workflow.py` 中断言「不猜」的用例；早期的 `test_agent_run.js` 已随前端 legacy 删除）。
 
 ## 十、入口与出口标准
 
@@ -147,7 +147,7 @@ P-07 编写用例时跑出了三个问题，前两个已修，第三个待定。
 ### 10.2 出口（可交付）
 
 - [ ] `npm run check` 全绿（当前 160 项）
-- [ ] `pytest -q tests/backend` 全绿（有库 90 项；无库时只跑纯逻辑 51 项）
+- [ ] `pytest -q tests/integration` 全绿（有库 90 项；无库时只跑纯逻辑 51 项）
 - [ ] `npm run test:e2e` 全绿（15 项，含跨账号隔离）
 - [ ] `python scripts/check_docs.py` / `check_secrets.py` / `check_frontend_dead_code.py` 通过
 - [ ] 部署后 `python scripts/smoke_web_deploy.py <url>` 19/19

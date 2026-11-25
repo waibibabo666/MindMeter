@@ -8,7 +8,7 @@
   2. 回答可用性：模板路径下的引用数、是否提到对应维度、回答长度；
   3. 延迟：本地模板路径的耗时（不含模型）。
 
-用假 db / 假模型，和 tests/backend/test_agent_output_contract.py 同一套做法，
+用假 db / 假模型，和 tests/unit/test_agent_output_contract.py 同一套做法，
 因此可以在 CI 或任意机器上重复跑，用来对比优化前后。
 """
 from __future__ import annotations
@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "code" / "backend"))
 
 from app import agent as A
+from app.agent import graph as G
 from app.llm import LLMConfig
 
 FACTS = {
@@ -114,11 +115,11 @@ def main() -> int:
     args = parser.parse_args()
 
     # 站点未配置模型：走模板路径，结果可复现。
-    A.site_llm_config = lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
+    G.site_llm_config = lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
     # agent 的检索节点用的是 analysis.retrieve_context（返回 dict 列表），
     # 这里直接替换掉，避免依赖真实数据库与 BM25。
-    A.retrieve_context = lambda db, facts, limit=8: list(KB)[:limit]
-    A.retrieve_kb = lambda db, query, limit=3: list(KB)[:limit]
+    G.retrieve_context = lambda db, facts, limit=8, question=None: list(KB)[:limit]
+    G.retrieve_kb = lambda db, query, limit=3: list(KB)[:limit]
 
     rows = []
     for question, expected, need, has_history in CASES:

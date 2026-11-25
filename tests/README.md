@@ -13,15 +13,16 @@
 | `scripts/test_auth.js` | 用户名/密码规则、错误码文案、`api.js` 传输与 401 广播 | 可运行 |
 | `scripts/test_memory.js` | 摘要/画像/建议/消息业务规则 | 可运行 |
 | `scripts/test_log.js` | 前端日志脱敏/导出 | 可运行 |
-| `tests/backend/` | 账号与会话、多租户隔离、健康/OpenAPI 契约、计分金标准、Agent 工作流 | 需要 PostgreSQL/pgvector |
+| `tests/unit/` | 纯逻辑：Agent 路由/校验/派生数字、计分金标准、模板与流式契约 | 不需要数据库 |
+| `tests/integration/` | 账号与会话、多租户隔离、健康/OpenAPI 契约、API 冒烟、记忆沉淀 | 需要 PostgreSQL/pgvector |
 | `tests/e2e/` | Playwright：注册/登录闸门 + 主链路 + 跨账号隔离 | 可运行；`npm run test:e2e` |
 | `scripts/smoke_web_deploy.py` | 对已部署实例的 19 项冒烟检查（Cookie、隔离、导出、只读 AI） | 可运行 |
-| `tests/unit/` / `tests/integration/` | 预留 | 后续补充 |
 | `tests/ai_eval/` | 30 条 Agent + 20 条 RAG | 后续补充 |
+| `tests/XXXagent_demo_user_test/` | 课程要求的用户测试材料与截图 | 历史记录 |
 
 **说明**：桌面时代的历史 oracle（`scripts/test_storage.js`、`test_llm_client.js`、`test_agent_run.js`、
 `test_eval.js`）以及它们测试的前端 legacy 模块（`src/llm/*`、`src/agent/*`）已在 2026-11-20 删除；
-Agent 行为回归改由 `tests/backend/test_agent_chat.py` / `test_agent_workflow.py` 承担，
+Agent 行为回归改由 `tests/integration/test_agent_chat.py` / `test_agent_workflow.py` 承担，
 评测用例集在 `tests/ai_eval/agent-cases.json`。`scripts/check_frontend_dead_code.py` 会持续挡住不可达模块回流。
 
 ## 本地命令
@@ -37,7 +38,7 @@ python scripts/export_issues.py --check
 
 # 后端测试：需要一个已迁移的 pgvector 数据库
 python -m alembic -c code/backend/alembic.ini upgrade head
-MM_TEST_DATABASE_URL=postgresql+psycopg://user:pass@127.0.0.1:5432/mindmeter pytest -q tests/backend -rs
+MM_TEST_DATABASE_URL=postgresql+psycopg://user:pass@127.0.0.1:5432/mindmeter pytest -q tests/unit tests/integration -rs
 
 # 冒烟：对本地或线上实例
 python scripts/e2e_server.py                  # 本地起一条完整服务在 :8100

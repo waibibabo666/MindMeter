@@ -1,9 +1,4 @@
-"""Redacted logs: a rotating file for local runs, stdout for hosted runs.
-
-We never log prompts, answers, request bodies, Authorization headers, or keys.
-A hosted filesystem is ephemeral, so ``setup_logging`` must never crash the
-process just because the scratch directory is missing or read-only.
-"""
+"""脱敏日志：本地写轮转文件，托管环境写 stdout。"""
 from __future__ import annotations
 
 import logging

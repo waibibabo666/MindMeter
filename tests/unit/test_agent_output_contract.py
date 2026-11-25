@@ -1,4 +1,4 @@
-"""Agent 输出口径回归：校验失败要说清真原因、评级词必须拦、兜底文案不许出现 None。
+﻿"""Agent 输出口径回归：校验失败要说清真原因、评级词必须拦、兜底文案不许出现 None。
 
 对应 2026-11-20 用户人工测试反馈（A1 诚实性 / A2 可追溯 / A5 拦截可理解 / A6 等待可感知）：
   1. `_validate_node` 曾经把失败原因统一写成 "invalid"，真实 issue（too_long /
@@ -14,6 +14,8 @@ import pytest
 from types import SimpleNamespace
 
 from app import agent as A
+
+from app.agent import graph as G
 from app.agent import (
     ability_rating_hits,
     answer,
@@ -51,11 +53,9 @@ def run_graph(monkeypatch, question, facts, reply_text, chunks=KB_CHUNKS, scene=
     def fake_call_llm(config, messages, **kwargs):
         return LLMReply(text=reply_text, model="test-model")
 
-    monkeypatch.setattr(A, "retrieve_kb", fake_retrieve)
-    monkeypatch.setattr(A, "call_llm_with_fallback", fake_call_llm)
-    monkeypatch.setattr(
-        A,
-        "site_llm_config",
+    monkeypatch.setattr(G, "retrieve_kb", fake_retrieve)
+    monkeypatch.setattr(G, "call_llm_with_fallback", fake_call_llm)
+    monkeypatch.setattr(G, "site_llm_config",
         lambda: LLMConfig(
             endpoint="https://fake/v1", model="test-model", key="sk-test", enabled=True
         ),
@@ -73,10 +73,8 @@ def run_template(monkeypatch, question, facts, chunks=KB_CHUNKS, scene="chat_exp
         def scalars(self, _stmt):
             return SimpleNamespace(all=lambda: list(chunks))
 
-    monkeypatch.setattr(A, "retrieve_kb", lambda db, query, limit=3: list(chunks))
-    monkeypatch.setattr(
-        A,
-        "site_llm_config",
+    monkeypatch.setattr(G, "retrieve_kb", lambda db, query, limit=3: list(chunks))
+    monkeypatch.setattr(G, "site_llm_config",
         lambda: LLMConfig(endpoint="", model="", key="", enabled=False),
     )
     return answer(FakeDb(), question, facts, [], None, scene=scene)

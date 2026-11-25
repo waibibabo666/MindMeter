@@ -1,4 +1,4 @@
-# MindMeter 非功能需求规范
+﻿# MindMeter 非功能需求规范
 
 ## 一、文档信息
 
@@ -82,7 +82,7 @@
 | NFR-SEC-01 | 传输 | HTTPS/HSTS；TLS 1.2+ |
 | NFR-SEC-02 | 密码 | PBKDF2-HMAC-SHA256（240 000 轮 + 每用户随机盐）；≥8 位且含字母与数字；禁止明文/弱密码。argon2id 为后续可选（需额外依赖，当前优先标准库零原生依赖以适配托管平台） |
 | NFR-SEC-03 | 认证 | 服务端会话表 + `HttpOnly`/`SameSite=Lax`/`Secure(auto)` Cookie；库内只存 `sha256(token)`；30 天滑动续期；登出/改密/注销即时撤销；失败按 `IP+用户名` 限流 |
-| NFR-SEC-04 | 授权 | 所有业务表以 `(user_id, id)` 复合主键存储；查询一律带 `user_id`；越权返回 404/401（`tests/backend/test_tenancy.py`） |
+| NFR-SEC-04 | 授权 | 所有业务表以 `(user_id, id)` 复合主键存储；查询一律带 `user_id`；越权返回 404/401（`tests/integration/test_tenancy.py`） |
 | NFR-SEC-05 | 模型凭证 | 站点统一 `MM_LLM_API_KEY` 环境变量；**不入库、不进浏览器、不写日志、不进导出**；设置接口只读，写请求 403 |
 | NFR-SEC-06 | 输入 | 所有输入/模型输出转义；禁止 `eval`；SQL 参数化 |
 | NFR-SEC-07 | 限流 | 登录、注册、AI 调用、导出分级限流 |

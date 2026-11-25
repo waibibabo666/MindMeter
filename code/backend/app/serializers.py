@@ -1,9 +1,4 @@
-"""Convert database rows to the JSON shapes the frontend already speaks.
-
-Every function takes ``user_id`` and filters by it — that is the whole tenancy
-story. Keeping these shapes stable lets the frozen pages keep their rendering
-code (docs/adr/0001, docs/adr/0003).
-"""
+"""把数据库行转换成前端已经在用的 JSON 形状。"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -42,7 +37,7 @@ def ms(value: datetime | None) -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Row lookup: composite (user_id, id) primary keys
+# 行查询：复合主键 (user_id, id)
 # ---------------------------------------------------------------------------
 
 
@@ -71,7 +66,7 @@ def find_message(db: Session, user_id: int, message_id: str) -> ChatMessage | No
 
 
 # ---------------------------------------------------------------------------
-# Payloads
+# 载荷
 # ---------------------------------------------------------------------------
 
 
@@ -95,11 +90,11 @@ EDU_VALUES = {"middle", "high", "college", "bachelor", "graduate"}
 
 
 def clean_profile(raw: object) -> dict:
-    """Whitelist the account-level intake fields; refuse to store anything else.
+    """白名单化账号级 intake 字段；其他内容一律不存。
 
-    Only age + education + a consent marker live here. They never enter the
-    scoring path (docs/algorithm/algorithm.md), and free-form text is dropped on
-    purpose so this column cannot become a place to stash personal data.
+    这里只有年龄 + 学历 + 知情同意标记，永不进入计分链路
+    （docs/algorithm/algorithm.md）；自由文本会被丢弃，避免这一列变成
+    藏个人数据的地方。
     """
     data = raw if isinstance(raw, dict) else {}
     profile: dict[str, object] = {}
@@ -256,7 +251,7 @@ def memory_payload(db: Session, user_id: int, message_limit: int = 20) -> dict:
 
 
 def settings_payload(db: Session | None = None) -> dict:
-    """Site-provided AI: the browser sees the model name, never the key."""
+    """站点提供的 AI：浏览器只看到模型名，永远看不到 Key。"""
     config = site_llm_config()
     payload = config.public()
     payload["schemaVersion"] = 1

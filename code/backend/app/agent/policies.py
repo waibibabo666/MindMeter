@@ -1,10 +1,4 @@
-"""Agent scene policies: one place for per-scenario generation & validation rules.
-
-Replaces the previously scattered prompt constants (chat SYSTEM_PROMPT vs the
-report explain prompt) with a base prompt plus per-scene segments, and gives
-the validator a declarative policy instead of one-size-fits-all rules.
-See docs/software/agent-trend-workflow.md §5.1 and docs/adr/0002 for rationale.
-"""
+"""Agent 场景策略：每个场景的生成与校验规则只在这里定义一次。"""
 from __future__ import annotations
 
 import re

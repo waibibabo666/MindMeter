@@ -82,7 +82,7 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [软件设计](docs/software/software.md) | 模块总览 |
 | [Agent P0 改造包设计](docs/software/agent-trend-workflow.md) | 统一出口 + 趋势联动详细设计（评审稿） |
 | [诊断日志](docs/software/logging.md) | 前端内存日志、脱敏、导出 |
-| [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
+| [用户故事](docs/requirements/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
 | [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |
 | [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |
 | [风险计划](docs/mgmt/risk_mgmt_plan.md) | 范围、Key、RAG、隐私、素材 |
@@ -121,11 +121,11 @@ MindMeter/
 │  ├─ mgmt/                # 沟通与风险
 │  └─ retrospection/
 ├─ code/
-│  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG、scoring
+│  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG
 │  ├─ frontend/           # 原生前端（登录/注册 + 测评 + 报告 + 对话）
-│  └─ core_engine/        # L1 JS 计分历史
+│  └─ core_engine/        # 无框架核心引擎（计分 scoring-v3.2）
 ├─ scripts/                # 门禁、本地一键起服、冒烟检查、纯逻辑测试
-├─ tests/                  # backend（pytest）/ e2e（Playwright）/ ai_eval（评测集）
+├─ tests/                  # unit / integration / e2e / ai_eval / XXXagent_demo_user_test
 ├─ work_for_submission/    # 课程提交历史快照
 └─ README.md
 ```
@@ -164,7 +164,7 @@ python scripts/export_issues.py --check
 
 # 后端测试（需要 pgvector Postgres；设 MM_TEST_DATABASE_URL 后）
 $env:MM_TEST_DATABASE_URL = "postgresql+psycopg://mm_test@127.0.0.1:55450/mindmeter_test"
-pytest -q tests/backend -rs
+pytest -q tests/unit tests/integration -rs
 
 # 本地跑 Web 版（一条命令：自建数据库 + 迁移 + 服务在 :8100）
 python scripts/e2e_server.py

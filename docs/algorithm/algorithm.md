@@ -1,4 +1,4 @@
-# MindMeter 算法设计
+﻿# MindMeter 算法设计
 
 ## 一、文档信息
 
@@ -12,7 +12,7 @@
 | 最后更新 | 2026-11-07 |
 | 关联文档 | [功能需求规范](../requirements/functional_spec.md)、[技术方案](../software/architecture.md) |
 
-> 本版对应 `scoring-v3`：8 个任务、8 个维度、**不设总分**。`scoring-v1`（4 维）和 `scoring-v2`（7 维）仅保留在历史记录中，不再用于新测评。L2 起由 `code/backend/app/scoring/` 的 Python 实现负责计分；客户端只提交原始指标，不计分。
+> 本版对应 `scoring-v3`：8 个任务、8 个维度、**不设总分**。`scoring-v1`（4 维）和 `scoring-v2`（7 维）仅保留在历史记录中，不再用于新测评。L2 起由 `code/core_engine/scoring/` 的 Python 实现负责计分；客户端只提交原始指标，不计分。
 
 ## 二、目的与边界
 
@@ -127,7 +127,7 @@ ni = round(100 * correct / 20)
 
 | 项目 | 规则 |
 | --- | --- |
-| 配置版本 | `scoring-v3.2`；`code/frontend/src/scoring/{config,levels}.js` 与 `code/backend/app/scoring/{config,formulas}.py` 必须同口径，由 `tests/backend/test_scoring_golden.py::test_matches_the_js_engine` 逐维校验 |
+| 配置版本 | `scoring-v3.2`；`code/frontend/src/scoring/{config,levels}.js` 与 `code/core_engine/scoring/{config,formulas}.py` 必须同口径，由 `tests/unit/test_scoring_golden.py::test_matches_the_js_engine` 逐维校验 |
 | 变更 | 每次调整阈值或公式升一个小版本，并在本文档记录 |
 | 复现 | 输入、配置、版本相同，输出必须相同 |
 | 测试 | 每个公式至少覆盖正常、边界、缺失三类单元测试 |
@@ -159,7 +159,7 @@ ni = round(100 * correct / 20)
 | ps | 30 秒 | 45 秒 | 90 秒 | 编码 0.7 + 分类 0.3，按 `45/seconds` 折算 |
 | vf | 30 秒 | 60 秒 | 90 秒 | 有效词按 `60/seconds` 折算，10→0 分、30→100 分 |
 
-> 这张表与 `code/frontend/src/scoring/levels.js` 的 `LEVEL_SPEC`、`code/backend/app/scoring/config.py` 的 `LEVEL_SPEC` 一一对应；改任一处都必须同时改另两处，否则跨引擎测试会红。
+> 这张表与 `code/frontend/src/scoring/levels.js` 的 `LEVEL_SPEC`、`code/core_engine/scoring/config.py` 的 `LEVEL_SPEC` 一一对应；改任一处都必须同时改另两处，否则跨引擎测试会红。
 
 ## 七、报告中的呈现
 

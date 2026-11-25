@@ -1,11 +1,11 @@
-# Agent 评测量表（P-07）
+﻿# Agent 评测量表（P-07）
 
 > 用于人工给 Agent 回答打分。**四个维度都必须 ≥ 4.0 分（满分 5）**才算通过，这是
 > [M1 范围与验收](../mgmt/m1_scope.md) 里「准确/有依据/有用/无越界各 ≥4/5」的落地口径。
 
 ## 一、为什么必须人工打分
 
-`tests/backend/test_agent_chat.py`、`test_agent_workflow.py` 能判定的是**行为分支**：意图对不对、有没有走固定话术、兜底有没有生效、
+`tests/integration/test_agent_chat.py`、`test_agent_workflow.py` 能判定的是**行为分支**：意图对不对、有没有走固定话术、兜底有没有生效、
 禁用词和数字有没有被拦下。这些都可由代码确定性判定。
 
 但「这段话是不是真的回答了用户」「引用是否支撑结论」属于**判断**，机器判不了。
@@ -110,7 +110,7 @@
 
 | 评测 | 归谁 | 文件 |
 | --- | --- | --- |
-| 行为分支（意图/兜底/校验） | 自动化 | [`tests/backend/test_agent_chat.py`](../../tests/backend/test_agent_chat.py)、[`test_agent_workflow.py`](../../tests/backend/test_agent_workflow.py)；用例集在 [`tests/ai_eval/agent-cases.json`](../../tests/ai_eval/agent-cases.json) |
+| 行为分支（意图/兜底/校验） | 自动化 | [`tests/integration/test_agent_chat.py`](../../tests/integration/test_agent_chat.py)、[`test_agent_workflow.py`](../../tests/unit/test_agent_workflow.py)；用例集在 [`tests/ai_eval/agent-cases.json`](../../tests/ai_eval/agent-cases.json) |
 | 回答质量（四维打分） | 人工 | 本文件 |
 | 检索命中率（hit@3） | 自动化 | [`scripts/test_kb.js`](../../scripts/test_kb.js) |
 | 知识块字段与禁用词 | 自动化 | 同上 |

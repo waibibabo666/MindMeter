@@ -1,4 +1,4 @@
-"""引用行占位符与机制归因两条新规则（2026-11-20 真实模型复跑发现的第 2、3 个问题）。
+﻿"""引用行占位符与机制归因两条新规则（2026-11-20 真实模型复跑发现的第 2、3 个问题）。
 
 问题 2：`policies.BASE_PROMPT` 原来写「回答末尾另起一行写「引用：知识块编号 · 标题」」，
 真实模型把说明文字当字面内容抄进回答，实测原话：
@@ -19,6 +19,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from app import agent as A
+
+from app.agent import graph as G
 from app.agent import (
     answer,
     build_messages,
@@ -50,10 +52,9 @@ def run_graph(monkeypatch, question, reply_text, chunks=CHUNKS, facts=None, scen
         def scalars(self, _stmt):
             return SimpleNamespace(all=lambda: list(chunks))
 
-    monkeypatch.setattr(A, "retrieve_kb", lambda db, query, limit=3: list(chunks))
-    monkeypatch.setattr(A, "call_llm_with_fallback", lambda config, messages, **kw: LLMReply(text=reply_text, model="test-model"))
-    monkeypatch.setattr(
-        A, "site_llm_config",
+    monkeypatch.setattr(G, "retrieve_kb", lambda db, query, limit=3: list(chunks))
+    monkeypatch.setattr(G, "call_llm_with_fallback", lambda config, messages, **kw: LLMReply(text=reply_text, model="test-model"))
+    monkeypatch.setattr(G, "site_llm_config",
         lambda: LLMConfig(endpoint="https://fake/v1", model="test-model", key="sk-test", enabled=True),
     )
     return answer(FakeDb(), question, facts or FACTS, [], None, scene=scene)
