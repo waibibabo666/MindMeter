@@ -53,6 +53,7 @@ async function main() {
   const data = await import(href(path.join(SRC, 'data.js')));
   const gameStore = await import(href(path.join(SRC, 'games', 'store.js')));
   const ir = await import(href(path.join(SRC, 'tasks', 'ir.js')));
+  const psTasks = await import(href(path.join(SRC, 'tasks', 'ps.js')));
   const svMount = await import(href(path.join(SRC, 'tasks', 'svMount.js')));
 
   /** 计算 24 点式子（递归下降，不执行字符串，避免 code-eval）。 */
@@ -421,6 +422,53 @@ async function main() {
       eq(new Set(keys).size, 4, `第 ${index} 题应有四个不同选项`);
       assert(q.answer >= 0 && q.answer < 4, `第 ${index} 题答案下标越界`);
     });
+  });
+
+  test('图形规律：数量规律不被截断（diagonal/combine 的 5 个也要出）', () => {
+    // 这两条规则在右下角会算出 5 个；以前数据层和渲染层都截断到 4，
+    // 导致题干规律指向「5 个」，选项里却只有「4 个」。
+    for (const rule of ['diagonal', 'combine']) {
+      for (let i = 0; i < 20; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(500 + i));
+        const answer = q.options[q.answer];
+        eq(answer.count, 5, `${rule} 第 ${i} 题答案数量`);
+        const counts = q.cells.filter(Boolean).map((cell) => cell.count);
+        assert(counts.includes(4), `${rule} 题干应能看到 4 个的格子`);
+        for (const opt of q.options) {
+          assert(opt.count >= 1 && opt.count <= 5, `${rule} 选项数量越界`);
+        }
+      }
+    }
+  });
+
+  test('图形规律：干扰项形状必须出现在题干里', () => {
+    // 干扰项用了题干没出现过的图形，等于送分；旧实现会拿随机 shapeA/shapeB 补位。
+    for (const rule of ['rowShape', 'colShape', 'diagonal', 'combine', 'alternate', 'mirror']) {
+      for (let i = 0; i < 40; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(700 + i));
+        const gridShapes = new Set(q.cells.filter(Boolean).map((cell) => cell.shape));
+        for (const opt of q.options) {
+          assert(
+            gridShapes.has(opt.shape),
+            `${rule} 第 ${i} 题干扰项形状「${opt.shape}」不在题干里`,
+          );
+        }
+      }
+    }
+  });
+
+  test('知觉速度：编码题答案下标有效且指向正确数字串', () => {
+    // 旧实现用数组引用做 indexOf，选项是拷贝，答案恒为 -1（编码题永远判错）。
+    for (let i = 0; i < 100; i += 1) {
+      const table = psTasks.makeTable();
+      const item = psTasks.buildEncoding(table, 1 + (i % 3));
+      assert(
+        item.answer >= 0 && item.answer < item.options.length,
+        `第 ${i} 题答案下标 ${item.answer}`,
+      );
+      const expected = item.shapes.map((entry) => String(entry.digit)).join('');
+      eq(item.options[item.answer].join(''), expected, `第 ${i} 题答案内容`);
+    }
   });
 
   test('空间旋转（测评）：选项不重复，正确项只出现一次', () => {

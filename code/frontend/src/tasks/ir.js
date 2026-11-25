@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 归纳推理：瑞文式 3×3 图形矩阵。
  *
  * 六种规则轮换出题：数量递增、数量递减、形状循环、位置轮换、叠加、交替。
@@ -30,13 +30,15 @@ const RULES = {
 };
 
 /** 生成四个互不相同的选项：正确答案 + 三个干扰项。 */
-function buildOptions(answer, shapeA, shapeB, random) {
+function buildOptions(answer, shapes, random) {
   // 干扰项要**四个互不相同**：先给"只错数量/只错形状/两样都错"，
   // 数量为 1 时 ±1 会被夹回 1（旧实现因此和正确答案撞车，出现两个正确项），
-  // 所以候选按"难度优先"排好后去重，不够再从形状×数量全组合里补。
+  // 所以候选按"难度优先"排好后去重，不够再从"题干出现过的形状 × 数量"里补。
+  // 形状限定在题干出现过的集合，避免干扰项用了根本没出现过的图形（一眼排除）。
   const clampCount = (value) => Math.min(MAX_COUNT, Math.max(1, value));
   const cellKey = (value) => `${value.shape}:${value.count}`;
-  const otherShape = answer.shape === shapeA ? shapeB : shapeA;
+  const pool = shapes.length ? shapes : [answer.shape];
+  const otherShape = pool.find((shape) => shape !== answer.shape) || answer.shape;
   const ordered = [
     { shape: answer.shape, count: clampCount(answer.count + 1) },
     { shape: answer.shape, count: clampCount(answer.count - 1) },
@@ -44,7 +46,7 @@ function buildOptions(answer, shapeA, shapeB, random) {
     { shape: otherShape, count: clampCount(answer.count + 1) },
     { shape: otherShape, count: clampCount(answer.count - 1) },
   ];
-  for (const shape of [shapeA, shapeB]) {
+  for (const shape of pool) {
     for (let count = 1; count <= MAX_COUNT; count += 1) ordered.push({ shape, count });
   }
   const options = [answer];
@@ -68,7 +70,6 @@ function buildOptions(answer, shapeA, shapeB, random) {
 export function buildMatrix(ruleName, random = Math.random) {
   const rule = RULES[ruleName] || RULES.rowShape;
   const shapeA = SHAPES[randInt(0, 3, random)];
-  const shapeB = SHAPES[(SHAPES.indexOf(shapeA) + 1) % 4];
 
   const cell = (r, c) => {
     const value = rule(r, c, shapeA);
@@ -80,7 +81,8 @@ export function buildMatrix(ruleName, random = Math.random) {
     for (let c = 0; c < 3; c += 1) cells.push(r === 2 && c === 2 ? null : cell(r, c));
   }
   const answer = cell(2, 2);
-  const options = buildOptions(answer, shapeA, shapeB, random);
+  const gridShapes = [...new Set(cells.filter(Boolean).map((cell) => cell.shape))];
+  const options = buildOptions(answer, gridShapes, random);
   return { cells, options, answer: options.indexOf(answer), rule: ruleName };
 }
 
