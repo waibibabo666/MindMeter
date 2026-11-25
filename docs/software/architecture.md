@@ -78,23 +78,23 @@ code/
 │  │  ├─ config.py / db.py / security.py / logging_setup.py / privacy.py / llm.py
 │  │  ├─ models.py         # SQLAlchemy
 │  │  ├─ serializers.py / analysis.py / templates.py
-│  │  ├─ scoring/          # config.py, formulas.py, stats.py
 │  │  ├─ agent/            # graph, state, validation, render, classify, policies, insights
 │  │  ├─ rag/              # base (Protocol), bm25, vector
 │  │  └─ memory.py         # MemoryStore：上下文 / 历史 / 沉淀
 │  ├─ alembic/
-│  ├─ tests/
 │  ├─ Dockerfile
 │  └─ pyproject.toml
-└─ frontend/
-   ├─ index.html
-   └─ src/
-      ├─ api.js            # fetch
-      ├─ auth.js
-      ├─ pages/            # login, register, report, chat, memory, trend, settings
-      ├─ tasks/            # 8 tasks
-      ├─ asr/              # Web Speech API
-      └─ styles/
+├─ frontend/
+│  ├─ index.html
+│  └─ src/
+│     ├─ api.js            # fetch
+│     ├─ auth.js
+│     ├─ pages/            # login, register, report, chat, memory, trend, settings
+│     ├─ tasks/            # 8 tasks
+│     ├─ asr/              # Web Speech API
+│     └─ styles/
+└─ core_engine/
+   └─ scoring/            # 计分引擎 scoring-v3.2（backend/app/scoring 为兼容 stub）
 ```
 
 ## 六、数据模型

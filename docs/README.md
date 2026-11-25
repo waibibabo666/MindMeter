@@ -11,7 +11,11 @@
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | 当前 v3.0 | 性能、可靠、安全、隐私、AI 质量 |
 | `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
+| `algorithm/` | [算法调研与选型依据](algorithm/research.md) | 当前 | 候选方案、取舍、复杂度、调研索引 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
+| `software/` | [代码质量](software/code_quality.md) | 当前 | 本地门禁、CI 检查项、当前基线 |
+| `software/` | [代码评审](software/code_review.md) | 当前 | 分支流程、评审清单、项目特有风险 |
+| `software/` | [系统部署](software/deployment.md) | 当前 | 部署形态、两条路径、环境变量、回滚 |
 | `software/` | [Railway 部署指南](software/deploy-railway.md) | 当前 | Dockerfile 构建；pgvector 模板是成败关键、`DATABASE_URL_PRIVATE` 走内网 |
 | `software/` | [自建服务器部署](software/deploy-selfhost.md) | 当前 | VPS / 阿里云：Docker 与裸机两条路、cookie 与 `X-Forwarded-Proto`、备份与安全清单 |
 | `software/` | [Web 本地开发与测试](software/local-development.md) | 当前 | 一键起库与服务、测试矩阵、LLM 联调、手工回归 |
@@ -26,7 +30,7 @@
 | `software/` | [测试与评测计划](software/test-plan.md) | 当前 v1.0 | P-07：分层、30 条 Agent 用例、20 条检索、缺陷记录 |
 | `software/` | [Agent 评测量表](software/eval-rubric.md) | 当前 v1.0 | P-07：四维评分锚点与通过标准 |
 | `software/` | [知识库来源核验](software/kb-source-review.md) | 待核验 | L-06：30 条来源逐项勾选表 |
-| `research/` | [用户故事](research/user_stories.md) | 当前 v3.0 | 16 条 L2 故事 + Gherkin |
+| `requirements/` | [用户故事](requirements/user_stories.md) | 当前 v3.0 | 16 条 L2 故事 + Gherkin |
 | `software/prototype/` | [原型说明](software/prototype/prototype.md) | L1 参考 | UI 骨架；不代表 L2 架构 |
 | `software/prototype/` | [AI 接入位](software/prototype/agent-接入位.md) | 当前 L2 | 前端 → FastAPI 的 Agent 契约；前端不直连模型 |
 | `mgmt/` | [沟通管理计划](mgmt/communication_mgmt_plan.md) | 当前 v2.0 | 分工、阶段节奏、升级 |

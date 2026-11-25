@@ -1,4 +1,4 @@
-# Backend tests
+# Integration tests（后端契约）
 
 Use a disposable PostgreSQL/pgvector database; never SQLite. The suite is
 cookie-authenticated: `client` is anonymous, `logged_client` shares one
@@ -12,7 +12,7 @@ python scripts/e2e_server.py           # 会自建 runtime/e2e 集群并跑迁�
 # 2) 或者手工：用已有的 pgvector 库，先迁移再跑测试
 python -m alembic -c code/backend/alembic.ini upgrade head
 $env:MM_TEST_DATABASE_URL = "postgresql+psycopg://mm_test@127.0.0.1:55450/mindmeter_test"
-pytest -q tests/backend -rs
+pytest -q tests/unit tests/integration -rs
 ```
 
 没有 `MM_TEST_DATABASE_URL` 时，需要数据库的用例自动 skip；纯逻辑用例（口令散列、计分金标准、Agent 图、模板文案）照常运行。

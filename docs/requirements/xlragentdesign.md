@@ -1,4 +1,4 @@
-# Agent 设计与功能说明（L2）
+﻿# Agent 设计与功能说明（L2）
 
 ## 一、文档信息
 
@@ -11,7 +11,7 @@
 | 评审人 | waibibabo666、song、1213lz |
 | 最后更新 | 2026-10-24 |
 | 上游 | [功能需求](functional_spec.md)、[算法设计](../algorithm/algorithm.md)、[技术方案](../software/architecture.md) |
-| 关联 | [用户故事](../research/user_stories.md)、[问题定义](problem_definition.md) |
+| 关联 | [用户故事](user_stories.md)、[问题定义](problem_definition.md) |
 
 > L2 的 Agent 是产品核心，不是“报告下面的一个解读卡片”。它要能解释、建议、追问、记住、看趋势；但**不做诊断、不做计划/打卡、不做情绪支持**。
 

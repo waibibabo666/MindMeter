@@ -1,4 +1,4 @@
-"""Pure output-validation rules: numbers, citations, mechanisms, ratings."""
+﻿"""Pure output-validation rules: numbers, citations, mechanisms, ratings."""
 from __future__ import annotations
 
 import math
@@ -457,7 +457,7 @@ def _half_up(value: float, digits: int) -> float:
 def _is_ms_metric_key(key: object) -> bool:
     """字段名是否表示毫秒（决定哪些值允许做 ms→s 换算）。
 
-    读码确认的真实字段（`code/frontend/src/tasks/*.js` + `app/scoring`）：
+    读码确认的真实字段（`code/frontend/src/tasks/*.js` + `core_engine/scoring`）：
     vc/ps 上报 `meanRtMs`（平均毫秒，`Math.round` 后的整数），sv 上报
     `correctRts`（逐题毫秒数组：`score_sv` / `sv_median_rt` 按毫秒中位数用它），
     逐题草稿里是 `rtMs`。判定只认两类形态：

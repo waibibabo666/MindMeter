@@ -1,4 +1,4 @@
-# 本地开发与测试（Web 版）
+﻿# 本地开发与测试（Web 版）
 
 > 部署到 Railway 见 [deploy-railway.md](deploy-railway.md)；账号与多租户的设计取舍见 [ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)。
 > 桌面版（pywebview / `MindMeter.cmd` / keyring）已删除，本文是唯一入口。
@@ -47,7 +47,7 @@ python scripts/e2e_server.py --db-only
 # 输出： MM_TEST_DATABASE_URL=postgresql+psycopg://mm_e2e@127.0.0.1:55451/mindmeter_e2e
 
 $env:MM_TEST_DATABASE_URL = "postgresql+psycopg://mm_e2e@127.0.0.1:55451/mindmeter_e2e"
-python -m pytest -q tests/backend -rs
+python -m pytest -q tests/unit tests/integration -rs
 ```
 
 ### C. 外部 Postgres + 热重载（不用便携版）
@@ -74,9 +74,9 @@ python -m uvicorn app.main:app --reload --port 8000
 | --- | --- | --- |
 | 前端 JS/CSS/HTML | lint + 格式 + 纯逻辑 | `npm run check` |
 | 认证/路由闸门/页面结构 | 同上 + 浏览器 E2E | `npm run check && npm run test:e2e` |
-| 后端 API、模型、迁移 | 后端契约测试 | `python -m pytest -q tests/backend -rs`（需要 `MM_TEST_DATABASE_URL`） |
+| 后端 API、模型、迁移 | 后端契约测试 | `python -m pytest -q tests/unit tests/integration -rs`（需要 `MM_TEST_DATABASE_URL`） |
 | 数据模型 / 加表 | 迁移真跑一遍 + 契约测试 | `--db-only` 后 `alembic upgrade head`，再 pytest |
-| Agent / LLM 调用 / 校验 | 图级测试（不需要真 Key） | `python -m pytest -q tests/backend/test_agent_workflow.py` |
+| Agent / LLM 调用 / 校验 | 图级测试（不需要真 Key） | `python -m pytest -q tests/unit/test_agent_workflow.py` |
 | 知识库内容 | KB 校验 + 种子一致性 | `npm run test:kb && node scripts/export_kb_seed.mjs` |
 | 部署物料（Dockerfile/railway.json/依赖/env） | 部署后冒烟 | `python scripts/smoke_web_deploy.py <url>` |
 | 文档/结构/密钥 | 三个门禁脚本 | `python scripts/check_docs.py`、`python scripts/check_secrets.py`、`python scripts/check_frontend_dead_code.py` |
@@ -134,7 +134,7 @@ Remove-Item -Recurse -Force runtime\e2e      # 下一次会重新 initdb，等�
 ```powershell
 npm run check
 python scripts/e2e_server.py --db-only; $env:MM_TEST_DATABASE_URL = "..."   # 用上一条输出
-python -m pytest -q tests/backend -rs
+python -m pytest -q tests/unit tests/integration -rs
 npm run test:e2e
 python scripts/check_docs.py; python scripts/check_secrets.py; python scripts/check_frontend_dead_code.py
 git push                          # 合入 main 后 Railway 自动部署

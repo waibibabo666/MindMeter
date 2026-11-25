@@ -8,7 +8,7 @@
   2. 回答可用性：模板路径下的引用数、是否提到对应维度、回答长度；
   3. 延迟：本地模板路径的耗时（不含模型）。
 
-用假 db / 假模型，和 tests/backend/test_agent_output_contract.py 同一套做法，
+用假 db / 假模型，和 tests/unit/test_agent_output_contract.py 同一套做法，
 因此可以在 CI 或任意机器上重复跑，用来对比优化前后。
 """
 from __future__ import annotations

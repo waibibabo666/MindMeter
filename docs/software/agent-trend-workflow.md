@@ -1,4 +1,4 @@
-# Agent P0 改造包详细设计：统一出口与趋势联动
+﻿# Agent P0 改造包详细设计：统一出口与趋势联动
 
 ## 一、文档信息
 
@@ -126,7 +126,7 @@ def build_trend_payload(db) -> dict:
 
 ## 七、G3 三个确定性修复
 
-1. **历史时序**：`build_messages` 现在把最近 history 拼在当前问题**之后**（agent/\_\_init\_\_.py L308–323），模型看到的顺序是「问题→旧对话」。修正为 `[system, *history, current_user_block]`。（早期作为对照 oracle 的 legacy JS 前端 Agent 已于 2026-11-20 删除，行为回归改由 `tests/backend/test_agent_workflow.py` 承担。）
+1. **历史时序**：`build_messages` 现在把最近 history 拼在当前问题**之后**（agent/\_\_init\_\_.py L308–323），模型看到的顺序是「问题→旧对话」。修正为 `[system, *history, current_user_block]`。（早期作为对照 oracle 的 legacy JS 前端 Agent 已于 2026-11-20 删除，行为回归改由 `tests/unit/test_agent_workflow.py` 承担。）
 2. **引用软失败**：`validate_text` 的 `require_citation` 按 §5.1 分档；同时后端返回前剥掉模型写的「引用：…」尾行，引用统一由 `citations` 数组渲染（前端已有 `citationsLine`），消除正文/卡片重复。
 3. **派生数字白名单**：校验前对 facts 做一次确定性派生展开，仅允许以下四类，杜绝链式运算：
    - 同一维度内 `correct/total` 两两组合的加减差值与整数百分比（四舍五入）；
@@ -149,14 +149,14 @@ def build_trend_payload(db) -> dict:
 
 ## 九、验收标准与测试
 
-后端 pytest（`tests/backend/`，新增 `test_agent_trend.py`、`test_scene_policy.py`、`test_chat_explain_unified.py`）：
+后端 pytest（`tests/integration/`，新增 `test_agent_trend.py`、`test_scene_policy.py`、`test_chat_explain_unified.py`）：
 
 1. classify：趋势正例 ≥5（「这两次有什么变化」「上次和这次差多少」…）；反例 ≥3（「上次那个建议怎么还没做」→ EXPLAIN）；crisis/boundary 优先于 trend 词（「感觉活着没变化」仍 crisis）。
 2. trend 组装：共同维度、delta、days、<7 天 repeatRisk、仅一次测评 → no_data 固定话术。
 3. 校验：「+7 分」通过、「进步了」模板、「44→51」通过、无引用不判死（soft）、报告场景无引用要求。
 4. 统一出口：给 `explain_report` 注入含禁用词/越界数字的假模型输出 → 返回必为模板（现状测试可复现该漏洞，先红后绿）。
 5. history 顺序快照测试：system → 旧→新 history → 当前问题块。
-6. ~~legacy 30 条 JS 用例（`scripts/test_agent.js`）保持绿，作为回归 oracle。~~ 该 oracle 已随前端 legacy 于 2026-11-20 删除；等价回归改由 `tests/backend/test_agent_workflow.py`（意图路由、固定话术含 12356/120、派生数字与校验器）承担。
+6. ~~legacy 30 条 JS 用例（`scripts/test_agent.js`）保持绿，作为回归 oracle。~~ 该 oracle 已随前端 legacy 于 2026-11-20 删除；等价回归改由 `tests/unit/test_agent_workflow.py`（意图路由、固定话术含 12356/120、派生数字与校验器）承担。
 7. G5 定位用例：「我就是笨，什么都记不住」→ 重导向模板，`modelCalled=false`；「我是不是有痴呆前兆」→ boundary 优先；危机 + 自责共现 → crisis 优先；「换算成 MoCA 我是不是 21 分」→ 走 EXPLAIN 链路且输出中任何量表数字都被白名单拦下（不在 facts → 模板）；「这个方法没用」→ 不触发重导向（共现正则回归）。
 8. 手工演示脚本（对齐 MM-REQ-007 §十三）：两次测评 → 趋势页 → 点按钮 → 解释差值带练习效应 → 追问「那我要不要多练」→ 引用知识块。
 

@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 "on":
   push:
@@ -165,7 +165,7 @@ jobs:
 
       - name: Run backend contract tests
         if: steps.detect.outputs.ready == 'true'
-        run: pytest -q tests/backend -rs
+        run: pytest -q tests/unit tests/integration -rs
 
   security:
     name: Secret scan
