@@ -1,13 +1,4 @@
-﻿"""The single authoritative server-side scoring engine (scoring-v3.2).
-
-`score_session(results, level)` must return exactly what
-`code/frontend/src/scoring/index.js#scoreSession(results, level)` returns for
-the same input: the report card shows the client-side number while the
-database, the trend page, the memory summary and the Agent facts all read this
-one. Any drift between the two is a user-visible contradiction, so
-`tests/unit/test_scoring_golden.py` pins the shared golden values and
-`scripts/test_scoring.js` pins the same numbers on the JS side.
-"""
+"""服务端唯一权威计分引擎（scoring-v3.2）。"""
 from __future__ import annotations
 
 from .config import CONFIG, DIMENSION_IDS, LEVEL_SPEC, LEVELS, SCORING_VERSION, items_for, seconds_for, spec_for

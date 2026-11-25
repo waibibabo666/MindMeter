@@ -1,4 +1,4 @@
-"""Pure math helpers ported from the frozen JS scoring module."""
+"""从冻结的 JS 计分模块移植的纯数学工具。"""
 from __future__ import annotations
 
 import math

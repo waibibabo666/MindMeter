@@ -1,8 +1,4 @@
-"""Conversation memory: read the prompt context, keep recent turns, sediment.
-
-One class owns the whole per-user memory surface so ``api/chat.py`` no longer
-carries the SQL for profile/summary/advice/messages.
-"""
+"""对话记忆：读取 prompt 上下文、保留最近消息、沉淀摘要与建议。"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -21,7 +17,7 @@ def _now() -> datetime:
 
 
 class MemoryStore:
-    """Per-user memory: profile + latest summary + recent advice + messages."""
+    """按用户的记忆：画像 + 最近摘要 + 最近建议 + 消息。"""
 
     def __init__(self, db: Session, user: User) -> None:
         self.db = db
@@ -29,7 +25,7 @@ class MemoryStore:
         self.user_id = int(user.id)
 
     def context(self) -> dict:
-        """What the prompt is allowed to see (never the raw conversation)."""
+        """prompt 允许看到的内容（永远不是原始对话）。"""
         profile_row = self.db.get(MemoryProfile, self.user_id)
         profile = None
         if profile_row is not None and profile_row.confirmed:
@@ -110,7 +106,7 @@ class MemoryStore:
         assessment_id: str | None,
         tier: str | None,
     ) -> dict:
-        """After a qualifying turn, write summary/advice (never blocks the reply)."""
+        """有效的一轮对话结束后写入摘要/建议（不阻塞回答）。"""
         from .agent.insights import after_turn
 
         return after_turn(

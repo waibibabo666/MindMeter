@@ -1,16 +1,4 @@
-"""Accounts: username/password credentials, server-side sessions, throttling.
-
-Design notes (docs/adr/0003-web-accounts-and-hosted-deployment.md):
-
-* Passwords use PBKDF2-HMAC-SHA256 from the standard library — no native
-  build deps, which matters on a free-tier host.
-* Sessions are opaque random tokens in an HttpOnly, SameSite=Lax cookie. The
-  database only ever stores ``sha256(token)``, so a leaked table cannot be
-  replayed as a cookie. Logout / "log out everywhere" / account deletion all
-  work because the server owns the session rows.
-* No email is collected: the product privacy rule (docs/requirements) is
-  "no identity data", and a course demo does not need password recovery.
-"""
+"""账号：用户名/密码凭证、服务端会话与限流。"""
 from __future__ import annotations
 
 import base64
@@ -39,7 +27,7 @@ USERNAME_RE = re.compile(r"^[a-z0-9一-鿿][a-z0-9._一-鿿-]{1,31}$")
 COOKIE_PATH = "/"
 
 # ---------------------------------------------------------------------------
-# Credentials
+# 凭证
 # ---------------------------------------------------------------------------
 
 
@@ -78,7 +66,7 @@ _DUMMY_HASH = ""
 
 
 def dummy_hash() -> str:
-    """A real, cached hash so an unknown username costs the same as a wrong password."""
+    """始终返回真实且已缓存的哈希，使未知用户名与错误密码耗时一致。"""
     global _DUMMY_HASH
     if not _DUMMY_HASH:
         _DUMMY_HASH = hash_password("mindmeter-placeholder-1")
@@ -102,7 +90,7 @@ def password_problems(password: str) -> list[str]:
 
 
 def credential_errors(username: str, password: str, confirm: str = "") -> list[str]:
-    """Return a list of human-readable problems; empty means the input is usable."""
+    """返回人类可读的问题列表；为空表示输入可用。"""
     problems: list[str] = []
     name = normalize_username(username)
     if not name:
@@ -118,7 +106,7 @@ def credential_errors(username: str, password: str, confirm: str = "") -> list[s
 
 
 # ---------------------------------------------------------------------------
-# Accounts
+# 账号
 # ---------------------------------------------------------------------------
 
 
@@ -130,7 +118,7 @@ def get_user(db: Session, username: str) -> User | None:
 
 
 def create_user(db: Session, username: str, password: str) -> User:
-    """Insert a new account. Policy (registration on/off, throttling) is the API's job."""
+    """插入新账号。是否允许注册、限流等策略由 API 层负责。"""
     name = normalize_username(username)
     problems = credential_errors(name, password)
     if problems:
@@ -147,7 +135,7 @@ def create_user(db: Session, username: str, password: str) -> User:
 
 
 def check_login(db: Session, username: str, password: str) -> User:
-    """Return the user or raise 401. Unknown users still cost one PBKDF2 run."""
+    """返回用户或抛 401。未知用户也要付出一次 PBKDF2 的代价。"""
     user = get_user(db, username)
     if user is None:
         verify_password(str(password or ""), dummy_hash())
@@ -164,19 +152,19 @@ def change_password(db: Session, user: User, old: str, new: str) -> None:
     if problems:
         raise HTTPException(400, detail=";".join(problems))
     user.password_hash = hash_password(new)
-    # Signing out everywhere is the cheap, honest version of "revoke sessions".
+    # 「全端登出」是「撤销会话」的廉价且诚实的实现。
     revoke_all(db, user.id)
     db.commit()
 
 
 def delete_account(db: Session, user: User) -> None:
-    """Hard delete; ON DELETE CASCADE removes assessments, memory, chat and AI runs."""
+    """硬删除；ON DELETE CASCADE 会清掉测评、记忆、对话与 AI 运行记录。"""
     db.delete(user)
     db.commit()
 
 
 # ---------------------------------------------------------------------------
-# Sessions
+# 会话
 # ---------------------------------------------------------------------------
 
 
@@ -221,7 +209,7 @@ def read_session(db: Session, request: Request) -> tuple[User, AuthSession] | No
     user = db.get(User, row.user_id)
     if user is None:
         return None
-    # Sliding expiry, but only write when it saves more than a minute of churn.
+    # 滑动续期，但只有在能省下超过一分钟的写操作时才落库。
     if row.last_seen_at.tzinfo is None:
         row.last_seen_at = row.last_seen_at.replace(tzinfo=timezone.utc)
     if _now() - row.last_seen_at > timedelta(minutes=5):
@@ -251,7 +239,7 @@ def purge_expired_sessions(db: Session) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Request plumbing
+# 请求处理管线
 # ---------------------------------------------------------------------------
 
 
@@ -296,14 +284,14 @@ def clear_session_cookie(response) -> None:
 
 
 class _Throttle:
-    """Fixed-window counter kept in memory: one process, enough for a course demo."""
+    """进程内固定窗口计数器：单进程，课程演示够用。"""
 
     def __init__(self) -> None:
         self._hits: dict[str, list[float]] = {}
         self._lock = threading.Lock()
 
     def hit(self, key: str, window_s: int, max_attempts: int) -> bool:
-        """True means the attempt is blocked."""
+        """返回 True 表示该次尝试被拦截。"""
         if max_attempts <= 0 or window_s <= 0:
             return False
         now = time.monotonic()
@@ -340,7 +328,7 @@ def login_throttle_key(request: Request, username: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Dependencies
+# 依赖
 # ---------------------------------------------------------------------------
 
 

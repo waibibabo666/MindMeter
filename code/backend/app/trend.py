@@ -1,10 +1,4 @@
-"""Shared trend assembly (pure functions).
-
-One implementation for the comparison of the last two completed assessments,
-used by both `GET /trends` (table rendering) and the Agent facts assembler, so
-the model can quote deltas that live in the same whitelist the validator reads.
-See docs/software/agent-trend-workflow.md §6.1.
-"""
+"""共享趋势组装（纯函数）。"""
 from __future__ import annotations
 
 from typing import Any
@@ -37,7 +31,7 @@ def days_between(prev_at: str, next_at: str) -> int | None:
 
 
 def build_trend_from_sessions(prev: dict, next_: dict) -> dict[str, Any]:
-    """Compare only dimensions scored in both sessions; carry delta + gap."""
+    """只比较两次都测过的维度；携带差值与间隔。"""
     prev_scores = _scores(prev)
     next_scores = _scores(next_)
     common = [dim for dim in DIM_ORDER if dim in prev_scores and dim in next_scores]
@@ -64,7 +58,7 @@ def build_trend_from_sessions(prev: dict, next_: dict) -> dict[str, Any]:
 
 
 def build_trend_payload(sessions: list[dict]) -> dict[str, Any] | None:
-    """`sessions` newest-first (as returned by sessions_payload). None if <2."""
+    """``sessions`` 按新到旧排列（sessions_payload 的返回）。不足两次返回 None。"""
     if not isinstance(sessions, list) or len(sessions) < 2:
         return None
     return build_trend_from_sessions(sessions[1], sessions[0])

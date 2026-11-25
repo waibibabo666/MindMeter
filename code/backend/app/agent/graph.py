@@ -1,4 +1,4 @@
-"""LangGraph orchestration: nodes, edges, and the public ``answer()``."""
+"""LangGraph 编排：节点、边与对外入口 ``answer()``。"""
 from __future__ import annotations
 
 import time
@@ -329,7 +329,7 @@ def _after_retrieve(state: AgentState) -> str:
 
 
 def _after_validate(state: AgentState) -> str:
-    # Invalid LLM output already carries the deterministic template text.
+    # 无效的 LLM 输出现已带回确定性模板文本。
     return "end"
 
 

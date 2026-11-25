@@ -1,9 +1,4 @@
-"""Account endpoints: register, login, logout, password, erasure.
-
-Everything here except register/login/session is authenticated. Responses use
-the same ``{error|detail}`` JSON shape as the rest of the API so the frontend
-can map failures without a second code path.
-"""
+"""账号接口：注册、登录、登出、改密、注销。"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
@@ -34,7 +29,7 @@ def _user_json(user: User) -> dict:
 
 @router.get("/auth/session")
 def session_state(request: Request, db: Session = Depends(get_db)):
-    """Public boot probe: is this browser signed in, and as who?"""
+    """公开的启动探针：当前浏览器是否已登录、以谁登录？"""
     pair = auth.read_session(db, request)
     if pair is None:
         return {
@@ -65,7 +60,7 @@ def register(
     if auth.throttle_hit(key, settings.register_window_s, settings.register_max_attempts):
         raise HTTPException(429, detail="too_many_registrations")
     if not payload.get("adult"):
-        # F-01: registration requires the 18+ confirmation.
+        # F-01：注册必须确认 18+。
         raise HTTPException(400, detail="adult_confirmation_required")
 
     username, password = _payload_user(payload)
@@ -137,7 +132,7 @@ def change_password(
     if payload.get("confirm") not in (None, "") and payload["confirm"] != new:
         raise HTTPException(400, detail="两次输入的密码不一致")
     auth.change_password(db, user, current, new)
-    # The old session was just revoked: issue a fresh cookie for this browser.
+    # 旧会话刚被撤销：给当前浏览器重新下发 cookie。
     token = auth.issue_session(db, user, request)
     auth.apply_session_cookie(response, token, auth.wants_secure_cookie(request))
     record(db, user.id, "change_password", "users", "ok")
@@ -157,7 +152,7 @@ def delete_account(
     if not auth.verify_password(password, user.password_hash):
         raise HTTPException(403, detail="wrong_password")
     auth.delete_account(db, user)
-    # The account row is gone, so this audit row carries no user id at all.
+    # 账号行已删除，这条审计记录不再携带 user id。
     record(db, None, "delete_account", "users", "ok")
     auth.clear_session_cookie(response)
     return {"ok": True, "deleted": True}

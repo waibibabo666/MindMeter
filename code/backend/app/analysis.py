@@ -1,4 +1,4 @@
-"""Shared result analysis: facts + reviewed knowledge + concrete suggestions."""
+"""共享结果分析：facts、已审知识块与具体建议。"""
 from __future__ import annotations
 
 import json

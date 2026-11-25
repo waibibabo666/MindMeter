@@ -1,11 +1,4 @@
-"""Local RAG: pgvector when an embedding model is available, BM25 otherwise.
-
-The reviewed chunks live in PostgreSQL. Retrieval is a small strategy layer:
-
-- ``Bm25Retriever``  — character-bigram BM25 (no model files needed)
-- ``VectorRetriever`` — pgvector cosine over fastembed vectors
-- ``retrieve()``      — picks a backend from ``MM_RAG_MODE``, fuses with RRF
-"""
+"""本地 RAG：有 embedding 模型时用 pgvector，否则回退 BM25。"""
 from __future__ import annotations
 
 import hashlib
@@ -59,7 +52,7 @@ def retrieve(db: Session, query: str, limit: int = 3) -> list[ScoredChunk]:
 
 
 def warmup() -> None:
-    """Load the optional embedding model before the first user question."""
+    """在第一个用户问题之前加载可选的 embedding 模型。"""
     get_model()
 
 
@@ -75,7 +68,7 @@ def content_hash(chunk: dict) -> str:
 
 
 def ingest_embeddings(db: Session, force: bool = False) -> int:
-    """Embed reviewed chunks if a local model is available. Returns updated count."""
+    """本地模型可用时为已审知识块生成向量，返回更新条数。"""
     model = get_model()
     if model is None:
         return 0

@@ -1,4 +1,4 @@
-"""Retriever contract shared by the lexical and semantic backends."""
+"""检索器契约：词法（BM25）与语义（向量）共用。"""
 from __future__ import annotations
 
 from typing import Protocol, TypedDict
@@ -15,7 +15,7 @@ class ScoredChunk(TypedDict):
 
 
 class Retriever(Protocol):
-    """A ranking backend over the reviewed knowledge chunks."""
+    """对已审知识块做排序的检索后端。"""
 
     name: str
 
@@ -23,7 +23,7 @@ class Retriever(Protocol):
 
 
 def rrf(*rankings: list[ScoredChunk], limit: int) -> list[ScoredChunk]:
-    """Reciprocal-rank fusion of several rankings (no score calibration needed)."""
+    """多路排序的倒数排名融合（无需分数校准）。"""
     scores: dict[str, float] = {}
     items: dict[str, ScoredChunk] = {}
     for ranking in rankings:

@@ -1,19 +1,4 @@
-"""HTTP guard for the hosted web app.
-
-This replaces the retired desktop guard (loopback check + per-launch
-``X-MM-Token``), which cannot work on a public host. Two things stay, one thing
-is new:
-
-* the same security headers and strict same-origin CSP;
-* state-changing ``/api/`` requests must be same-origin and JSON — that plus
-  the ``SameSite=Lax`` session cookie is the CSRF defense (no token table,
-  no extra round-trip);
-* authentication itself is *not* decided here: ``app.auth.require_user`` is a
-  FastAPI dependency, so every endpoint says explicitly whether it is public.
-
-A pure ASGI middleware is used on purpose: BaseHTTPMiddleware buffers response
-bodies and breaks ``StaticFiles`` streaming (h11 "Too much data").
-"""
+"""托管 Web 应用的 HTTP 安全守卫。"""
 from __future__ import annotations
 
 import json
@@ -44,7 +29,7 @@ def _host_of(url: str) -> str:
 
 
 def same_origin(headers: Headers, host: str) -> bool:
-    """No Origin header (non-browser client, curl, health probe) is allowed."""
+    """允许没有 Origin 头的非浏览器客户端（curl、健康探针）。"""
     origin = headers.get("origin", "") or headers.get("referer", "")
     if not origin:
         return True
@@ -73,7 +58,7 @@ async def _send_json(send: Callable, status: int, code: str) -> None:
 
 
 class SecurityMiddleware:
-    """Security headers + same-origin/JSON gate for mutating API calls."""
+    """安全响应头 + 对写接口做同源/JSON 校验。"""
 
     def __init__(self, app: Callable) -> None:
         self.app = app
@@ -121,5 +106,5 @@ def json_error(status: int, code: str, message: str = "") -> JSONResponse:
 
 
 def audit_detail(**kwargs: object) -> dict:
-    """Small helper to keep audit rows JSON-serializable."""
+    """让审计行可 JSON 序列化的小工具。"""
     return json.loads(json.dumps(kwargs, default=str))

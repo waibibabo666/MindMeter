@@ -1,13 +1,4 @@
-"""Database engine/session helpers.
-
-Creating the engine does not connect. Migrations are run by the deploy
-(``alembic upgrade head`` in the start command), and FastAPI only connects when
-a request needs the database.
-
-Hosted Postgres strings come in several dialects, so ``normalize_url`` accepts
-what the host (and a plain ``postgres://...`` handoff) actually gives you and
-rewrites it to the psycopg3 driver this app uses.
-"""
+"""数据库引擎与会话辅助。"""
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -34,7 +25,7 @@ def normalize_url(raw: str) -> str:
 
 
 def engine_kwargs(_url: str = "") -> dict:
-    """A small pool plus aggressive recycling: hosts like Railway close idle conns."""
+    """小连接池 + 激进回收：Railway 这类主机会关闭空闲连接。"""
     return {
         "pool_pre_ping": True,
         "pool_recycle": 280,

@@ -1,4 +1,4 @@
-﻿"""Typed state passed between LangGraph nodes."""
+"""LangGraph 节点之间传递的状态。"""
 from __future__ import annotations
 
 from typing import TypedDict

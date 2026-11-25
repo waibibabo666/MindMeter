@@ -1,7 +1,4 @@
-"""Lexical fallback: character-bigram BM25 over reviewed chunks.
-
-No model files required, so retrieval still works on a bare deployment.
-"""
+"""词法回退：基于字符 bigram 的 BM25。"""
 from __future__ import annotations
 
 import math

@@ -1,4 +1,4 @@
-"""Deterministic renderers and prompt assembly for the agent."""
+"""确定性渲染与 prompt 拼装。"""
 from __future__ import annotations
 
 from ..analysis import DIM_NAMES, DIM_ORDER, SPECIFIC_SUGGESTIONS
@@ -108,7 +108,7 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
 
 
 def scene_template(state: dict) -> str:
-    """Deterministic fallback per scene (no blank output on any degradation)."""
+    """按场景的确定性兜底（任何降级都不会输出空白）。"""
     scene = state.get("scene") or DEFAULT_SCENE
     facts = state.get("facts") or {}
     if scene == "report":

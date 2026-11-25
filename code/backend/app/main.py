@@ -1,12 +1,4 @@
-"""FastAPI application for the hosted MindMeter web app.
-
-The same origin serves the API and the static frontend, so the browser needs
-no CORS and the session cookie stays first-party. Importing this module does
-not connect to a database; ``MM_AUTO_MIGRATE=1`` (the default) runs
-``alembic upgrade head`` once at startup so a fresh hosted Postgres works
-without extra dashboard steps — set it to ``0`` when the deploy platform runs
-a dedicated pre-deploy migration command.
-"""
+"""MindMeter Web 应用的 FastAPI 入口。"""
 from __future__ import annotations
 
 import os
@@ -46,7 +38,7 @@ def _auto_migrate_enabled() -> bool:
 
 
 def run_migrations() -> None:
-    """Best-effort schema upgrade at boot. Never takes the app down."""
+    """启动时尽力升级 Schema，绝不因此让应用起不来。"""
     try:
         from alembic import command
         from alembic.config import Config

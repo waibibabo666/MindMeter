@@ -1,17 +1,9 @@
-"""MindMeter agent public API.
+"""MindMeter Agent 公共 API。
 
-The package is split by responsibility:
+包内按职责分层：state（状态）、graph（编排）、validation（校验）、
+render（模板与 prompt）、classify（路由）、policies（场景策略）、insights（记忆沉淀）。
 
-- ``state``       — the typed state passed between graph nodes
-- ``graph``       — LangGraph orchestration (classify → retrieve → generate → validate)
-- ``validation``  — pure output rules (numbers, citations, mechanisms, ratings)
-- ``render``      — deterministic templates and prompt assembly
-- ``classify``    — keyword intent routing (+ ``intent_llm`` fallback)
-- ``policies``    — per-scene generation/validation policy (single source of truth)
-- ``insights``    — after-turn memory sediment
-
-Import from this package (or the submodule that owns the symbol); nothing else.
-"""
+对外统一从本包或拥有该符号的子模块导入。"""
 from __future__ import annotations
 
 from .classify import (
@@ -42,11 +34,11 @@ from .validation import (
 )
 
 __all__ = [
-    # state
+    # 状态
     "AgentState",
-    # graph
+    # 编排
     "answer",
-    # routing
+    # 路由
     "INTENT",
     "FIXED_REPLY",
     "GREETING_NO_FACTS",
@@ -57,7 +49,7 @@ __all__ = [
     "fixed_reply",
     "needs_llm_fallback",
     "resolve_intent",
-    # validation
+    # 校验
     "ability_rating_hits",
     "banned_word_hits",
     "chinese_measure_hits",
@@ -67,7 +59,7 @@ __all__ = [
     "extract_numbers",
     "mechanism_hits",
     "validate_text",
-    # render
+    # 渲染
     "build_messages",
     "memory_lines",
     "scene_template",

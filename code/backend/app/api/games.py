@@ -1,10 +1,4 @@
-"""Per-account practice-game records.
-
-Games are practice, not assessment: nothing here feeds a report, a trend, an
-average or the export. They live in the database (one row per account and game)
-instead of browser localStorage so a shared browser cannot show one account's
-best scores to another.
-"""
+"""按账号的练习游戏记录。"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -52,7 +46,7 @@ def _payload(rows) -> dict:
 
 @router.get("/games")
 def list_games(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    """Every game record of the signed-in account (empty when never played)."""
+    """当前登录账号的全部游戏记录（从未玩过时为空）。"""
     rows = db.execute(
         select(GameRecord).where(GameRecord.user_id == int(user.id))
     ).scalars()
@@ -66,7 +60,7 @@ def record_game(
     user: User = Depends(auth.require_user),
     db: Session = Depends(get_db),
 ):
-    """Record one finished round. Best score only goes up; plays always grows."""
+    """记录一轮已完成的游戏。最高分只增不减，次数始终累加。"""
     try:
         key = _clean_id(game_id)
     except ValueError:
@@ -95,7 +89,7 @@ def record_game(
 
 @router.delete("/games")
 def clear_games(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    """Drop every game record of this account (the report is untouched)."""
+    """删除本账号的全部游戏记录（报告不受影响）。"""
     db.execute(delete(GameRecord).where(GameRecord.user_id == int(user.id)))
     db.commit()
     return {"ok": True}

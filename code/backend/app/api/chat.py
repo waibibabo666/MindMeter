@@ -120,7 +120,7 @@ def chat(
     memory = store.context() if use_memory is not False else None
     history = store.history()
 
-    # PII is redacted before storage and never forwarded to a model.
+    # PII 在入库前脱敏，且绝不会发给模型。
     sensitive = find_sensitive(question)
     if sensitive:
         store.append("user", redact(question))
@@ -139,7 +139,7 @@ def chat(
             "code": "pii_blocked",
         }
     else:
-        # Persist the user turn before the model call so a crash still leaves the question.
+        # 先落库用户提问再调模型，崩溃时至少留下问题。
         store.append("user", question)
         db.commit()
         result = answer(db, question, facts, history, memory)

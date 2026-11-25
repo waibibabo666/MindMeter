@@ -16,7 +16,7 @@ MANAGED = "ai_managed_by_site"
 
 @router.get("/settings/ai")
 def get_settings(user: User = Depends(auth.require_user)):
-    """Read-only view of the site-provided model. The key never appears here."""
+    """站点级模型的只读视图；Key 永远不会出现在这里。"""
     return settings_payload()
 
 

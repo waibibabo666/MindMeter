@@ -1,8 +1,4 @@
-"""Semantic retrieval over pgvector, with a local embedding model.
-
-Optional: when ``fastembed``/model files are unavailable, every call returns
-an empty list and the caller falls back to BM25. We never fabricate vectors.
-"""
+"""基于 pgvector 与本地 embedding 模型的语义检索。"""
 from __future__ import annotations
 
 import os
@@ -26,7 +22,7 @@ def prepare_embedding_env() -> None:
     cache = Path(settings.data_dir) / "models"
     cache.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("FASTEMBED_CACHE_PATH", str(cache))
-    # httpx 0.28 cannot parse bracketed IPv6 entries in NO_PROXY.
+    # httpx 0.28 无法解析 NO_PROXY 里的方括号 IPv6 项。
     for name in ("NO_PROXY", "no_proxy"):
         value = os.environ.get(name, "")
         if value:
@@ -36,7 +32,7 @@ def prepare_embedding_env() -> None:
 
 
 def get_model():
-    """Load the embedding model once; ``None`` means "not available here"."""
+    """只加载一次 embedding 模型；``None`` 表示当前环境不可用。"""
     global _model, _model_failed
     if _model is not None or _model_failed:
         return _model

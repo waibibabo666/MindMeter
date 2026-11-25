@@ -1,4 +1,4 @@
-﻿"""Pure output-validation rules: numbers, citations, mechanisms, ratings."""
+"""纯函数输出校验：数字、引用、机制归因、评级措辞。"""
 from __future__ import annotations
 
 import math
