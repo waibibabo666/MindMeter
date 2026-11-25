@@ -12,6 +12,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from app import agent as A
+
+from app.agent import graph as G
 from app.agent import answer, classify
 from app.llm import LLMConfig, LLMReply
 
@@ -35,20 +37,16 @@ class FakeDb:
 
 
 def run(monkeypatch, question: str, reply_text: str = "") -> dict:
-    monkeypatch.setattr(A, "retrieve_context", lambda db, facts, limit=8, question=None: list(CHUNKS))
-    monkeypatch.setattr(A, "retrieve_kb", lambda db, query, limit=3: list(CHUNKS))
+    monkeypatch.setattr(G, "retrieve_context", lambda db, facts, limit=8, question=None: list(CHUNKS))
+    monkeypatch.setattr(G, "retrieve_kb", lambda db, query, limit=3: list(CHUNKS))
     if reply_text:
-        monkeypatch.setattr(
-            A, "call_llm_with_fallback", lambda config, messages, **kw: LLMReply(text=reply_text, model="t")
+        monkeypatch.setattr(G, "call_llm_with_fallback", lambda config, messages, **kw: LLMReply(text=reply_text, model="t")
         )
-        monkeypatch.setattr(
-            A,
-            "site_llm_config",
+        monkeypatch.setattr(G, "site_llm_config",
             lambda: LLMConfig(endpoint="https://fake/v1", model="t", key="sk-test", enabled=True),
         )
     else:
-        monkeypatch.setattr(
-            A, "site_llm_config", lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
+        monkeypatch.setattr(G, "site_llm_config", lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
         )
     return answer(FakeDb(), question, FACTS, [], None, scene="chat_explain")
 

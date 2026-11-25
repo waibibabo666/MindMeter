@@ -1,4 +1,4 @@
-"""追问与概念纠偏的行为约束（2026-11-21）。
+﻿"""追问与概念纠偏的行为约束（2026-11-21）。
 
 产品要求：
   * 用户表述里出现常见误解时，用一句话纠正，并给出下一步能问什么；
@@ -48,7 +48,7 @@ def test_correction_is_bounded_by_history():
 
 
 def test_correction_skips_model_and_cites_kb(monkeypatch):
-    monkeypatch.setattr("app.agent.call_llm_with_fallback", _no_llm)
+    monkeypatch.setattr("app.agent.graph.call_llm_with_fallback", _no_llm)
     result = answer(None, "八个维度就是八种智力吧", FACTS, [], None, scene="chat_explain")
     assert result["source"] == "template"
     assert result["code"] == "correction"
@@ -58,7 +58,7 @@ def test_correction_skips_model_and_cites_kb(monkeypatch):
 
 def test_safety_intents_are_not_treated_as_misconceptions(monkeypatch):
     # 安全类问题必须走各自的固定话术，不能被"纠偏"抢走。
-    monkeypatch.setattr("app.agent.call_llm_with_fallback", _no_llm)
+    monkeypatch.setattr("app.agent.graph.call_llm_with_fallback", _no_llm)
     boundary = answer(None, "我是不是得了抑郁症", FACTS, [], None, scene="chat_explain")
     assert boundary["intent"] == INTENT["BOUNDARY"]
     crisis = answer(None, "我不想活了", FACTS, [], None, scene="chat_explain")

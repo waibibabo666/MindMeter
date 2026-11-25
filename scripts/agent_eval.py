@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "code" / "backend"))
 
 from app import agent as A
+from app.agent import graph as G
 from app.llm import LLMConfig
 
 FACTS = {
@@ -114,11 +115,11 @@ def main() -> int:
     args = parser.parse_args()
 
     # 站点未配置模型：走模板路径，结果可复现。
-    A.site_llm_config = lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
+    G.site_llm_config = lambda: LLMConfig(endpoint="", model="", key="", enabled=False)
     # agent 的检索节点用的是 analysis.retrieve_context（返回 dict 列表），
     # 这里直接替换掉，避免依赖真实数据库与 BM25。
-    A.retrieve_context = lambda db, facts, limit=8: list(KB)[:limit]
-    A.retrieve_kb = lambda db, query, limit=3: list(KB)[:limit]
+    G.retrieve_context = lambda db, facts, limit=8, question=None: list(KB)[:limit]
+    G.retrieve_kb = lambda db, query, limit=3: list(KB)[:limit]
 
     rows = []
     for question, expected, need, has_history in CASES:

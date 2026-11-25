@@ -1,4 +1,4 @@
-"""LLM 兜底意图路由（第 3 轮反馈 3 的架构升级）。
+﻿"""LLM 兜底意图路由（第 3 轮反馈 3 的架构升级）。
 
 要钉住的不是"模型能不能分类"，而是三条安全不变式：
 1. 安全红线不可降级（危机/越界/高风险领域/疏导/自责由关键词决定）；
@@ -10,6 +10,8 @@ from __future__ import annotations
 import pytest
 
 from app import agent as A
+
+from app.agent import graph as G
 from app.agent import INTENT, needs_llm_fallback, resolve_intent
 from app.agent.classify import classify
 from app.agent.intent_llm import CLASSIFY_MAX_TOKENS, build_messages, classify_with_llm, parse_intent
@@ -122,7 +124,7 @@ def _stub_llm(monkeypatch, value, calls):
         calls.append(question)
         return value
 
-    monkeypatch.setattr(A, "classify_with_llm", fake)
+    monkeypatch.setattr(G, "classify_with_llm", fake)
 
 
 def test_ambiguous_question_is_rescued_end_to_end(monkeypatch):

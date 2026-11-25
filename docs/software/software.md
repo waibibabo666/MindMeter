@@ -71,8 +71,6 @@ code/
       └─ styles/
 ```
 
-> `code/core_engine/` 是 L1 JS 计分历史，L2 不再参与计分；正式计分在 `backend/app/scoring/`。
-
 ## 五、数据流
 
 ```text

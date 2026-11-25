@@ -1,4 +1,4 @@
-"""派生数字白名单回归：单位换算与百分比派生必须放行，幻觉数字必须拦住。
+﻿"""派生数字白名单回归：单位换算与百分比派生必须放行，幻觉数字必须拦住。
 
 2026-11-20 用户人工实测（真实模型 glm-4-flash-250414，四个问题全回退模板）：
 
@@ -321,6 +321,8 @@ def _graph(monkeypatch, question, facts, reply_text):
     from types import SimpleNamespace
 
     from app import agent as A
+
+    from app.agent import graph as G
     from app.llm import LLMConfig, LLMReply
 
     class FakeDb:
@@ -330,15 +332,11 @@ def _graph(monkeypatch, question, facts, reply_text):
         def scalars(self, _stmt):
             return SimpleNamespace(all=lambda: [])
 
-    monkeypatch.setattr(A, "retrieve_kb", lambda db, query, limit=3: [])
-    monkeypatch.setattr(
-        A,
-        "call_llm_with_fallback",
+    monkeypatch.setattr(G, "retrieve_kb", lambda db, query, limit=3: [])
+    monkeypatch.setattr(G, "call_llm_with_fallback",
         lambda config, messages, **kwargs: LLMReply(text=reply_text, model="test-model"),
     )
-    monkeypatch.setattr(
-        A,
-        "site_llm_config",
+    monkeypatch.setattr(G, "site_llm_config",
         lambda: LLMConfig(endpoint="https://fake/v1", model="test-model", key="sk-test", enabled=True),
     )
     return A.answer(FakeDb(), question, facts, [], None)

@@ -122,8 +122,7 @@ MindMeter/
 │  └─ retrospection/
 ├─ code/
 │  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG、scoring
-│  ├─ frontend/           # 原生前端（登录/注册 + 测评 + 报告 + 对话）
-│  └─ core_engine/        # L1 JS 计分历史
+│  └─ frontend/           # 原生前端（登录/注册 + 测评 + 报告 + 对话）
 ├─ scripts/                # 门禁、本地一键起服、冒烟检查、纯逻辑测试
 ├─ tests/                  # backend（pytest）/ e2e（Playwright）/ ai_eval（评测集）
 ├─ work_for_submission/    # 课程提交历史快照

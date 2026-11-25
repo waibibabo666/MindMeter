@@ -1,4 +1,4 @@
-"""Agent P0 工作流测试：路由、场景策略、派生数字、统一出口、历史时序。
+﻿"""Agent P0 工作流测试：路由、场景策略、派生数字、统一出口、历史时序。
 
 不依赖数据库：classify/validate/build_messages 为纯函数；图级测试用假
 site_llm_config 与假 call_llm（CI 无需 Key）。对应设计文档 §九 1/3/4/5/7。
@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import pytest
 
 from app import agent as A
+
+from app.agent import graph as G
 from app.agent import (
     FIXED_REPLY,
     INTENT,
@@ -58,13 +60,11 @@ def run_graph(monkeypatch, question, facts, reply_text, chunks=KB_CHUNKS, scene=
         calls["config"] = config
         return LLMReply(text=reply_text, model="test-model")
 
-    monkeypatch.setattr(A, "retrieve_kb", fake_retrieve)
-    monkeypatch.setattr(A, "call_llm_with_fallback", fake_call_llm)
+    monkeypatch.setattr(G, "retrieve_kb", fake_retrieve)
+    monkeypatch.setattr(G, "call_llm_with_fallback", fake_call_llm)
     # The deployment owns the model config now (app.llm.site_llm_config):
     # tests inject it the same way, with a fake key that never leaves memory.
-    monkeypatch.setattr(
-        A,
-        "site_llm_config",
+    monkeypatch.setattr(G, "site_llm_config",
         lambda: LLMConfig(endpoint="https://fake/v1", model="test-model", key="sk-test", enabled=True),
     )
     result = A.answer(FakeDb(), question, facts, [], None, scene=scene)
