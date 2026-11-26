@@ -7,8 +7,8 @@
  *
  * 人工测试反馈 3 第 1 条（「没有清空对话的按钮，每次进入都要往下划」）：
  *   - 加「清空对话」入口（只删 messages，见 memory.js 的 clearConversation 注释）；
- *   - 消息流改成**有高度上限的滚动容器**，进入页面与每次发完都滚到底部；
- *   - 输入框那一块 sticky 在视口底部，历史再多也不用先找输入框。
+ *   - 布局改成标准对话式：标题栏在顶部、消息区在中间自己滚、输入框贴住底部；
+ *   - 进入页面与每次发完都滚到底部，历史再多也不用先找输入框。
  */
 
 import { button, el, emptyState, hint } from '../ui.js';
@@ -151,7 +151,7 @@ function configBanner(ctx, settings) {
   const text = settings.hasKey
     ? '站点尚未完成模型配置；当前回答来自模板。'
     : '站点未配置模型：对话仍可用，但回答来自模板（只复述原始指标）。';
-  return el('div', { class: 'card' }, [
+  return el('div', { class: 'chat-notice' }, [
     el('p', { class: 'tiny', text }),
     button('去设置', () => ctx.go('/settings'), { variant: 'ghost' }),
   ]);
@@ -241,9 +241,7 @@ export function renderChat(root, ctx, options = {}) {
     { class: 'chat-list', role: 'log', 'aria-live': 'polite', 'aria-relevant': 'additions' },
     messages.length ? messages.map(messageNode) : [emptyChat(ctx, hasFacts)],
   );
-  // 反馈 3：消息流是一个有上限的滚动容器，整页不再被历史拉长。
-  // 输入框那一块也放在容器里、sticky 在容器底边：滚到底时它是正文的最后一段
-  // （不会有任何东西被它永久盖住），没滚到底时它钉在视口里始终看得见。
+  // 消息流是页面里唯一的滚动区域：标题栏与输入框固定在上下两端，不随历史滚动。
   const scroller = el('div', { class: 'chat-scroll' }, [list]);
 
   const input = el('textarea', {
@@ -430,41 +428,34 @@ export function renderChat(root, ctx, options = {}) {
   const composer = el('div', { class: 'chat-composer' }, [
     el('div', { class: 'row' }, [input, send]),
     status,
+    el('p', { class: 'chat-composer-note' }, [
+      'AI 生成 · 仅解释本次结果 · 非诊断。提问会发送给站点配置的模型服务，不要把手机号、身份证号等敏感信息发进来。',
+      hint(TIP_CHAT, { edge: true }),
+    ]),
   ]);
 
+  /*
+   * 标准对话式布局：顶部是标题栏（含返回/记忆/清空入口），中间是唯一的滚动
+   * 消息区，底部输入框贴住内容区下沿。整页不再随历史变长：宽屏下页面锁定
+   * 一屏高度，侧栏在顶部的窄屏仍用高度上限保证输入框留在首屏。
+   */
   root.appendChild(
     el('section', { class: 'page page-chat', 'aria-labelledby': 'chat-title' }, [
-      el('p', { class: 'kicker', text: '问问 AI' }),
-      el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
-      configBanner(ctx, settings),
-      el('div', { class: 'chat-toolbar' }, [
-        clearButton,
-        el('p', { class: 'tiny', text: '只删对话记录；摘要、建议记录与画像保留。' }),
+      el('header', { class: 'chat-head' }, [
+        el('div', { class: 'chat-head-title' }, [
+          el('p', { class: 'kicker', text: '问问 AI' }),
+          el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
+        ]),
+        el('div', { class: 'chat-head-actions' }, [
+          button('返回报告', () => ctx.go('/report'), { variant: 'ghost' }),
+          button('我的记忆', () => ctx.go('/memory'), { variant: 'ghost' }),
+          clearButton,
+        ]),
       ]),
+      configBanner(ctx, settings),
       scroller,
       profileDraftCard(ctx, root),
-      el('div', { class: 'row' }, [
-        button('返回报告', () => ctx.go('/report'), { variant: 'ghost' }),
-        button('我的记忆', () => ctx.go('/memory'), { variant: 'ghost' }),
-      ]),
-      el('p', { class: 'disclaimer' }, [
-        'AI 生成 · 仅解释本次结果 · 非诊断。提问会发送给站点配置的模型服务，不要把手机号、身份证号等敏感信息发进来。',
-        hint(TIP_CHAT, { edge: true }),
-      ]),
       composer,
-    ]),
-  );
-
-  root.appendChild(
-    el('section', { class: 'page page-chat', 'aria-labelledby': 'chat-title' }, [
-      el('p', { class: 'kicker', text: '问问 AI' }),
-      el('h1', { id: 'chat-title', class: 'page-title', text: '对话' }),
-      configBanner(ctx, settings),
-      el('div', { class: 'chat-toolbar' }, [
-        clearButton,
-        el('p', { class: 'tiny', text: '只删对话记录；摘要、建议记录与画像保留。' }),
-      ]),
-      scroller,
     ]),
   );
 
