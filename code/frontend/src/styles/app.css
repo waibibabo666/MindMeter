@@ -984,35 +984,102 @@ body.focus #app {
   text-align: left;
 }
 
-/* ---- L-05 对话页 ---- */
-/* 人工测试反馈 3 第 1 条：消息流自己滚（整页不再被历史拉长），
-   输入框那一块 sticky 在视口底部，进页面第一眼就找得到对话入口。
-   上限按"360×640 一屏之内能同时看到消息流与输入框"倒推：sticky 抬起来时最多只
-   会盖住页尾那行免责句（往下滚一点就完整可见），不会再出现"要先划到底才找得到输入框"。 */
+/* ---- L-05 对话页：标准对话式布局 ---- */
+/* 标题栏（含返回/记忆/清空）钉在顶部，消息区是唯一滚动区域，输入框贴住底沿。
+   宽屏（≥900，侧栏与主区同排）页面锁定一屏高度：整页不滚，只有消息区滚；
+   窄屏（侧栏在顶部）页面不锁高，用高度上限保证输入框仍留在首屏。 */
+.page-chat {
+  display: flex;
+  flex-direction: column;
+  max-width: 860px;
+  margin-inline: auto;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .page-chat {
+    height: calc(100dvh - 116px);
+    min-height: 480px;
+  }
+}
+.chat-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10);
+  padding: 0 0 var(--space-10);
+  border-bottom: 1px solid var(--line);
+}
+.chat-head .page-title {
+  margin: var(--space-4) 0 0;
+}
+.chat-head-title {
+  min-width: 0;
+}
+.chat-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-6);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chat-head-actions::-webkit-scrollbar {
+  display: none;
+}
+.chat-head-actions .btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--fs-xs);
+  border-radius: var(--radius-pill);
+}
+.chat-notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  margin: var(--space-8) 0 0;
+  padding: var(--space-8) var(--space-12);
+  border: 1px dashed var(--warn-line);
+  border-radius: var(--radius-md);
+  background: var(--warn-soft);
+}
+.chat-notice p {
+  flex: 1;
+  margin: 0;
+}
+.chat-notice .btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: var(--space-4) var(--space-10);
+  font-size: var(--fs-xs);
+}
 .chat-scroll {
-  max-height: min(44vh, 520px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  padding: var(--space-12) 0 var(--space-4);
 }
-.chat-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-10);
-  margin: var(--space-8) 0 var(--space-10);
-}
-.chat-toolbar .btn {
-  width: auto;
-  flex: 0 0 auto;
-  min-width: 132px;
-  padding: var(--space-8) var(--space-14);
+@media (max-width: 899px) {
+  .chat-scroll {
+    flex: 0 1 auto;
+    max-height: min(44vh, 480px);
+  }
 }
 .chat-composer {
+  flex: none;
   position: sticky;
   bottom: 0;
   z-index: 6;
-  margin: var(--space-12) 0 0;
+  margin: var(--space-8) 0 0;
   padding: var(--space-10) var(--space-10) var(--space-6);
   background: var(--card);
   border: 1px solid var(--line);
@@ -1022,8 +1089,7 @@ body.focus #app {
 .chat-composer .row {
   margin: 0;
   align-items: flex-end;
-  /* 360px 下不换行：换行会把 composer 撑高 ~50px，页尾免责句就被 sticky 抬起来的
-     输入条盖住了。输入框自己 min-width:0 收缩即可。 */
+  /* 360px 下不换行：换行会把 composer 撑高，输入框容易被挤出首屏。 */
   flex-wrap: nowrap;
 }
 .chat-composer p:empty {
@@ -1032,25 +1098,62 @@ body.focus #app {
 .chat-composer p {
   margin: var(--space-6) 0 0;
 }
+.chat-composer-note {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
 .chat-list {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-10);
 }
+.chat-list > .empty-state {
+  margin: auto;
+}
+.chat-list .card {
+  margin: 0;
+}
+.chat-list .chat-pending {
+  margin: 0;
+}
 .chat-user {
   align-self: flex-end;
-  max-width: 85%;
+  max-width: 82%;
   background: var(--accent-soft);
   border-color: var(--accent-line);
+  border-radius: var(--radius-lg) var(--radius-lg) 6px var(--radius-lg);
 }
 .chat-ai {
   align-self: flex-start;
-  max-width: 92%;
-  border-left: 3px solid var(--ai-line);
+  max-width: 90%;
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 6px;
 }
 .chat-user p,
 .chat-ai p {
   margin: var(--space-4) 0;
+}
+@media (max-width: 599px) {
+  /* 手机上的标题栏按 app bar 处理：去掉装饰性 kicker，标题与操作各占一行。 */
+  .chat-head .kicker {
+    display: none;
+  }
+  .chat-head .page-title {
+    margin: 0;
+    font-size: var(--fs-lg);
+  }
+  .chat-head {
+    align-items: center;
+    padding-bottom: var(--space-8);
+  }
+  .chat-scroll {
+    max-height: min(42vh, 480px);
+  }
+  .chat-composer-note {
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
 }
 
 .citations {
