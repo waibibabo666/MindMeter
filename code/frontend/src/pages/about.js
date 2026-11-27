@@ -231,7 +231,7 @@ export function renderAbout(root, ctx) {
         ),
         el('p', {
           class: 'tiny',
-          text: '更新：2026-11 · 计分口径 scoring-v3.2 · 说明页与各页的免责文案同源，避免表述不一致。',
+          text: '更新：2026-11 · 计分口径 scoring-v3.3 · 说明页与各页的免责文案同源，避免表述不一致。',
         }),
       ]),
 

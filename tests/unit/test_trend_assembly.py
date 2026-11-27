@@ -74,7 +74,18 @@ def test_template_trend_repeat_risk_hint():
         "days": 4,
         "repeatRisk": True,
     })
-    assert "练习效应" in text and "少于 7 天" in text
+    assert "练习效应" in text and "少于 7 天" not in text and "间隔 4 天" in text
+
+
+def test_template_trend_same_day_has_its_own_note():
+    text = template_trend({
+        "rows": [{"id": "vc", "name": "言语理解", "prev": 60, "next": 61, "delta": 1}],
+        "onlyPrev": [],
+        "onlyNext": [],
+        "days": 0,
+        "repeatRisk": True,
+    })
+    assert "同一天" in text
 
 
 def test_template_trend_empty_payloads_have_copy():

@@ -31,6 +31,7 @@ from .classify import (
     needs_llm_fallback,
     resolve_intent,
 )
+from .display import cited_sources, display_text
 from .intent_llm import classify_with_llm
 from .misconceptions import build_correction, should_correct
 from .policies import DEFAULT_SCENE, policy_for, prompt_for
@@ -408,10 +409,16 @@ def answer(
     if result.get("source") == "llm":
         # 引用行只在校验时检查；展示统一走 citations 数组（前端已有引用行渲染）。
         text = TRAILING_CITATION_RE.sub("", text).rstrip()
+    # 用户看到的版本：没有 kb-… 编号，来源只留正文真的用到的知识块。
+    # `text` / `sources` 保持原样给校验与记忆沉淀用（沉淀要靠编号认建议出处）。
+    raw_text = result.get("text", "")
+    shown = cited_sources(raw_text, result.get("sources") or [])
     return {
         "intent": result.get("intent", INTENT["EXPLAIN"]),
         "intentSource": result.get("intentSource", "rule"),
         "risk": result.get("risk", "low"),
+        "displayText": display_text(raw_text, result.get("sources") or []),
+        "shownSources": shown,
         "text": text,
         "citations": result.get("citations", []),
         "sources": result.get("sources", []),

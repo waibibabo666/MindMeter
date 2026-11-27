@@ -57,7 +57,7 @@ TREND_OPENINGS = [
 TREND_CLOSINGS = [
     "差值只描述两次分数的距离，不等于训练效果；睡眠、情绪、设备与练习效应都会影响单次结果。",
     "分数只与自己的上一次比较才有意义——这里没有常模，也不与人群比较，单次波动是常态。",
-    "想看稳定趋势，请保持 7 天以上的间隔多测几次；单次差值只能当作线索，不等于训练效果。",
+    "想看变化是否稳定，多测几次再看；单次差值只能当作线索，不等于训练效果。",
 ]
 
 
@@ -365,7 +365,10 @@ def template_trend(payload: dict | None) -> str:
     notes = []
     if days is not None:
         if data.get("repeatRisk"):
-            notes.append(f"两次间隔 {days} 天，少于 7 天，练习效应可能抬高本次结果")
+            if days == 0:
+                notes.append("两次都在同一天，疲劳与热身会混进差值，更像状态波动")
+            else:
+                notes.append(f"两次间隔 {days} 天，练习效应可能参与其中，多测几次再看是否稳定")
         else:
             notes.append(f"两次间隔 {days} 天")
     if skipped:

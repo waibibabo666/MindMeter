@@ -93,11 +93,11 @@ def test_prompt_no_longer_uses_the_literal_placeholder():
 
 def test_prompt_forbids_mechanism_invention():
     prompt = prompt_for("chat_explain")
-    for phrase in ("混淆", "回忆效率", "编码质量", "目标符号本身错误"):
-        assert phrase in prompt, phrase  # 反例逐条写进提示词，模型才知道踩在哪
+    # 放宽后：允许基于画像的解读，但没有读数支撑的内部过程要写成「可能与…有关」的推测。
+    assert "可能与" in prompt
     from app.analysis import ANALYSIS_PROMPT
 
-    assert "混淆" in ANALYSIS_PROMPT
+    assert "不要添加画像和指标里没有的结论" in ANALYSIS_PROMPT
 
 
 def test_citation_ids_are_injected_into_the_user_block():
@@ -188,21 +188,20 @@ MODEL_MECHANISM_PS = (
 )
 
 
-def test_mechanism_sentences_are_hard_blocked():
+def test_mechanism_sentences_are_soft_flagged():
+    """放宽：机制推测不再把整条回答打回模板，但仍记入遥测（soft）。"""
     for text in (MODEL_MECHANISM_AM, MODEL_MECHANISM_PS):
         result = check(text)
-        assert not result["ok"], (text, result["issues"])
         assert "mechanism_speculation" in codes(result), result["issues"]
         assert all(
-            issue["severity"] == "hard" for issue in result["issues"] if issue["code"] == "mechanism_speculation"
+            issue["severity"] == "soft" for issue in result["issues"] if issue["code"] == "mechanism_speculation"
         )
 
 
-def test_mechanism_falls_back_to_template(monkeypatch):
+def test_mechanism_no_longer_falls_back_to_template(monkeypatch):
     result = run_graph(monkeypatch, "为什么联想记忆低？", MODEL_MECHANISM_AM)
-    assert result["source"] == "template", result
-    assert result["code"] == "mechanism_speculation", result
-    assert "混淆" not in result["text"] and "回忆效率" not in result["text"]
+    assert result["source"] == "llm", result
+    assert any(issue["code"] == "mechanism_speculation" for issue in result["validation"]), result
 
 
 def test_mechanism_hits_are_reported_verbatim_for_telemetry():
@@ -252,6 +251,6 @@ def test_existing_red_lines_are_not_weakened():
     """红线：三层判定仍然在（数字、张冠李戴、评级词）。"""
     assert "unsourced_number" in codes(check("你的正确率是 91%。仅供参考。"))
     assert "score_misattributed" in codes(check("联想记忆得分 50，说明你只回忆出 5 组。仅供参考。"))
-    assert "banned_word" in codes(check("联想记忆 1.87 秒，这表明在回忆速度上表现中等。仅供参考。"))
+    assert "banned_word" in codes(check("联想记忆 1.87 秒，这表明你在回忆速度上能力较弱。仅供参考。"))
     assert policy_for("chat_explain")["max_chars"] == 360
     assert policy_for("chat_explain")["require_citation"] == "soft"

@@ -1,11 +1,11 @@
 /**
- * 本地计分入口（scoring-v3.2，与后端 app/scoring 逐维一致）。
+ * 本地计分入口（scoring-v3.3，与后端 app/scoring 逐维一致）。
  *
  * 输入：store 里的 results，形如
  *   { vc: { metrics, answers }, ps: { metrics }, sv: { metrics, answers, rts }, am: { ... } }
  * 输出：
  *   {
- *     version: 'scoring-v3.2',
+ *     version: 'scoring-v3.3',
  *     dimensions: { vc, vf, nc, ps, ir, sv, am, ni },   // 未测为 null
  *     measured: ['vc','ps',...],
  *     missing:  ['vf','nc',...]

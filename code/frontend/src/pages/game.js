@@ -89,7 +89,7 @@ export function renderGame(root, ctx, gameId) {
     clear(stage);
     // 先按本地已知的最佳结算，再用后端返回值校正（最高分只升不降）。
     resultView(stage, item, score, detail, bestOf(), start);
-    void recordGame(item.id, score).then((data) => {
+    void recordGame(item.id, score, item.dim).then((data) => {
       if (disposed) return;
       records = data.records;
     });

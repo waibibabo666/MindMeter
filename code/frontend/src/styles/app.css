@@ -2088,14 +2088,65 @@ button.spot-cell {
 }
 
 /* ---- 趋势折线图 ---- */
-.trend-chart {
-  margin: var(--space-6) 0 2px;
+/* 每个维度一张小图（按变化大小排序），窄屏自动变成单列。 */
+.trend-minis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-14);
+  margin: var(--space-10) 0;
 }
-.trend-chart svg {
+.trend-mini {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--space-14);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.trend-mini-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-10);
+}
+.trend-mini-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-weight: 600;
+}
+.trend-mini-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+}
+.trend-mini-chart svg {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
+}
+.trend-band {
+  fill: var(--accent-soft);
+  stroke: var(--accent-line);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.trend-value {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.trend-status {
+  margin: 0;
+}
+.trend-mini .btn {
+  align-self: flex-start;
+}
+.trend-status.above,
+.trend-status.below {
+  font-weight: 600;
 }
 .trend-grid {
   stroke: var(--line);
@@ -2107,27 +2158,19 @@ button.spot-cell {
   fill: var(--dim);
   font-size: 12px;
 }
-.trend-line {
-  stroke-dasharray: 1400;
-  stroke-dashoffset: 1400;
-  animation: trend-draw 1.2s ease-out forwards;
-}
-.trend-dot {
-  opacity: 0;
-  animation: fade-in 0.4s ease forwards 0.8s;
-}
-.trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-14);
-  margin: var(--space-10) 0 2px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.trend-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
+/* 默认就可见：折线与圆点是数据本身，不能依赖动画才显示出来。
+   只有用户接受动效时才「先藏起来再画出来」；系统开了减少动态效果时
+   动画被全局关掉，隐藏态就永远不会被撤销（用户看到的是空图）。 */
+@media (prefers-reduced-motion: no-preference) {
+  .trend-line {
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: trend-draw 1.2s ease-out forwards;
+  }
+  .trend-dot {
+    opacity: 0;
+    animation: fade-in 0.4s ease forwards 0.8s;
+  }
 }
 .legend-digit {
   font-weight: 700;
@@ -2539,12 +2582,6 @@ button.spot-cell {
 .task-page .options .btn {
   color: #101418;
   font-weight: 600;
-}
-.trend-legend-item i {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-xs);
-  display: inline-block;
 }
 @keyframes trend-draw {
   to {

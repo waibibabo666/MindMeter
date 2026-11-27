@@ -41,6 +41,11 @@ function citationItems(citations) {
     .filter((item) => item && item.id);
 }
 
+/** 用户看到的是资料标题，不是 kb-… 编号；旧消息只存了编号时退回「知识库资料」。 */
+function citationTitle(item) {
+  return String(item.title || '').trim() || '知识库资料';
+}
+
 function citationsLine(citations) {
   const items = citationItems(citations);
   if (items.length === 0) return null;
@@ -48,8 +53,8 @@ function citationsLine(citations) {
     const source = item.source && typeof item.source === 'object' ? item.source : {};
     const meta = [source.author, source.year, source.locator].filter(Boolean).join(' · ');
     return el('div', { class: 'citation-item' }, [
-      el('p', { class: 'tiny', text: `${item.id} · ${item.title || ''}` }),
-      meta ? el('p', { class: 'tiny muted', text: meta }) : null,
+      el('p', { class: 'tiny', text: citationTitle(item) }),
+      meta ? el('p', { class: 'tiny muted', text: `出处：${meta}` }) : null,
       item.text ? el('p', { class: 'tiny muted', text: String(item.text).slice(0, 180) }) : null,
       source.url
         ? el('a', {
@@ -63,7 +68,10 @@ function citationsLine(citations) {
     ]);
   });
   return el('details', { class: 'citations' }, [
-    el('summary', { class: 'tiny', text: `引用：${items.map((item) => item.id).join(' · ')}` }),
+    el('summary', {
+      class: 'tiny',
+      text: `这条回答参考了 ${items.length} 条资料：${items.map(citationTitle).join('、')}`,
+    }),
     ...rows,
   ]);
 }

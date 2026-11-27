@@ -6,6 +6,7 @@ from ..analysis import build_messages as build_analysis_messages
 from ..analysis import retrieve_context, template_analysis, weak_dims
 from ..templates import metric_clauses, reading_sentence, template_narrative, template_trend
 from .classify import DIM_MEASURES, dims_in_question, is_advice_ask, is_explain_what_ask
+from .mind_profile import build_mind_profile, profile_block
 from .policies import DEFAULT_SCENE, prompt_for
 from .validation import SCORING_NOTE
 def _readable_facts(facts: dict) -> dict:
@@ -74,8 +75,8 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
         if plan_ids:
             parts.append(f"· 练习分散到不同日子，比一次性长时间重复更稳（引用：{plan_ids[0]}）。")
         parts.append(
-            "· 想看到可比的变化，请隔一周以上再复测同一档位；"
-            "间隔太短，练习效应会让差值不好解释。"
+            "· 隔一两天复测就能看到变化；"
+            "变化是否稳定，多测几次再看。"
         )
         parts.append("")
         parts.append("这次相关维度的原始数字是：")
@@ -96,6 +97,11 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
             parts.append("可以试试：")
             parts.append(f"· {tip}{tail}")
     else:
+        mind_lines = build_mind_profile(facts)["lines"]
+        if mind_lines:
+            parts.append("从这次的数据看你的心智状态：")
+            parts.extend(f"· {line}" for line in mind_lines)
+            parts.append("")
         parts.append("本次完成的原始指标：")
         parts.extend(lines)
         parts.append("")
@@ -191,7 +197,7 @@ def _trend_block(trend: dict) -> str:
     days = trend.get("days")
     tail = []
     if days is not None:
-        tail.append(f"间隔 {days} 天" + ("（少于 7 天，练习效应可能影响结果）" if trend.get("repeatRisk") else ""))
+        tail.append(f"间隔 {days} 天" + ("（间隔较短，练习效应可能参与其中）" if trend.get("repeatRisk") else ""))
     if skipped:
         tail.append("未参与对比的维度：" + "、".join(skipped))
     return "两次对比数据：\n" + "\n".join(lines) + ("\n" + "；".join(tail) if tail else "")
@@ -216,6 +222,9 @@ def build_messages(
         "本次原始指标：\n" + (_facts_line(facts) or "（无）"),
         "可引用知识块：\n" + ("\n".join(f"{c['id']} · {c['title']}：{c['text']}" for c in chunks) or "（无）"),
     ]
+    mind = profile_block(facts)
+    if mind:
+        blocks.insert(1, mind)
     if chunks:
         # 引用行照抄这一行：把本轮真实存在的编号 · 标题逐条给出来。
         # 只写"知识块编号 · 标题"这种抽象说明，模型会把它当字面内容抄进回答

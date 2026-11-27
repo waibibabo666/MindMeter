@@ -102,6 +102,65 @@ def test_standard_tier_counts_the_delivered_items():
     assert (scores["nc"], scores["ir"], scores["ni"]) == (100, 100, 100)
 
 
+# ---------------------------------------------------------------------------
+# v3.3：猜测校正与作答合法性
+# ---------------------------------------------------------------------------
+
+
+def test_ir_and_ni_are_guess_corrected():
+    # ir 四选一：8 题蒙对 2 题（期望值）= 0 分；ni 三选一：6 题蒙对 2 题 = 0 分
+    results = {"ir": {"metrics": {"total": 8, "correct": 2}}, "ni": {"metrics": {"total": 8, "correct": 3}}}
+    scores = score_session(results, "standard")["scores"]
+    assert scores["ir"] == 0
+    assert scores["ni"] == 6  # (3/8 - 1/3) / (2/3) = 0.0625
+    assert score_session({"ir": {"metrics": {"total": 15, "correct": 9}}}, "standard")["scores"]["ir"] is None
+    # 15 题的深档表不存在：9/15 只用公式直接验证
+    from app.scoring import score_ir, score_ni
+
+    assert score_ir({"total": 15, "correct": 9}, 15) == 47
+    assert score_ni({"total": 20, "correct": 15}, 20) == 63
+
+
+def test_random_guessing_averages_near_zero_on_choice_dimensions():
+    """纯猜的期望分应接近 0：这是猜测校正存在的意义（v3.2 的 ir/ni 会给出 25 / 33 分）。"""
+    import random
+
+    rng = random.Random(11)
+    runs = 2000
+    ir = [
+        score_session({"ir": {"metrics": {"total": 8, "correct": sum(rng.random() < 0.25 for _ in range(8))}}}, "standard")["scores"]["ir"]
+        for _ in range(runs)
+    ]
+    ni = [
+        score_session({"ni": {"metrics": {"total": 8, "correct": sum(rng.random() < 1 / 3 for _ in range(8))}}}, "standard")["scores"]["ni"]
+        for _ in range(runs)
+    ]
+    assert sum(ir) / runs < 12, sum(ir) / runs
+    assert sum(ni) / runs < 12, sum(ni) / runs
+
+
+def test_impossible_counts_are_null_not_capped():
+    forged = {
+        "vc": {"metrics": {"total": 8, "correct": 80}},
+        "nc": {"metrics": {"total": 40, "correct": 40}},
+        "ir": {"metrics": {"total": 8, "correct": -3}},
+        "ps": {"metrics": {"encCorrect": 9999, "catCorrect": 9999}},
+        "vf": {"metrics": {"validCount": 500}},
+        "am": {"metrics": {"targets": 6, "firstTry": 60}},
+        "sv": {"metrics": {"total": 8, "weighted": 80}},
+    }
+    scores = score_session(forged, "standard")["scores"]
+    assert all(value is None for value in scores.values()), scores
+
+
+def test_plausible_fast_play_is_still_scored():
+    """合法性上限只拦不可能的计数，不能误伤手速很快的真人。"""
+    fast = {"ps": {"metrics": {"encCorrect": 30, "encWrong": 2, "catCorrect": 12, "catWrong": 1}}}
+    assert score_session(fast, "standard")["scores"]["ps"] is not None
+    talkative = {"vf": {"metrics": {"validCount": 35}}}
+    assert score_session(talkative, "standard")["scores"]["vf"] == 100
+
+
 def test_quick_and_deep_use_their_own_denominators():
     quick = score_session({"vc": {"metrics": {"total": 4, "correct": 4}}}, "quick")["scores"]
     assert quick["vc"] == 100
@@ -145,7 +204,7 @@ def test_new_metric_paths_are_scored():
 
 
 def test_scoring_version_is_reported():
-    assert SCORING_VERSION == "scoring-v3.2"
+    assert SCORING_VERSION == "scoring-v3.3"
     assert score_session({}, "standard")["version"] == SCORING_VERSION
 
 

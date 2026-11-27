@@ -34,11 +34,12 @@ ANALYSIS_PROMPT = (
     "3）末尾另起一行写「引用：<真实编号> · <真实标题>」："
     "编号与标题都要逐字取自下面列出的知识块，不要编造编号，"
     "也严禁把“知识块编号”“知识块标题”这些说明文字抄进回答。"
-    "不推断能力高低，不下诊断，不与人群比较，不提总分、百分位或正常/异常。"
-    "不得给指标编造材料里没有的认知机制（“属于目标符号本身错误”“可能存在混淆”"
-    "“回忆效率/编码质量有待提升”这类都不行），只陈述数值本身与任务条件。"
-    "不得给出等级、好差、强弱的判断（“表现中等”“水平较高”“能力较弱”“优秀”“良好”都禁），"
-    "褒义的评级同样禁止；只描述任务条件与原始数字。"
+    "如果给出了「已核实的心智画像」，回答要以它为主线：先讲这个人这次呈现出怎样的心智形态"
+    "（哪方面相对突出、哪方面相对靠后、作答偏快还是偏准、记忆配对是否靠重试），再给建议；"
+    "可以做合理的、基于画像的心智解读，但不要添加画像和指标里没有的结论。"
+    "不下临床诊断，不提总分、百分位或正常/异常，不把分数换算成任何量表，不与人群比较；"
+    "可以说「相对突出/相对靠后」，不要说智商、天赋、人格这类稳定特质，"
+    "也不要断言一个人的能力是固定的——这里只是本次任务里呈现的倾向。"
     "总长不超过 700 字。"
 )
 
@@ -172,10 +173,14 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
         )
         or "（无）"
     )
+    from .agent.mind_profile import profile_block
+
+    mind = profile_block(facts)
     user = [
         "本次原始指标：",
         facts_block(facts),
         "",
+        *([mind, ""] if mind else []),
         "可引用知识块：",
         kb,
     ]
@@ -208,9 +213,13 @@ def template_analysis(facts: dict, chunks: list[dict]) -> str:
     items = measured(facts)
     if not items:
         return "本次还没有可解读的参考分。先完成一次测评，我会按维度和知识库给你具体建议。"
+    from .agent.mind_profile import build_mind_profile
+
     weak = weak_dims(facts)
     strong = strong_dims(facts)
+    mind_lines = build_mind_profile(facts)["lines"]
     lines = [
+        *(["你这次呈现的心智形态：", *[f"· {m}" for m in mind_lines], ""] if mind_lines else []),
         f"本次有 {len(items)} 个维度有参考分。"
         + (f"相对较高的是 {DIM_NAMES[strong[0]]}（{dict(items)[strong[0]]}）。" if strong else "")
         + (f"可以关注 {('、'.join(DIM_NAMES[d] for d in weak))}。" if weak else ""),

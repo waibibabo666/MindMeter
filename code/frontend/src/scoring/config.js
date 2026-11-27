@@ -1,5 +1,5 @@
 /**
- * scoring-v3.2 的阈值与版本（与 code/backend/app/scoring/config.py 同步）。
+ * scoring-v3.3 的阈值与版本（与 code/backend/app/scoring/config.py 同步）。
  *
  * 与 algorithm.md 的差异说明（L-02）：
  *   文档 v4.0 的分母按 15/20/24 题、60 秒设计，但 M1 实际实现的是
@@ -8,7 +8,7 @@
  *   并把阈值单独放这里，便于以后校准（只改这里，不改公式代码）。
  */
 
-export const SCORING_VERSION = 'scoring-v3.2';
+export const SCORING_VERSION = 'scoring-v3.3';
 
 /** 八个维度，顺序与 data.js 的 DIMS 一致。 */
 export const DIMENSION_IDS = ['vc', 'vf', 'nc', 'ps', 'ir', 'sv', 'am', 'ni'];
@@ -19,12 +19,14 @@ export const CONFIG = {
 
   vc: {
     items: 6,
+    guess: 0.25,
   },
 
-  /** 言语流畅性：10 个有效词 → 0 分，30 个 → 100 分。 */
+  /** 言语流畅性：10 个有效词 → 0 分，30 个 → 100 分。maxPerSecond 是合法性上限，不是计分参数。 */
   vf: {
     floor: 10,
     span: 20,
+    maxPerSecond: 4,
   },
 
   /** 数字运算：固定 20 题。 */
@@ -36,11 +38,15 @@ export const CONFIG = {
     /** 45 秒内：8 个正确匹配 → 0 分，24 个 → 100 分。 */
     low: 8,
     high: 24,
+    /** 作答速度上限（次/秒）：超过就是伪造或脚本，记 null。 */
+    maxPerSecond: 5,
   },
 
   /** 归纳推理：固定 15 题。 */
+  /** 归纳推理：固定 15 题，四选一，猜测校正 0.25。 */
   ir: {
     items: 15,
+    guess: 0.25,
   },
 
   sv: {
@@ -57,8 +63,10 @@ export const CONFIG = {
   },
 
   /** 自然知识：固定 20 题。 */
+  /** 自然知识：固定 20 题，现行题型三选一，猜测校正 1/3。 */
   ni: {
     items: 20,
+    guess: 1 / 3,
   },
 
   am: {
