@@ -51,6 +51,12 @@ ir 平均 25 分、95 分位 50 分；伪造 `correct: 80, total: 8` 与 `encCor
   上限放在 `CONFIG`，不是计分参数。
 - 版本号 `scoring-v3.2` → `scoring-v3.3`；算法文档补充版本说明。
 
+### 文档与汇报
+
+- **汇报幻灯片**（`docs/slides/`）：Slidev 27 页，严格按课程考核编号 1.1.1–3.7.2；含制作 → 内容审核 → 评分
+  的工作 loop（`review.md` + 静态审计 `tools/audit.mjs` + 渲染检查 `tools/render-check.mjs`）、
+  离线启动 `start.cmd`、PDF 导出脚本；需要作者提供的截图位置一律留空占位。
+
 ### 已知影响
 
 - **v3.2 与 v3.3 的 ir/ni 分数不可直接比较**：已有记录不会重算，跨版本的趋势里这两个维度会出现
