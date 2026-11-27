@@ -198,13 +198,13 @@ def explain_report(
     )
     db.commit()
     return {
-        "text": result.get("text", ""),
+        "text": result.get("displayText") or result.get("text", ""),
         "source": result.get("source", "template"),
         # code 现在是真实原因（模型侧 timeout/auth/…，或校验侧 too_long/banned_word/
         # unsourced_number/score_misattributed）；细到"哪几个数字没有出处"看 validation。
         "code": code,
         "reason": code or "",
         "validation": result.get("validation") or [],
-        "citations": result.get("citations") or [],
-        "sources": result.get("sources") or [],
+        "citations": [item["id"] for item in (result.get("shownSources") or []) if item.get("id")],
+        "sources": result.get("shownSources") or [],
     }

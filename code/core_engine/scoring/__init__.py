@@ -1,4 +1,4 @@
-"""服务端唯一权威计分引擎（scoring-v3.2）。"""
+"""服务端唯一权威计分引擎（scoring-v3.3）。"""
 from __future__ import annotations
 
 from .config import CONFIG, DIMENSION_IDS, LEVEL_SPEC, LEVELS, SCORING_VERSION, items_for, seconds_for, spec_for

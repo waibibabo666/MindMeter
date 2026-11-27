@@ -146,7 +146,7 @@ def test_empty_model_output_returns_empty_code(monkeypatch):
 
 MODEL_RATING_REPLY = (
     "联想记忆任务中，正确回忆了6组，总共有8组。每组回忆所需时间均为2500毫秒，任务得分为71。"
-    "这表明在回忆速度和准确性上表现中等。这些数字不能说明联想记忆能力的高低。"
+    "这表明你在回忆速度和准确性上能力较强。这些数字不能说明联想记忆能力的高低。"
 )
 RATING_FACTS = {
     "am": {"targets": 8, "firstTry": 6, "meanRtMs": 2500, "score": 71},
@@ -154,7 +154,7 @@ RATING_FACTS = {
 
 
 def test_ability_rating_sentence_is_hard_blocked():
-    """「表现中等」这类能力评级必须拦掉（ADR-0002：不推断能力高低）。"""
+    """「能力较强」这类稳定能力定级仍要拦掉；「表现较好」这类绑定本次任务的说法已放宽。"""
     result = validate_text(
         MODEL_RATING_REPLY,
         allowed_numbers=derived_allowed_numbers(RATING_FACTS),
@@ -176,7 +176,7 @@ def test_ability_rating_wording_is_repaired_not_discarded(monkeypatch):
     result = run_graph(monkeypatch, "为什么联想记忆低？", RATING_FACTS, MODEL_RATING_REPLY)
     assert result["source"] == "llm", result
     assert result["code"] == "wording_repaired", result
-    assert "表现中等" not in result["text"] and "表现较好" not in result["text"]
+    assert "能力较强" not in result["text"]
     assert "本次分数相对较高" in result["text"]
     # 关键：改写不能动数字
     assert "6" in result["text"] and "8" in result["text"] and "71" in result["text"]
@@ -199,6 +199,8 @@ def test_rating_adjective_without_an_ability_object_is_allowed():
         "这次作答速度较快，可能是谨慎取舍的结果。仅供参考。",
         "编码阶段答对 6 题，平均每次作答约 2.5 秒。仅供参考。",
         "这些数字不能说明你能力较弱，也不与人群比较。仅供参考。",
+        "联想记忆这次相对突出，作答偏向先准再快。仅供参考。",
+        "这次整体表现较好，但只反映本次任务。仅供参考。",
         "回答较短，只说三点。仅供参考。",
     ):
         result = validate_text(
@@ -209,7 +211,6 @@ def test_rating_adjective_without_an_ability_object_is_allowed():
 
 def test_rating_phrases_are_all_blocked():
     for phrase in (
-        "整体表现中等。",
         "联想记忆水平较好。",
         "这属于中上水平。",
         "智力水平不受影响。",
@@ -222,10 +223,11 @@ def test_rating_phrases_are_all_blocked():
 def test_base_prompt_and_analysis_prompt_forbid_ratings():
     from app.analysis import ANALYSIS_PROMPT
 
-    assert "等级" in prompt_for("chat_explain")
-    assert "表现中等" in prompt_for("chat_explain")  # 提示词直接举出反例
-    assert "等级" in prompt_for("summary")  # BASE_PROMPT 共用
-    assert "等级" in ANALYSIS_PROMPT  # 摘要/报告走的是另一套 prompt，同样要禁
+    # 放宽后的口径：允许「相对突出/靠后」的倾向描述，仍禁智商/天赋/人格定级与量表换算。
+    for prompt in (prompt_for("chat_explain"), prompt_for("summary"), ANALYSIS_PROMPT):
+        assert "智商" in prompt and "天赋" in prompt
+        assert "相对突出" in prompt
+    assert "MoCA" in prompt_for("chat_explain")
 
 
 # ---------------------------------------------------------------------------
@@ -401,14 +403,14 @@ def test_advice_line_is_cited_only_when_the_chunk_was_retrieved(monkeypatch):
 
 
 def test_version_number_is_not_a_metric_but_91_still_is():
-    """(a) 修根因：`scoring-v3.2` 里的 3.2 是口径标识，不是本次指标数字。
+    """(a) 修根因：`scoring-v3.3` 里的 3.3 是口径标识，不是本次指标数字。
 
     曾经校验器把它当成"facts 里没有的数字"判死 —— 模型只要复述计分版本就被回退模板。
     反过来，凭空出现的 91 依然必须拦：这条豁免只认"紧跟字母/连字符的点分号"。
     """
     from app.scoring import SCORING_VERSION
 
-    assert SCORING_VERSION == "scoring-v3.2"
+    assert SCORING_VERSION == "scoring-v3.3"
     quoted = validate_text(
         f"分数不在这里给，服务端按 {SCORING_VERSION} 折算，与本次题目难度无关。仅供参考。",
         allowed_numbers=set(),

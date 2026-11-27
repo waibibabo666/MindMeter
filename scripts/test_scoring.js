@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * L-02 本地计分（scoring-v3.2）的金标准检查。
+ * L-02 本地计分（scoring-v3.3）的金标准检查。
  *
  * 覆盖：
  *   - 4 组手算金标准：全对 / 中等 / 偏低 / 最低边界
@@ -157,7 +157,7 @@ async function main() {
     ['total', 'mean', 'average', 'composite', 'score'].forEach((key) => {
       assert(!(key in r), `不应出现 ${key} 字段`);
     });
-    eq(r.version, 'scoring-v3.2', 'version');
+    eq(r.version, 'scoring-v3.3', 'version');
     eq(Object.keys(r.dimensions).length, 8, '维度数');
   });
 
@@ -201,17 +201,54 @@ async function main() {
     eq(scoring.scoreNc({ total: 20, correct: 18 }), 90, 'nc');
   });
 
-  test('金标准·归纳推理 9/15 = 60', () => {
-    eq(scoring.scoreIr({ total: 15, correct: 9 }), 60, 'ir');
+  test('金标准·归纳推理（四选一，0.25 校正）9/15 = 47，全猜得 0', () => {
+    eq(scoring.scoreIr({ total: 15, correct: 9 }), 47, 'ir');
+    eq(scoring.scoreIr({ total: 8, correct: 2 }, 8), 0, 'ir 纯猜水平应为 0 分，不是 25');
+    eq(scoring.scoreIr({ total: 8, correct: 8 }, 8), 100, 'ir 全对');
   });
 
-  test('金标准·自然探索 15/20 = 75', () => {
-    eq(scoring.scoreNi({ total: 20, correct: 15 }), 75, 'ni');
+  test('金标准·自然探索（三选一，1/3 校正）15/20 = 63，全猜得 0', () => {
+    eq(scoring.scoreNi({ total: 20, correct: 15 }), 63, 'ni');
+    eq(scoring.scoreNi({ total: 6, correct: 2 }, 6), 0, 'ni 纯猜水平应为 0 分，不是 33');
+    eq(scoring.scoreNi({ total: 6, correct: 6 }, 6), 100, 'ni 全对');
   });
 
-  test('边界·流畅性低于 10 词记 0，超上限记 100', () => {
+  test('边界·流畅性低于 10 词记 0，满分封顶 100', () => {
     eq(scoring.scoreVf({ validCount: 5 }), 0, 'vf 下限');
-    eq(scoring.scoreVf({ validCount: 500 }), 100, 'vf 上限');
+    eq(scoring.scoreVf({ validCount: 120 }), 100, 'vf 60 秒内 120 个词仍在合法范围，封顶 100');
+  });
+
+  // ---------- v3.3：作答合法性（客户端上报的计数不可信） ----------
+
+  test('合法性·正确数不能超过总数，也不能为负', () => {
+    eq(scoring.scoreVc({ total: 6, correct: 60 }), null, 'vc correct>total');
+    eq(scoring.scoreIr({ total: 15, correct: -1 }), null, 'ir 负数');
+    eq(scoring.scoreNc({ total: 20, correct: 21 }), null, 'nc correct>total');
+    eq(scoring.scoreNi({ total: 20, correct: Number.POSITIVE_INFINITY }), null, 'ni Infinity');
+    eq(scoring.scoreSv({ total: 8, weighted: 80 }), null, 'sv weighted>total');
+  });
+
+  test('合法性·总题数不能超过该档发放的题数', () => {
+    // 标准档 nc 只发 10 题：上报 40 题 40 对就是伪造
+    eq(scoring.scoreNc({ total: 40, correct: 40 }, 10), null, 'nc total>expected');
+    eq(scoring.scoreNc({ total: 10, correct: 10 }, 10), 100, '正常的满题量仍可计分');
+  });
+
+  test('合法性·限时任务的作答速度不能超过人类上限', () => {
+    eq(scoring.scorePs({ encCorrect: 9999, catCorrect: 9999 }), null, 'ps 新口径 9999');
+    eq(scoring.scorePs({ correct: 9999 }), null, 'ps 旧口径 9999');
+    eq(
+      scoring.scorePs({ encCorrect: 30, encWrong: 0, catCorrect: 30, catWrong: 0 }),
+      100,
+      'ps 60 次/45 秒合法',
+    );
+    eq(scoring.scorePs({ encCorrect: -5, catCorrect: 10 }), null, 'ps 负数');
+    eq(scoring.scoreVf({ validCount: 500 }), null, 'vf 60 秒 500 个词');
+  });
+
+  test('合法性·联想记忆一次点对数不能超过目标数', () => {
+    eq(scoring.scoreAm({ targets: 6, firstTry: 60 }), null, 'am PAL');
+    eq(scoring.scoreAm({ hits: 99, falseAlarms: 0 }), null, 'am hits>targets');
   });
 
   test('边界·题量不足（截断的题本）记 null', () => {
@@ -233,18 +270,19 @@ async function main() {
     const r = scoring.scoreSession({
       vc: { metrics: { total: 8, correct: 8 } },
       vf: { metrics: { validCount: 20 } },
-      nc: { metrics: { total: 20, correct: 18 } },
+      // 标准档真实题量：nc 10 / ir 8 / ni 8（总题数超过发放数会被判不合法）
+      nc: { metrics: { total: 10, correct: 9 } },
       ps: { metrics: { correct: 24 } },
-      ir: { metrics: { total: 15, correct: 12 } },
+      ir: { metrics: { total: 8, correct: 7 } },
       sv: { metrics: { total: 8, correct: 8, correctRts: rts(8, 1500) } },
       am: { metrics: { hits: 8, falseAlarms: 0 }, answers: makeAnswers(8, 8) },
-      ni: { metrics: { total: 20, correct: 15 } },
+      ni: { metrics: { total: 8, correct: 7 } },
     });
     eq(r.measured.length, 8, 'measured 数量');
     eq(r.missing.length, 0, 'missing 数量');
     eq(r.dimensions.nc, 90, 'nc');
-    eq(r.dimensions.ir, 80, 'ir');
-    eq(r.dimensions.ni, 75, 'ni');
+    eq(r.dimensions.ir, 83, 'ir');
+    eq(r.dimensions.ni, 81, 'ni');
   });
 
   let passed = 0;

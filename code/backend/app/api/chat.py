@@ -145,11 +145,15 @@ def chat(
         db.commit()
         result = answer(db, question, facts, history, memory)
 
+    # 用户看到的是去掉 kb 编号的版本，来源只含正文真的用到的知识块；
+    # 没有 displayText 的分支（隐私拦截）保持原文。
+    shown_text = result.get("displayText") or result.get("text", "")
+    shown_sources = result.get("shownSources") if "shownSources" in result else (result.get("sources") or [])
     store.append(
         "assistant",
-        result.get("text", ""),
+        shown_text,
         source=result.get("source"),
-        citations=result.get("sources") or result.get("citations") or [],
+        citations=shown_sources,
         code=result.get("code"),
         risk=result.get("risk"),
     )
@@ -185,10 +189,10 @@ def chat(
     memory_now = sedimented["memory"]
     return {
         "reply": {
-            "text": result.get("text", ""),
+            "text": shown_text,
             "intent": result.get("intent", "explain"),
-            "citations": result.get("citations", []),
-            "sources": result.get("sources", []),
+            "citations": [item["id"] for item in shown_sources if item.get("id")],
+            "sources": shown_sources,
             "source": result.get("source", "template"),
             # code 现在是真实原因（too_long / banned_word / unsourced_number /
             # score_misattributed / 模型侧 timeout…），前端 LLM_FALLBACK_REASON

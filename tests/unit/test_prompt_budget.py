@@ -41,3 +41,5 @@ def test_citation_must_explain_support():
     prompt = prompt_for("chat_explain")
     assert "支撑" in prompt
     assert "依据" in prompt
+    # 编号用户看不懂：正文里只说标题，编号只许出现在末尾引用行。
+    assert "不要在正文里写 kb- 开头的编号" in prompt

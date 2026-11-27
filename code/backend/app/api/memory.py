@@ -19,6 +19,16 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+@router.get("/memory/mind-profile")
+def get_mind_profile(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """agent 当前对用户心智状态的理解（由最近一次测评 + 趋势按规则得出，不调用模型）。"""
+    from ..agent.mind_profile import build_mind_profile
+    from .chat import _facts
+
+    facts, assessment_id, _tier = _facts(db, int(user.id))
+    return {"assessmentId": assessment_id, **build_mind_profile(facts)}
+
+
 @router.get("/memory")
 def get_memory(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     return memory_payload(db, int(user.id))

@@ -50,11 +50,17 @@ export function buildTrend(prev, next, dimNames = {}) {
   };
 }
 
-/** 7 天内复测：提示练习效应，但不禁止。 */
+/**
+ * 间隔较短时的提示：照常展示变化，只提醒「练习效应可能参与其中」，不劝用户等。
+ * 7 天是练习效应基本散去的保守线，不是比较的门槛；同一天内复测另说一句。
+ */
 export function repeatHint(days) {
   if (typeof days !== 'number') return null;
+  if (days === 0) {
+    return '两次都在同一天，疲劳与热身会混进差值，更像状态波动；练习效应也可能参与其中。';
+  }
   if (days < REPEAT_MIN_DAYS) {
-    return `距上次仅 ${days} 天，练习效应可能影响结果；建议间隔 7 天以上再比较趋势。`;
+    return `距上次 ${days} 天，变化可以先看；练习效应可能参与其中，多测几次再看是否稳定。`;
   }
   return null;
 }

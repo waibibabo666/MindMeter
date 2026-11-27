@@ -272,6 +272,28 @@ class ChatMessage(Base):
     )
 
 
+class GamePlay(Base):
+    """每一局游戏的成绩流水（用于游戏质量的后验更新，不进报告与趋势）。
+
+    ``user_id`` 随账号级联删除；统计接口只输出聚合，不返回用户标识。
+    """
+
+    __tablename__ = "game_plays"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    game_id: Mapped[str] = mapped_column(Text, nullable=False)
+    dim: Mapped[str] = mapped_column(Text, nullable=False)
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (Index("game_plays_game_created", "game_id", "created_at"),)
+
+
 class AIRun(Base):
     """每次请求的 AI 遥测；``user_id`` 仅用于审计，不在 UI 展示。"""
 

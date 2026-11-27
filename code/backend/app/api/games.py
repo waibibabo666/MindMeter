@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 
 from .. import auth
 from ..db import get_db
-from ..models import GameRecord, User
+from ..analysis import DIM_ORDER
+from ..game_quality import evaluate
+from ..models import GamePlay, GameRecord, User
 
 router = APIRouter()
 
@@ -83,8 +85,28 @@ def record_game(
         row.plays = int(row.plays or 0) + 1
         row.last_score = score
         row.last_at = datetime.now(timezone.utc)
+    # 单局流水用于游戏质量评估。它是旁路：写失败（例如还没迁移）不能影响玩家记分，
+    # 所以放在 savepoint 里，出错只回滚这一笔。
+    dim = str(payload.get("dim") or "")
+    if dim in DIM_ORDER:
+        try:
+            with db.begin_nested():
+                db.add(GamePlay(user_id=int(user.id), game_id=key, dim=dim, score=score))
+        except Exception:  # noqa: BLE001
+            pass
     db.commit()
     return _payload([row])
+
+
+@router.get("/games/quality")
+def games_quality(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """各游戏的质量后验：区分度、天花板/地板、数据量。只含聚合，不含任何用户标识。"""
+    rows = db.execute(
+        select(GamePlay.user_id, GamePlay.game_id, GamePlay.dim, GamePlay.score).order_by(
+            GamePlay.created_at, GamePlay.id
+        )
+    ).all()
+    return {"games": evaluate((int(r[0]), r[1], r[2], float(r[3])) for r in rows)}
 
 
 @router.delete("/games")

@@ -1,0 +1,24 @@
+.cover { margin-top: 0; }
+.cover .eyebrow { letter-spacing: 0.32em; color: #16a34a; font-size: 0.95rem; }
+.cover h1 { font-size: 2.6rem; margin: 0.6rem 0 0.3rem; color: #14532d; }
+.cover .slogan { font-size: 1.3rem; color: #374151; }
+.cover .meta { margin-top: 1.6rem; color: #6b7280; }
+.cover .date { color: #9ca3af; }
+
+.flow { display: flex; align-items: stretch; gap: 0.25rem; flex-wrap: nowrap; margin: 1rem 0 0.5rem; }
+.flow .step { flex: 1 1 0; min-width: 0; padding: 0.6rem 0.35rem; border: 1px solid #d1fae5; border-radius: 10px; background: #f0fdf4; text-align: center; font-size: 0.92rem; font-weight: 600; color: #065f46; line-height: 1.35; }
+.flow .step span { font-weight: 400; font-size: 0.8rem; color: #047857; }
+.flow .arrow { flex: none; align-self: center; color: #10b981; font-weight: 700; }
+
+.source { margin-top: 1rem; font-size: 0.8rem; color: #9ca3af; }
+.tiny { font-size: 0.78rem; color: #9ca3af; }
+.slogan { color: #16a34a; font-weight: 600; }
+
+table { font-size: 0.86rem; }
+th { color: #14532d; }
+
+.shot { margin-top: 0.7rem; padding: 0.8rem 1rem; border: 1.5px dashed #a1a1aa; border-radius: 10px; background: #fafafa; }
+.shot-head { font-weight: 700; color: #52525b; font-size: 0.9rem; }
+.shot p { margin: 0.3rem 0 0; font-size: 0.82rem; color: #71717a; }
+.shot-file { font-family: ui-monospace, monospace; }
+.shot-img { display: block; max-width: 100%; max-height: 340px; margin: 0.6rem auto 0; border: 1px solid #e4e4e7; border-radius: 8px; }

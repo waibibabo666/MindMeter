@@ -34,7 +34,7 @@
 | 言语流畅性 `vf` | 60 秒动物命名（ASR） | `validCount`、`rawText` | 去重后的有效动物名数；`rawText` 只在内存中使用，不落库 |
 | 数字运算 `nc` | 两位数加减/简单乘法 | `correct`、`total` | 20 题四选一 |
 | 知觉速度 `ps` | 目标符号—四选项匹配 | `correct`、`attempted` | 45 秒内正确匹配数 |
-| 归纳推理 `ir` | 数列/字母序列/简单矩阵 | `correct`、`total` | 15 题四选一 |
+| 归纳推理 `ir` | 数列/字母序列/简单矩阵 | `correct`、`total` | 15 题四选一（标准档 8 题） |
 | 空间视觉化 `sv` | 心理旋转 | `correct`、`total`、`correctRts`、`medianRt` | M1 为 8 题四选一 |
 | 联想记忆 `am` | 12 组词对 + 16 题配对再认 | `hits`、`falseAlarms`、`targets`、`foils` | 8 目标 + 8 干扰 |
 | 自然知识 `ni` | 自然图片四选一分类 | `correct`、`total` | 20 张图片 |
@@ -83,7 +83,7 @@ ps = round(100 * clamp01((correct - 8) / 16))
 ### 4.5 归纳推理（ir）
 
 ```text
-ir = round(100 * correct / 15)
+ir = round(100 * clamp01((correct / total - 0.25) / 0.75))   # v3.3：四选一猜测校正
 ```
 
 ### 4.6 空间视觉化（sv）
@@ -110,7 +110,7 @@ am = round(100 * clamp01((d' + 1) / 5))   // d' = -1 → 0，d' = 4 → 100
 ### 4.8 自然知识（ni）
 
 ```text
-ni = round(100 * correct / 20)
+ni = round(100 * clamp01((correct / total - 1/3) / (2/3)))   # v3.3：现行题型三选一（动物/植物/真菌）
 ```
 
 ## 五、异常与缺失
@@ -127,7 +127,7 @@ ni = round(100 * correct / 20)
 
 | 项目 | 规则 |
 | --- | --- |
-| 配置版本 | `scoring-v3.2`；`code/frontend/src/scoring/{config,levels}.js` 与 `code/core_engine/scoring/{config,formulas}.py` 必须同口径，由 `tests/unit/test_scoring_golden.py::test_matches_the_js_engine` 逐维校验 |
+| 配置版本 | `scoring-v3.3`；`code/frontend/src/scoring/{config,levels}.js` 与 `code/core_engine/scoring/{config,formulas}.py` 必须同口径，由 `tests/unit/test_scoring_golden.py::test_matches_the_js_engine` 逐维校验 |
 | 变更 | 每次调整阈值或公式升一个小版本，并在本文档记录 |
 | 复现 | 输入、配置、版本相同，输出必须相同 |
 | 测试 | 每个公式至少覆盖正常、边界、缺失三类单元测试 |
@@ -142,6 +142,7 @@ ni = round(100 * correct / 20)
 | `scoring-v3` | 8 维：言语理解、言语流畅性、数字运算、知觉速度、归纳推理、空间视觉化、联想记忆、自然知识 | 10-24 团队拍板 |
 | `scoring-v3.1` | 4 维（M1）：vc / ps / sv / am | 11-07 按 M1 实际题量重定分母与锚点：vc ÷6、ps 8→24（45 秒）、sv ÷8 且 RT 1500/4000、am targets=foils=8；其余四维 M1 不测，恒为 null |
 | `scoring-v3.2` | 8 维全量，**按档位取分母** | 11-20 修正 Python 端口与前端引擎的偏差：① 补上分档题量表（下表），nc/ir/ni 不再按 20/15/20 判完成率（标准档实际 10/8/8，旧端口因此把满分判成 null）；② vc 补四选一猜测校正 `(acc−0.25)/0.75`；③ sv 支持加权正确率 `weighted/total`（展开图按转动次数给分）；④ ps 支持编码/分类双段（错题扣 0.5，按 `45/seconds` 折算）；⑤ vf 支持 ASR 不可用→null 与 `60/seconds` 折算；⑥ am 支持 PAL 口径（`firstTry/targets`，六选一校正）。公式本身与 v3.1 的前端实现一致，**变的是"两端必须同口径"**，由跨引擎一致性测试锁定 |
+| `scoring-v3.3` | 在 v3.2 上补两件事 | ① **ir/ni 补猜测校正**：ir 四选一按 0.25、ni 现行题型三选一按 1/3；v3.2 里纯猜会得 25/33 分，现在期望约 0；② **作答合法性校验**：计数为负或非有限数、正确数超过总数、总题数超过该档发放数、限时任务作答速度超过人类上限（ps 5 次/秒、vf 4 词/秒）一律记 null（不是 0 分，也不封顶）。上限放在配置里，不是计分参数。**v3.2 与 v3.3 的 ir/ni 分数不可直接比较** |
 
 ### 分档题量与完成率判定（v3.2）
 

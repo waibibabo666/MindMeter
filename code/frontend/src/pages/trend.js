@@ -13,13 +13,22 @@
 import { el, button, hint } from '../ui.js';
 import { DIMS } from '../data.js';
 import { readSessions } from '../storage.js';
-import { buildTrend, repeatHint, scoredDims, REPEAT_MIN_DAYS } from '../trend.js';
-import { buildTrendSeries, trendChartMarkup, seriesColor } from '../charts/trend.js';
+import { buildTrend, repeatHint, scoredDims } from '../trend.js';
+import {
+  dimSummary,
+  miniChartMarkup,
+  pointsOfDim,
+  recentWindow,
+  seriesColor,
+  timeDomain,
+} from '../charts/trend.js';
 import { setPendingQuestion } from '../chat.js';
 
 const TREND_QUESTION = '帮我解释这两次测评的变化';
 /** 少于三次记录只给两次之间的差值，不画走势线，也不使用「趋势」措辞。 */
 const TREND_MIN_POINTS = 3;
+/** 走势小图最多看最近几次测评。 */
+const SERIES_WINDOW = 10;
 
 const DIM_NAME = Object.fromEntries(DIMS.map((d) => [d.id, d.name]));
 
@@ -230,38 +239,126 @@ function baselineCard(model) {
     }),
     el('p', {
       class: 'tiny',
-      text: `建议间隔 ${REPEAT_MIN_DAYS} 天以上再复测，减少同一份卷子重做的练习效应。`,
+      text: '隔一两天复测就能看到变化；变化是否稳定，多测几次再看。',
     }),
   ]);
 }
 
-/** 走势折线：三次及以上、且每次都测到的维度才连线；画不出来就整块不出现。 */
-function seriesCard(sessions) {
-  if (!Array.isArray(sessions) || sessions.length < TREND_MIN_POINTS) return null;
-  const view = buildTrendSeries(
-    sessions,
-    DIMS.map((dim) => dim.id),
-  );
-  if (view.dims.length === 0) return null;
+/** 这次落在「你自己的波动范围」的哪里（次数不够的维度不走这里，见 buildingNote）。 */
+function statusLine(summary) {
+  const range = `${summary.band.low}–${summary.band.high}`;
+  if (summary.status === 'above') return `高于你平时的范围（${range}）`;
+  if (summary.status === 'below') return `低于你平时的范围（${range}）`;
+  return `在你平时的范围内（${range}）`;
+}
 
-  const legend = el(
-    'div',
-    { class: 'trend-legend' },
-    view.dims.map((id, index) =>
-      el('span', { class: 'trend-legend-item' }, [
-        el('i', { style: `background:${seriesColor(id, index)}` }),
-        DIM_NAME[id] || id,
+/** 一个维度一张小图：名字 + 最新值/变化 + 图 + 落点说明 + 带着问题去对话。 */
+function miniCard(ctx, item, domain, windowSessions) {
+  const { dim, color, summary, points } = item;
+  const chart = miniChartMarkup({
+    id: dim.id,
+    name: dim.name,
+    color,
+    points,
+    summary,
+    domain,
+    windowSessions,
+  });
+  const delta = summary.delta;
+  return el('div', { class: 'trend-mini' }, [
+    el('div', { class: 'trend-mini-head' }, [
+      el('span', { class: 'trend-mini-name' }, [
+        el('i', { class: 'trend-mini-dot', style: `background:${color}` }),
+        dim.name,
       ]),
+      delta === null
+        ? null
+        : el('span', { class: deltaClass(delta), text: `比上次 ${deltaText(delta)}` }),
+    ]),
+    el('div', { class: 'trend-mini-chart', html: chart }),
+    summary.status === 'building'
+      ? null
+      : el('p', { class: `tiny trend-status ${summary.status}`, text: statusLine(summary) }),
+    button(
+      '让 Agent 解释这个变化',
+      () => {
+        // 对话里的趋势只覆盖最近两次，所以问法写成「和上次相比」，不承诺看完整条线。
+        setPendingQuestion(`帮我解释${dim.name}和上次相比的变化`);
+        ctx.go('/chat');
+      },
+      { variant: 'ghost' },
     ),
-  );
+  ]);
+}
+
+/** 次数不够画波动范围的维度只在卡片上方说一次，别在每张卡片里重复同一句。 */
+function buildingNote(drawable) {
+  const building = drawable.filter((item) => item.summary.status === 'building');
+  if (building.length === 0) return null;
+  const need = Math.min(...building.map((item) => item.summary.need));
+  const text =
+    building.length === drawable.length
+      ? `再测 ${need} 次，每张图里会出现你自己的波动范围（浅绿色的带）。`
+      : `${building.map((item) => item.dim.name).join('、')}再测 ${need} 次后，也会出现各自的波动范围。`;
+  return el('p', { class: 'tiny', text });
+}
+
+/**
+ * 各维度走势：三次及以上记录才出现；每个维度一张小图，按真实日期排列，
+ * 变化最大的排在前面。某个维度测过不到两次就画不出线，单独点名而不是悄悄消失。
+ */
+function seriesCard(ctx, sessions) {
+  if (!Array.isArray(sessions) || sessions.length < TREND_MIN_POINTS) return null;
+  const windowSessions = recentWindow(sessions, SERIES_WINDOW);
+  if (windowSessions.length < TREND_MIN_POINTS) return null;
+  const domain = timeDomain(windowSessions);
+
+  const drawable = [];
+  const single = [];
+  DIMS.forEach((dim, index) => {
+    const points = pointsOfDim(windowSessions, dim.id);
+    if (points.length >= 2) {
+      drawable.push({
+        dim,
+        points,
+        summary: dimSummary(points),
+        color: seriesColor(dim.id, index),
+        order: index,
+      });
+    } else if (points.length === 1) {
+      single.push(dim.name);
+    }
+  });
+  if (drawable.length === 0) return null;
+
+  drawable.sort((a, b) => {
+    const da = a.summary.delta === null ? -1 : Math.abs(a.summary.delta);
+    const db = b.summary.delta === null ? -1 : Math.abs(b.summary.delta);
+    return db - da || a.order - b.order;
+  });
+
   return el('div', { class: 'card trend-card' }, [
     el('h2', { class: 'card-title', text: '各维度走势' }),
-    el('div', { class: 'trend-chart', html: trendChartMarkup(view) }),
-    legend,
     el('p', {
-      class: 'tiny',
-      text: `最近 ${view.count} 次记录；只连每次都测到的维度，缺一次就不画，不做插值。`,
+      class: 'muted',
+      text: `最近 ${windowSessions.length} 次记录，横轴按真实日期；变化最大的维度排在前面。`,
     }),
+    buildingNote(drawable),
+    el(
+      'div',
+      { class: 'trend-minis' },
+      drawable.map((item) => miniCard(ctx, item, domain, windowSessions)),
+    ),
+    el('p', { class: 'tiny' }, [
+      '没测的那次直接跳过，线只连真实测过的点。',
+      hint(
+        '「你平时的范围」= 此前各次分数的平均 ± 一个标准差（至少 3 个更早的点才画，且至少 ±3 分）。只拿你自己比，不与任何人比；次数少时只是粗略参考，不等于训练效果。',
+        { edge: true },
+      ),
+    ]),
+    single.length > 0
+      ? el('p', { class: 'tiny', text: `${single.join('、')}只测过一次，还画不出线。` })
+      : null,
   ]);
 }
 
@@ -311,7 +408,7 @@ export function compareSection(ctx, model, sessions) {
   if (model.kind === 'baseline') return [baselineCard(model)];
   const withSessions = Object.assign({}, model, { sessions });
   const nodes = [compareCard(ctx, withSessions)];
-  const chart = seriesCard(sessions);
+  const chart = seriesCard(ctx, sessions);
   if (chart) nodes.push(chart);
   return nodes;
 }

@@ -26,10 +26,10 @@ export async function readGames() {
 }
 
 /** 记一局：最高分只升不降，局数照常累加。返回更新后的记录。 */
-export async function recordGame(gameId, score) {
+export async function recordGame(gameId, score, dim) {
   const value = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
   try {
-    const data = await api.post(`/games/${encodeURIComponent(gameId)}`, { score: value });
+    const data = await api.post(`/games/${encodeURIComponent(gameId)}`, { score: value, dim });
     return normalize(data);
   } catch {
     return EMPTY;

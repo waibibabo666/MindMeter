@@ -1,5 +1,5 @@
 /**
- * 八个维度的计分公式（scoring-v3.2）。
+ * 八个维度的计分公式（scoring-v3.3）。
  *
  * 统一约定：
  *   - 输入是任务上报的 metrics（原始指标），不读全局状态；
@@ -25,25 +25,30 @@ function tooFew(total, expected) {
   return !Number.isFinite(total) || total < expected * CONFIG.minCompletion;
 }
 
-/** 正确率型维度共用：vc / nc / ir / ni。 */
-function scoreAccuracy(metrics, expected) {
-  if (!metrics) return null;
-  const { total, correct } = metrics;
-  if (tooFew(total, expected)) return null;
-  if (!Number.isFinite(correct) || correct < 0) return null;
-  return int100(clamp01(correct / total));
+/** 计数合法：有限数、非负、不超过上限。名字刻意不叫 validCount，避免遮蔽 scoreVf 里的同名变量。 */
+function isValidCount(value, max = Infinity) {
+  return Number.isFinite(value) && value >= 0 && value <= max;
 }
 
-/** 言语理解 vc = round(100 × correct / total) */
-export function scoreVc(metrics, expected = CONFIG.vc.items) {
+/**
+ * 选择题型共用（vc / ir / ni / nc）：完成率 → 合法性 → 猜测校正。
+ *
+ * 合法性：总题数不能超过该档发放的题数，正确数不能为负也不能超过总题数。
+ * 客户端上报的是自己的计数，不相信它；不合法记 null（不是 0 分，也不是封顶）。
+ * guess = 0 即不校正（nc 是数字输入，没有猜中的说法）。
+ * 与 core_engine/scoring/formulas.py 的 _choice_score 逐行对应，运算顺序也一致。
+ */
+function scoreChoice(metrics, expected, guess) {
   if (!metrics) return null;
   const { total, correct } = metrics;
   if (tooFew(total, expected)) return null;
-  if (!Number.isFinite(correct) || correct < 0) return null;
-  // 四选一猜测校正：全猜得 0 分，而不是 25 分
-  const accuracy = correct / total;
-  const corrected = (accuracy - 0.25) / 0.75;
-  return int100(clamp01(corrected));
+  if (!isValidCount(total, expected) || !isValidCount(correct, total)) return null;
+  return int100(clamp01((correct / total - guess) / (1 - guess)));
+}
+
+/** 言语理解 vc：四选一，全猜得 0 分，而不是 25 分 */
+export function scoreVc(metrics, expected = CONFIG.vc.items) {
+  return scoreChoice(metrics, expected, CONFIG.vc.guess);
 }
 
 /**
@@ -53,9 +58,18 @@ export function scoreVc(metrics, expected = CONFIG.vc.items) {
 export function scorePs(metrics, seconds = 45) {
   if (!metrics) return null;
   const { encCorrect, encWrong, catCorrect, catWrong } = metrics;
+  // 作答速度上限：没有人能在限时内点得比 maxPerSecond 次/秒更快，超过就是伪造或脚本。
+  const ceiling = CONFIG.ps.maxPerSecond * Math.max(1, seconds);
 
   // 新版：编码 + 分类，错题扣 0.5
   if (Number.isFinite(encCorrect) || Number.isFinite(catCorrect)) {
+    const parts = [encCorrect, encWrong, catCorrect, catWrong].map((value) => value ?? 0);
+    if (
+      !parts.every((value) => isValidCount(value)) ||
+      parts.reduce((a, b) => a + b, 0) > ceiling
+    ) {
+      return null;
+    }
     const low = 6;
     const high = 30;
     const scale = 45 / Math.max(1, seconds);
@@ -68,7 +82,7 @@ export function scorePs(metrics, seconds = 45) {
 
   // 旧口径：只有 correct，保留兼容
   const { correct } = metrics;
-  if (!Number.isFinite(correct)) return null;
+  if (!isValidCount(correct, ceiling)) return null;
   const { low, high } = CONFIG.ps;
   const rate = seconds === 45 ? correct : correct * (45 / Math.max(1, seconds));
   return int100(clamp01((rate - low) / (high - low)));
@@ -94,6 +108,9 @@ export function scoreSv(metrics, expected = CONFIG.sv.items) {
   // 新版：加权正确率（展开图按转动次数给权重）
   if (Number.isFinite(metrics.weighted) && Number.isFinite(metrics.total)) {
     if (tooFew(metrics.total, expected)) return null;
+    if (!isValidCount(metrics.total, expected) || !isValidCount(metrics.weighted, metrics.total)) {
+      return null;
+    }
     const p = metrics.weighted / metrics.total;
     return int100(clamp01((p - 0.25) / 0.75));
   }
@@ -101,6 +118,7 @@ export function scoreSv(metrics, expected = CONFIG.sv.items) {
   const { total, correct, correctRts } = metrics;
   if (tooFew(total, expected)) return null;
   if (!Number.isFinite(correct) || correct < CONFIG.sv.minCorrect) return null;
+  if (!isValidCount(total, expected) || !isValidCount(correct, total)) return null;
 
   const rts = filterRts(Array.isArray(correctRts) ? correctRts : [], CONFIG.sv.minRt);
   const rt = median(rts);
@@ -127,6 +145,7 @@ export function scoreAm(metrics, answers) {
 
   // PAL 口径：一次点对数 / 目标数，六选一按 1/6 校正
   if (Number.isFinite(metrics.targets) && Number.isFinite(metrics.firstTry)) {
+    if (!isValidCount(metrics.firstTry, metrics.targets)) return null;
     const rate = metrics.firstTry / Math.max(1, metrics.targets);
     const corrected = (rate - 1 / 6) / (1 - 1 / 6);
     return int100(clamp01(corrected));
@@ -143,6 +162,8 @@ export function scoreAm(metrics, answers) {
     if (newCount > 0) foils = newCount;
   }
 
+  if (!isValidCount(hits, targets) || !isValidCount(falseAlarms, foils)) return null;
+
   const H = (hits + 0.5) / (targets + 1);
   const F = (falseAlarms + 0.5) / (foils + 1);
   const dPrime = zInv(H) - zInv(F);
@@ -154,23 +175,23 @@ export function scoreVf(metrics, seconds = 60) {
   if (!metrics) return null;
   if (metrics.unavailable) return null;
   const { validCount } = metrics;
-  if (!Number.isFinite(validCount) || validCount < 0) return null;
+  if (!isValidCount(validCount, CONFIG.vf.maxPerSecond * Math.max(1, seconds))) return null;
   const { floor, span } = CONFIG.vf;
   const rate = seconds === 60 ? validCount : validCount * (60 / Math.max(1, seconds));
   return int100(clamp01((rate - floor) / span));
 }
 
-/** 数字运算 nc = round(100 × correct / total) */
+/** 数字运算 nc = round(100 × correct / total)：数字输入，没有猜测校正 */
 export function scoreNc(metrics, expected = CONFIG.nc.items) {
-  return scoreAccuracy(metrics, expected);
+  return scoreChoice(metrics, expected, 0);
 }
 
-/** 归纳推理 ir = round(100 × correct / total) */
+/** 归纳推理 ir：四选一，按 0.25 校正（v3.3 前纯猜会得 25 分） */
 export function scoreIr(metrics, expected = CONFIG.ir.items) {
-  return scoreAccuracy(metrics, expected);
+  return scoreChoice(metrics, expected, CONFIG.ir.guess);
 }
 
-/** 自然知识 ni = round(100 × correct / total) */
+/** 自然知识 ni：现行题型是三选一（动物/植物/真菌），按 1/3 校正 */
 export function scoreNi(metrics, expected = CONFIG.ni.items) {
-  return scoreAccuracy(metrics, expected);
+  return scoreChoice(metrics, expected, CONFIG.ni.guess);
 }

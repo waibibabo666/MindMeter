@@ -298,7 +298,7 @@ def test_dimension_local_seconds_are_not_a_blanket_pass():
 @pytest.mark.parametrize(
     "text",
     [
-        "联想记忆 1.87 秒，这表明在回忆速度上表现中等。仅供参考。",
+        "联想记忆 1.87 秒，这表明你在回忆速度上能力较弱。仅供参考。",
         "知觉速度平均 1.88 秒，你的能力较强。仅供参考。",
         "正确率 62.5%，整体处于中等水平。仅供参考。",
     ],
