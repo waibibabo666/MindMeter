@@ -24,6 +24,7 @@
 | `adr/` | [ADR-0003 Web 账号与托管部署](adr/0003-web-accounts-and-hosted-deployment.md) | 已接受 | 账号/会话/CSRF、多租户主键、站点 LLM 配置、RAG 与探活口径 |
 | `adr/` | [ADR-0002 非临床定位与 Agent 语言契约](adr/0002-agent-positioning-language-contract.md) | 提议 | MoCA 参考三分法、不借临床权威、Agent 措辞/校验约束 |
 | `software/` | [Agent P0 改造包设计](software/agent-trend-workflow.md) | 评审稿 v0.2 | 统一出口 + 趋势联动 + 定位落地（受 ADR-0002 约束） |
+| `slides/` | [汇报幻灯片](slides/README.md) | 当前 | Slidev 答辩稿：启动方式、审核评分 loop、截图清单 |
 | `software/` | [软件设计](software/software.md) | 当前 v3.0 | 模块总览 |
 | `software/` | [诊断日志](software/logging.md) | 当前 v1.0 | 前端内存日志、脱敏、导出 |
 | `software/` | [本地知识库设计](software/knowledge-base.md) | 草案 v1.0 | P-06：分类、chunk schema、30 条计划、来源候选 |
