@@ -55,7 +55,7 @@
 
 ## 课程提交版
 
-[作业 1](<../work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md>)、[作业 2](<../work_for_submission/苏打F4_MindMeter_assignment[2]_rev.md>)、[作业 3](<../work_for_submission/苏打F4_MindMeter_assignment[3]_rev.md>) 是 2026-10-24 的课程提交快照，**不代表 L2 当前实现**；当前口径以本索引的“当前”文档为准。
+[作业 1](<../work_for_submission/苏打F4_MindMeter_assignment[1].md>)、[作业 2](<../work_for_submission/苏打F4_MindMeter_assignment[2].md>)、[作业 3](<../work_for_submission/苏打F4_MindMeter_assignment[3].md>) 是 2026-11-28 修订的课程提交版（已对齐当前实现）；口径以本索引的“当前”文档为准。
 
 ## 说明
 
