@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" width="1600" height="700" font-family="'Microsoft YaHei','Segoe UI',Arial,sans-serif">
+<rect width="1600" height="700" fill="#ffffff"/>
+<text x="72" y="84" font-size="38" font-weight="700" fill="#1f2328">3.7 代码统计</text>
+<text x="72" y="122" font-size="17" fill="#6b7280">git 跟踪文件 · 快照 2026-11-28 · 不含文档 / 依赖 / 生成物</text>
+<rect x="72" y="158" width="460" height="76" rx="14" fill="#f8faf9" stroke="#e2e8e5"/>
+<text x="96" y="190" font-size="15" fill="#6b7280">文件总数</text>
+<text x="96" y="220" font-size="27" font-weight="700" fill="#1f2328">194</text>
+<rect x="564" y="158" width="460" height="76" rx="14" fill="#f8faf9" stroke="#e2e8e5"/>
+<text x="588" y="190" font-size="15" fill="#6b7280">代码行数</text>
+<text x="588" y="220" font-size="27" font-weight="700" fill="#1f2328">37,227</text>
+<rect x="1056" y="158" width="460" height="76" rx="14" fill="#f8faf9" stroke="#e2e8e5"/>
+<text x="1080" y="190" font-size="15" fill="#6b7280">测试行占比</text>
+<text x="1080" y="220" font-size="27" font-weight="700" fill="#1f2328">16.4%</text>
+<text x="72" y="342" font-size="21" font-weight="700" fill="#1f2328">后端（Python）</text>
+<text x="72" y="368" font-size="14.5" fill="#9aa1aa">57 个文件</text>
+<rect x="430" y="324" width="780" height="26" rx="7" fill="#f1f5f3"/>
+<rect x="430" y="324" width="425.9" height="26" rx="7" fill="#15803d"/>
+<text x="1528" y="346" font-size="18" font-weight="650" fill="#334155" text-anchor="end">8,870 行 · 23.8%</text>
+<text x="72" y="426" font-size="21" font-weight="700" fill="#1f2328">前端（JS/CSS/HTML）</text>
+<text x="72" y="452" font-size="14.5" fill="#9aa1aa">70 个文件</text>
+<rect x="430" y="408" width="780" height="26" rx="7" fill="#f1f5f3"/>
+<rect x="430" y="408" width="780.0" height="26" rx="7" fill="#22c55e"/>
+<text x="1528" y="430" font-size="18" font-weight="650" fill="#334155" text-anchor="end">16,244 行 · 43.6%</text>
+<text x="72" y="510" font-size="21" font-weight="700" fill="#1f2328">测试（Python + JS）</text>
+<text x="72" y="536" font-size="14.5" fill="#9aa1aa">41 个文件</text>
+<rect x="430" y="492" width="780" height="26" rx="7" fill="#f1f5f3"/>
+<rect x="430" y="492" width="293.8" height="26" rx="7" fill="#4f46e5"/>
+<text x="1528" y="514" font-size="18" font-weight="650" fill="#334155" text-anchor="end">6,118 行 · 16.4%</text>
+<text x="72" y="594" font-size="21" font-weight="700" fill="#1f2328">脚本（质量/部署/数据）</text>
+<text x="72" y="620" font-size="14.5" fill="#9aa1aa">26 个文件</text>
+<rect x="430" y="576" width="780" height="26" rx="7" fill="#f1f5f3"/>
+<rect x="430" y="576" width="287.9" height="26" rx="7" fill="#b45309"/>
+<text x="1528" y="598" font-size="18" font-weight="650" fill="#334155" text-anchor="end">5,995 行 · 16.1%</text>
+</svg>
