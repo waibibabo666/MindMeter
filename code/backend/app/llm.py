@@ -1,10 +1,4 @@
-"""OpenAI-compatible chat client.
-
-The deployment owns the credential: ``MM_LLM_API_KEY`` / ``MM_LLM_BASE_URL`` /
-``MM_LLM_MODEL`` on the web service. Nothing in this module reads a local
-credential store, and no key is ever persisted to the database or returned to
-the browser (``site_llm_config().public()`` drops it).
-"""
+"""OpenAI 兼容的对话客户端。"""
 from __future__ import annotations
 
 import json
@@ -20,12 +14,11 @@ from .logging_setup import redact_text
 
 
 def _clean_no_proxy_env() -> None:
-    """httpx 0.28 cannot parse bracketed IPv6 entries in NO_PROXY.
+    """httpx 0.28 无法解析 NO_PROXY 里的方括号 IPv6 项。
 
-    If the backend is started outside the desktop launcher (dev shell, tests),
-    a polluted NO_PROXY like `::1,[::1]` makes every request raise
-    InvalidURL before the connection is attempted — which previously showed up
-    to users as "key configured but every answer falls back to template".
+    如果后端不在桌面启动器里运行（开发 shell、测试），被污染的
+    ``::1,[::1]`` 会让每个请求在建立连接前就抛 InvalidURL——用户看到的
+    就是「配了 Key 但每次回答都回退模板」。
     """
     for name in ("NO_PROXY", "no_proxy"):
         value = os.environ.get(name, "")
@@ -67,7 +60,7 @@ class LLMReply:
 
 @dataclass(frozen=True)
 class LLMConfig:
-    """Site-level model config. `key` must never leave the process."""
+    """站点级模型配置。``key`` 绝不能离开进程。"""
 
     endpoint: str
     model: str
@@ -88,7 +81,7 @@ class LLMConfig:
         return seen
 
     def public(self) -> dict:
-        """What the browser is allowed to know."""
+        """浏览器被允许知道的内容。"""
         return {
             "endpoint": self.endpoint,
             "model": self.model,
@@ -102,7 +95,7 @@ class LLMConfig:
 
 
 def _extra_params_for(endpoint: str) -> dict:
-    """Provider quirks that must be sent, or the answer comes back malformed."""
+    """厂商专属参数：不发这些，回答格式会坏。"""
     host = urlsplit(endpoint).netloc.lower()
     if "bigmodel.cn" in host or "zhipu" in host:
         # GLM-4.5/4.7 默认开启动态思考；本产品的回答短且有格式约束，直接关掉。

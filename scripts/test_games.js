@@ -52,6 +52,46 @@ async function main() {
   const { svRotate, svMirror } = svGames;
   const data = await import(href(path.join(SRC, 'data.js')));
   const gameStore = await import(href(path.join(SRC, 'games', 'store.js')));
+  const ir = await import(href(path.join(SRC, 'tasks', 'ir.js')));
+  const psTasks = await import(href(path.join(SRC, 'tasks', 'ps.js')));
+  const svMount = await import(href(path.join(SRC, 'tasks', 'svMount.js')));
+
+  /** 计算 24 点式子（递归下降，不执行字符串，避免 code-eval）。 */
+  function evalMath(expr) {
+    const tokens =
+      String(expr)
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/[−–—]/g, '-')
+        .match(/\d+|[+\-*/()]/g) || [];
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const next = () => tokens[pos++];
+    const factor = () => {
+      const token = next();
+      if (token === '(') {
+        const value = sum();
+        next(); // 吃掉 ")"
+        return value;
+      }
+      return Number(token);
+    };
+    const product = () => {
+      let value = factor();
+      while (peek() === '*' || peek() === '/') {
+        value = next() === '*' ? value * factor() : value / factor();
+      }
+      return value;
+    };
+    const sum = () => {
+      let value = product();
+      while (peek() === '+' || peek() === '-') {
+        value = next() === '+' ? value + product() : value - product();
+      }
+      return value;
+    };
+    return sum();
+  }
 
   // ---------- 登记表 ----------
 
@@ -186,33 +226,60 @@ async function main() {
 
   // ---------- 存储 ----------
 
-  test('游戏记录：最高分只升不降，且独立于测评存储', () => {
-    const map = new Map();
-    globalThis.localStorage = {
-      getItem: (k) => (map.has(k) ? map.get(k) : null),
-      setItem: (k, v) => map.set(k, String(v)),
-      removeItem: (k) => map.delete(k),
+  test('游戏记录：按账号存后端，最高分只升不降', async () => {
+    // 用一个内存假后端替代 fetch：验证 store 走的是 /api/v1/games，而不是 localStorage。
+    const rows = new Map();
+    const calls = [];
+    const json = (payload) => ({ ok: true, status: 200, json: async () => payload });
+    globalThis.fetch = async (target, options = {}) => {
+      const method = options.method || 'GET';
+      const pathname = String(target);
+      calls.push(`${method} ${pathname}`);
+      if (method === 'GET' && pathname.endsWith('/games')) {
+        return json({ records: Object.fromEntries(rows) });
+      }
+      if (method === 'DELETE' && pathname.endsWith('/games')) {
+        rows.clear();
+        return json({ ok: true });
+      }
+      const hit = pathname.match(/\/games\/([^/]+)$/);
+      if (method === 'POST' && hit) {
+        const id = decodeURIComponent(hit[1]);
+        const score = JSON.parse(options.body || '{}').score;
+        const prev = rows.get(id) || { best: 0, plays: 0, lastScore: 0, lastAt: '' };
+        const next = {
+          best: Math.max(prev.best, score),
+          plays: prev.plays + 1,
+          lastScore: score,
+          lastAt: '2026-11-21T00:00:00Z',
+        };
+        rows.set(id, next);
+        return json({ records: { [id]: next } });
+      }
+      return { ok: false, status: 404, json: async () => ({ detail: 'not_found' }) };
     };
-    gameStore.clearGames();
 
-    gameStore.recordGame('schulte', 80);
-    eq(gameStore.readGames().records.schulte.best, 80, '首次记录');
-    gameStore.recordGame('schulte', 55);
-    eq(gameStore.readGames().records.schulte.best, 80, '低分不覆盖');
-    eq(gameStore.readGames().records.schulte.plays, 2, '局数累加');
-    eq(gameStore.readGames().records.schulte.lastScore, 55, '最近一局');
+    await gameStore.clearGames();
 
-    gameStore.recordGame('schulte', 120);
-    eq(gameStore.readGames().records.schulte.best, 100, '上限截断');
+    await gameStore.recordGame('schulte', 80);
+    eq((await gameStore.readGames()).records.schulte.best, 80, '首次记录');
+    await gameStore.recordGame('schulte', 55);
+    eq((await gameStore.readGames()).records.schulte.best, 80, '低分不覆盖');
+    eq((await gameStore.readGames()).records.schulte.plays, 2, '局数累加');
+    eq((await gameStore.readGames()).records.schulte.lastScore, 55, '最近一局');
 
-    // 只写游戏自己的 key，不碰测评数据
-    const keys = [...map.keys()];
-    eq(keys.length, 1, '只应写一个 key');
-    assert(keys[0].includes('games'), '写入的应是游戏 key');
+    await gameStore.recordGame('schulte', 120);
+    eq((await gameStore.readGames()).records.schulte.best, 100, '上限截断');
 
-    gameStore.clearGames();
-    eq(Object.keys(gameStore.readGames().records).length, 0, '清除后为空');
-    delete globalThis.localStorage;
+    assert(
+      calls.every((call) => call.includes('/api/v1/games')),
+      '游戏记录必须走 /api/v1/games 接口',
+    );
+    assert(!calls.some((call) => call.includes('localStorage')), '不应再依赖 localStorage');
+
+    await gameStore.clearGames();
+    eq(Object.keys((await gameStore.readGames()).records).length, 0, '清除后为空');
+    delete globalThis.fetch;
   });
 
   // ---------- 纯逻辑（题库 / 视觉 / 语音） ----------
@@ -312,6 +379,117 @@ async function main() {
     let changed = 0;
     for (let i = 0; i < base.length; i += 1) if (base[i] !== target[i]) changed += 1;
     eq(changed, 4, '实际不同的格子数');
+  });
+
+  // ---------- 题库正确性（2026-11-21 修复的计分错误） ----------
+
+  test('24 点：每题恰好一个式子成立，且每个式子只用题目给的四个数', () => {
+    for (const item of quizzes.twentyFour.bank) {
+      const nums = (item.prompt.match(/\d+/g) || [])
+        .slice(0, 4)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const solutions = item.options.filter((opt) => Math.abs(evalMath(opt) - 24) < 1e-9);
+      eq(solutions.length, 1, `${item.prompt} 成立的式子数`);
+      for (const opt of item.options) {
+        const used = (String(opt).match(/\d+/g) || []).map(Number).sort((a, b) => a - b);
+        eq(used.join(','), nums.join(','), `「${opt}」用到的数字`);
+      }
+    }
+  });
+
+  test('链式计算：每题的题干与选项答案一致', () => {
+    for (const item of quizzes.chainCalc.bank) {
+      const match = String(item.prompt).match(/从\s*(\d+)\s*开始，依次(.+?)，结果是？/);
+      assert(match, `题干格式不符：${item.prompt}`);
+      let value = Number(match[1]);
+      for (const token of match[2].match(/[+−×÷]\d+/g) || []) {
+        const sign = token[0];
+        const operand = Number(token.slice(1));
+        if (sign === '+') value += operand;
+        else if (sign === '−') value -= operand;
+        else if (sign === '×') value *= operand;
+        else value /= operand;
+      }
+      eq(Number(item.options[item.answer]), value, item.prompt);
+    }
+  });
+
+  test('图形规律（测评）：选项互不相同，答案唯一', () => {
+    const questions = ir.buildQuestions(120, seeded(17));
+    questions.forEach((q, index) => {
+      const keys = q.options.map((cell) => `${cell.shape}:${cell.count}`);
+      eq(new Set(keys).size, 4, `第 ${index} 题应有四个不同选项`);
+      assert(q.answer >= 0 && q.answer < 4, `第 ${index} 题答案下标越界`);
+    });
+  });
+
+  test('图形规律：数量规律不被截断（diagonal/combine 的 5 个也要出）', () => {
+    // 这两条规则在右下角会算出 5 个；以前数据层和渲染层都截断到 4，
+    // 导致题干规律指向「5 个」，选项里却只有「4 个」。
+    for (const rule of ['diagonal', 'combine']) {
+      for (let i = 0; i < 20; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(500 + i));
+        const answer = q.options[q.answer];
+        eq(answer.count, 5, `${rule} 第 ${i} 题答案数量`);
+        const counts = q.cells.filter(Boolean).map((cell) => cell.count);
+        assert(counts.includes(4), `${rule} 题干应能看到 4 个的格子`);
+        for (const opt of q.options) {
+          assert(opt.count >= 1 && opt.count <= 5, `${rule} 选项数量越界`);
+        }
+      }
+    }
+  });
+
+  test('图形规律：干扰项形状必须出现在题干里', () => {
+    // 干扰项用了题干没出现过的图形，等于送分；旧实现会拿随机 shapeA/shapeB 补位。
+    for (const rule of ['rowShape', 'colShape', 'diagonal', 'combine', 'alternate', 'mirror']) {
+      for (let i = 0; i < 40; i += 1) {
+        const q = ir.buildMatrix(rule, seeded(700 + i));
+        const gridShapes = new Set(q.cells.filter(Boolean).map((cell) => cell.shape));
+        for (const opt of q.options) {
+          assert(
+            gridShapes.has(opt.shape),
+            `${rule} 第 ${i} 题干扰项形状「${opt.shape}」不在题干里`,
+          );
+        }
+      }
+    }
+  });
+
+  test('知觉速度：编码题答案下标有效且指向正确数字串', () => {
+    // 旧实现用数组引用做 indexOf，选项是拷贝，答案恒为 -1（编码题永远判错）。
+    for (let i = 0; i < 100; i += 1) {
+      const table = psTasks.makeTable();
+      const item = psTasks.buildEncoding(table, 1 + (i % 3));
+      assert(
+        item.answer >= 0 && item.answer < item.options.length,
+        `第 ${i} 题答案下标 ${item.answer}`,
+      );
+      const expected = item.shapes.map((entry) => String(entry.digit)).join('');
+      eq(item.options[item.answer].join(''), expected, `第 ${i} 题答案内容`);
+    }
+  });
+
+  test('空间旋转（测评）：选项不重复，正确项只出现一次', () => {
+    for (let i = 0; i < 200; i += 1) {
+      const q = svMount.buildRotate();
+      const keys = q.options.map((grid) => grid.join(''));
+      eq(new Set(keys).size, 4, `第 ${i} 次选项应互不相同`);
+      assert(q.answer >= 0, `第 ${i} 次答案下标应有效`);
+      const correct = keys[q.answer];
+      eq(keys.filter((key) => key === correct).length, 1, `第 ${i} 次正确项应唯一`);
+    }
+  });
+
+  test('折纸题：答案下标有效，选项不重复', () => {
+    for (const item of quizzes.fold.bank) {
+      eq(new Set(item.options).size, item.options.length, `${item.prompt} 选项重复`);
+      assert(
+        Number.isInteger(item.answer) && item.options[item.answer],
+        `${item.prompt} 答案下标非法`,
+      );
+    }
   });
 
   // ---------- 静态约定 ----------

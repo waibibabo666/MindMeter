@@ -1,4 +1,4 @@
-# ADR-0003：Web 账号体系与托管部署（Render → 后迁移 Railway）
+﻿# ADR-0003：Web 账号体系与托管部署（Render → 后迁移 Railway）
 
 > **2026-11-20 更新**：部署目标已从 Render 迁移到 Railway（见 [Railway 部署指南](../software/deploy-railway.md)）。本文保留当时的决策记录，文中 “Render” 均指当时的托管方案，应用侧形态未变。
 
@@ -44,7 +44,7 @@
 - 免费实例会冷启动（首个请求约 1 分钟）、文件系统临时、免费 Postgres 30 天后过期；部署文档给出升级 `starter` 的一步操作。
 - 注册可被 `MM_ALLOW_REGISTRATION=false` 关闭（答辩现场控制用量），登录按 `IP+用户名` 限流、注册按 IP 限流。
 - 注销账号是硬删除 + `ON DELETE CASCADE`，满足“删除后不可恢复、导出不含 Key”；30 天缓冲期由 Render 的每日备份代替，文档写明。
-- 测试体系换轨：`tests/backend` 走 Cookie 会话（`logged_client` / `fresh_client`），新增 `test_auth_api.py`、`test_tenancy.py`；E2E 直接注册/登录，不再注入 token。
+- 测试体系换轨：`tests/integration` 走 Cookie 会话（`logged_client` / `fresh_client`），新增 `test_auth_api.py`、`test_tenancy.py`；E2E 直接注册/登录，不再注入 token。
 
 ## 不采用
 
@@ -56,4 +56,4 @@
 
 ## 验收
 
-见 [Railway 部署指南](../software/deploy-railway.md) §3「部署后必须验的两件事」；自动化对应 `tests/backend/test_auth_api.py`、`tests/backend/test_tenancy.py`、`scripts/smoke_web_deploy.py`。
+见 [Railway 部署指南](../software/deploy-railway.md) §3「部署后必须验的两件事」；自动化对应 `tests/integration/test_auth_api.py`、`tests/integration/test_tenancy.py`、`scripts/smoke_web_deploy.py`。

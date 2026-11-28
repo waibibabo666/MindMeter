@@ -158,6 +158,110 @@ async function main() {
   const trend = await import(pathToFileURL(path.join(SRC, 'trend.js')).href);
   const router = await import(pathToFileURL(path.join(SRC, 'router.js')).href);
   const trendPage = await import(pathToFileURL(path.join(SRC, 'pages', 'trend.js')).href);
+  const trendChart = await import(pathToFileURL(path.join(SRC, 'charts', 'trend.js')).href);
+  const chatModule = await import(pathToFileURL(path.join(SRC, 'chat.js')).href);
+
+  /** 在真实图表里量出每个圆点的横坐标（按出现顺序）。 */
+  const dotXs = (markup) => [...markup.matchAll(/<circle cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  const sessionAt = (id, iso, scores) => ({ id, finishedAt: iso, scores });
+
+  test('走势横轴按真实时间：隔 1 天与隔 6 天不能画成等距', () => {
+    const windowSessions = trendChart.recentWindow([
+      sessionAt('c', '2026-11-27T10:00:00Z', { vc: 70 }),
+      sessionAt('b', '2026-11-21T10:00:00Z', { vc: 62 }),
+      sessionAt('a', '2026-11-20T10:00:00Z', { vc: 60 }),
+    ]);
+    const points = trendChart.pointsOfDim(windowSessions, 'vc');
+    const markup = trendChart.miniChartMarkup({
+      id: 'vc',
+      name: '言语理解',
+      color: '#16a34a',
+      points,
+      summary: trendChart.dimSummary(points),
+      domain: trendChart.timeDomain(windowSessions),
+      windowSessions,
+    });
+    const [x0, x1, x2] = dotXs(markup);
+    const ratio = (x2 - x1) / (x1 - x0);
+    assert(Math.abs(ratio - 6) < 0.01, `间隔 6 天与 1 天的横向距离应为 6:1，实际 ${ratio}`);
+  });
+
+  test('个人波动带：更早的点不足 3 个不下判断，够了才画带', () => {
+    const point = (value, day) => ({ t: Date.UTC(2026, 10, day), iso: '', value });
+    const few = trendChart.dimSummary([point(50, 1), point(52, 2), point(60, 3)]);
+    assert(few.band === null && few.status === 'building', '只有 2 个更早的点不该画带');
+    assert(few.need === 1, `还差 1 次，实际 ${few.need}`);
+
+    const enough = [point(50, 1), point(52, 2), point(51, 3)];
+    const within = trendChart.dimSummary([...enough, point(52, 4)]);
+    assert(within.band && within.status === 'within', '落在平时的范围内应判 within');
+    assert(
+      trendChart.dimSummary([...enough, point(70, 4)]).status === 'above',
+      '明显更高应判 above',
+    );
+    assert(
+      trendChart.dimSummary([...enough, point(30, 4)]).status === 'below',
+      '明显更低应判 below',
+    );
+  });
+
+  test('个人波动带：最新一次不参与定义「平时」，半宽至少 3 分', () => {
+    const point = (value, day) => ({ t: Date.UTC(2026, 10, day), iso: '', value });
+    // 此前三次完全相同（标准差 0）：带宽不能缩成一条线，否则 1 分的起伏也会被判「高于」。
+    const flat = [point(50, 1), point(50, 2), point(50, 3)];
+    const summary = trendChart.dimSummary([...flat, point(53, 4)]);
+    assert(
+      summary.band.low === 47 && summary.band.high === 53,
+      `半宽下限应为 3，实际 ${JSON.stringify(summary.band)}`,
+    );
+    assert(summary.status === 'within', '53 恰在 50±3 的边界上，应算范围内');
+    assert(
+      trendChart.dimSummary([...flat, point(54, 4)]).status === 'above',
+      '54 超出 50±3 应判 above',
+    );
+  });
+
+  test('各维度走势：每个维度一张图，变化最大的排前面，按钮带着问题去对话', () => {
+    const sessions = [
+      sessionAt('c', '2026-11-27T10:00:00Z', { vc: 62, am: 62, ps: 60 }),
+      sessionAt('b', '2026-11-21T10:00:00Z', { vc: 60, am: 44, ps: 52 }),
+      sessionAt('a', '2026-11-20T10:00:00Z', { vc: 60, am: 40, ps: 48 }),
+    ];
+    const model = trendPage.buildCompareModel(sessions);
+    let went = null;
+    const nodes = withDocument(() =>
+      trendPage.compareSection({ go: (to) => (went = to) }, model, sessions),
+    );
+    assert(nodes.length === 2, `对比卡 + 走势卡共 2 块，实际 ${nodes.length}`);
+    const seriesText = withDocument(() => collectText(nodes[1]).join('\n'));
+    const order = ['联想记忆', '知觉速度', '言语理解'].map((name) => seriesText.indexOf(name));
+    assert(
+      order.every((i) => i >= 0),
+      `三个维度都该有小图：${seriesText}`,
+    );
+    assert(
+      order[0] < order[1] && order[1] < order[2],
+      '应按变化量从大到小排序（联想记忆 +18 > 知觉速度 +8 > 言语理解 +2）',
+    );
+    assert(
+      (seriesText.match(/再测 1 次/g) || []).length === 1,
+      '次数不够的提示只该出现一次，不要每张卡片重复',
+    );
+
+    const clickables = [];
+    const walk = (node) => {
+      if (node.listeners && node.listeners.click) clickables.push(node);
+      (node.children || []).forEach(walk);
+    };
+    walk(nodes[1]);
+    assert(clickables.length === 3, `每张小图一个解释按钮，实际 ${clickables.length}`);
+    clickables[0].listeners.click();
+    assert(went === '/chat', '点击应跳到对话页');
+    assert(
+      /联想记忆.*变化/.test(chatModule.takePendingQuestion()),
+      '带过去的问题应点名第一张小图的维度（联想记忆）',
+    );
+  });
 
   test('雷达：8 轴，未测留空', () => {
     const dims = [
@@ -215,8 +319,33 @@ async function main() {
     assert(out.days === 19, `间隔应为 19 天，实际 ${out.days}`);
   });
 
+  test('走势折线默认可见：隐藏态只能出现在 no-preference 动效里', () => {
+    // 回归：系统开了「减少动态效果」时全局会关掉动画，
+    // 若 .trend-line / .trend-dot 默认就是隐藏态，用户看到的是只有坐标轴的空图。
+    const css = fs.readFileSync(
+      path.join(__dirname, '../code/frontend/src/styles/app.css'),
+      'utf8',
+    );
+    for (const [selector, hidden] of [
+      ['.trend-line', 'stroke-dashoffset'],
+      ['.trend-dot', 'opacity: 0'],
+    ]) {
+      const at = css.indexOf(selector + ' {');
+      assert(at > 0, selector + ' 规则应存在');
+      assert(css.slice(at, css.indexOf('}', at)).includes(hidden), selector + ' 应含隐藏态');
+      const media = css.lastIndexOf('@media', at);
+      const header = css.slice(media, css.indexOf('{', media));
+      assert(
+        media >= 0 && header.includes('no-preference') && css.indexOf('\n}\n', media) > at,
+        selector + ' 的隐藏态必须包在 prefers-reduced-motion: no-preference 里',
+      );
+    }
+  });
+
   test('7 天提示', () => {
     assert(trend.repeatHint(3).includes('练习效应'), '3 天应提示');
+    assert(trend.repeatHint(0).includes('同一天'), '同一天应单独说明');
+    assert(!/建议间隔 7 天以上/.test(trend.repeatHint(3)), '短间隔不应劝用户等一周');
     assert(trend.repeatHint(6) !== null, '6 天应提示');
     assert(trend.repeatHint(7) === null, '7 天不应提示');
     assert(trend.repeatHint(30) === null, '30 天不应提示');

@@ -1,4 +1,4 @@
-# MindMeter L2 任务拆分（M0–M1 可执行版）
+﻿# MindMeter L2 任务拆分（M0–M1 可执行版）
 
 > **2026-11-07 范围变更**：M1 已改为**纯本地 + 用户自备 LLM API**（无远端登录/账号/服务端存储）。本页 50 条任务是 **L2 目标 backlog**；M1 只执行 [M1 范围与验收](m1_scope.md) 里的 **L-01～L-09**。原 P-02～P-05 / BE / AS 服务端 / RAG pgvector / Agent LangGraph 任务在 M1 不启动；需要时再按 L2 重写。
 
@@ -13,7 +13,7 @@
 | 评审人 | xlr268、song、1213lz |
 | 最后更新 | 2026-11-07 |
 | 上游 | [问题定义](../requirements/problem_definition.md)、[功能需求](../requirements/functional_spec.md)、[技术方案](../software/architecture.md) |
-| 关联 | [Agent 设计](../requirements/xlragentdesign.md)、[用户故事](../research/user_stories.md)、[测试说明](../../tests/README.md) |
+| 关联 | [Agent 设计](../requirements/xlragentdesign.md)、[用户故事](../requirements/user_stories.md)、[测试说明](../../tests/README.md) |
 
 > 目标：把 L2 需求拆成可执行任务，先完成 M1 纵向切片（账号 + 标准 4 项 + 服务端计分 + 对话 + 记忆 + RAG + 趋势），再进入 M2（8 项/三档/ASR）。M0–M1 约 **70.5 人日**（按人的 brief/review/验收/集成计，不把 AI 生成时间当工期）。
 >

@@ -1,14 +1,4 @@
-"""SQLAlchemy models for the hosted multi-user MindMeter web app.
-
-Two accounts tables (`users`, `auth_sessions`) own the login, and every
-business table carries `user_id` as part of its primary key so one row can
-never be read by another account. Natural ids stay exactly as the frontend
-generates them (`s_xxx`, `msg_xxx`); they are only unique *per user*.
-
-The knowledge base (`kb_chunks`) is shared read-only content, so it has no
-user column. The LLM key never appears in any table: it comes from the
-`MM_LLM_*` environment of the deployment (see `app.llm.site_llm_config`).
-"""
+"""托管多用户版 MindMeter 的 SQLAlchemy 模型。"""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -38,24 +28,24 @@ class Base(DeclarativeBase):
 
 
 def user_pk() -> Mapped[int]:
-    """Leading primary-key column: every business row belongs to exactly one account."""
+    """复合主键第一列：每条业务数据只属于一个账号。"""
     return mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
 
 
 def natural_pk() -> Mapped[str]:
-    """Client-generated id that is unique per account, not globally."""
+    """客户端生成的 id：按账号唯一，不是全局唯一。"""
     return mapped_column(Text, primary_key=True)
 
 
 def user_ref() -> Mapped[int | None]:
-    """Optional telemetry owner (CASCADE keeps account deletion complete)."""
+    """可选的遥测归属（CASCADE 保证删号时一并清理）。"""
     return mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
 
 
 # ---------------------------------------------------------------------------
-# Accounts
+# 账号
 # ---------------------------------------------------------------------------
 
 
@@ -76,7 +66,7 @@ class User(Base):
 
 
 class AuthSession(Base):
-    """Server-side sessions: the cookie holds a random token, the DB holds only its hash."""
+    """服务端会话：cookie 存随机 token，数据库只存其哈希。"""
 
     __tablename__ = "auth_sessions"
 
@@ -98,12 +88,12 @@ class AuthSession(Base):
 
 
 # ---------------------------------------------------------------------------
-# Per-user product data
+# 按用户隔离的业务数据
 # ---------------------------------------------------------------------------
 
 
 class AppState(Base):
-    """One in-progress assessment per account (was a single-row table on desktop)."""
+    """每个账号同一时间只有一次进行中的测评（桌面时代是单行表）。"""
 
     __tablename__ = "app_state"
 
@@ -226,8 +216,8 @@ class MemorySummary(Base):
 
     user_id: Mapped[int] = user_pk()
     id: Mapped[str] = natural_pk()
-    # Soft reference: assessments are keyed per user, so a single-column FK no
-    # longer exists. Deleting a session keeps the summary text.
+    # 软引用：测评按用户隔离，已不存在单列外键，
+    # 删除测评会话时摘要文本仍保留。
     assessment_id: Mapped[str | None] = mapped_column(Text)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     tier: Mapped[str] = mapped_column(Text, nullable=False)
@@ -282,8 +272,30 @@ class ChatMessage(Base):
     )
 
 
+class GamePlay(Base):
+    """每一局游戏的成绩流水（用于游戏质量的后验更新，不进报告与趋势）。
+
+    ``user_id`` 随账号级联删除；统计接口只输出聚合，不返回用户标识。
+    """
+
+    __tablename__ = "game_plays"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    game_id: Mapped[str] = mapped_column(Text, nullable=False)
+    dim: Mapped[str] = mapped_column(Text, nullable=False)
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (Index("game_plays_game_created", "game_id", "created_at"),)
+
+
 class AIRun(Base):
-    """Per-request AI telemetry. `user_id` is kept for auditing, never shown in the UI."""
+    """每次请求的 AI 遥测；``user_id`` 仅用于审计，不在 UI 展示。"""
 
     __tablename__ = "ai_runs"
 
@@ -322,7 +334,7 @@ class AuditLog(Base):
 
 
 class KBChunk(Base):
-    """Shared, read-only knowledge base (seeded by migration 0002)."""
+    """全站共享的只读知识库（由迁移 0002 播种）。"""
 
     __tablename__ = "kb_chunks"
 
@@ -350,3 +362,32 @@ class KBChunk(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+# ---------------------------------------------------------------------------
+# 练习游戏
+# ---------------------------------------------------------------------------
+
+
+class GameRecord(Base):
+    """按账号的练习游戏记录。
+
+    Games are practice, not assessment: they never enter a report or trend.
+    The row is still owned by an account (rather than browser localStorage)
+    because a shared browser must not show one account's records to another.
+    """
+
+    __tablename__ = "game_records"
+
+    user_id: Mapped[int] = user_pk()
+    game_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    best: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default=sa_text("0")
+    )
+    plays: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=sa_text("0")
+    )
+    last_score: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default=sa_text("0")
+    )
+    last_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -5,6 +5,7 @@
  */
 
 import { button, el, emptyState, hint, titled } from '../ui.js';
+import { api } from '../api.js';
 import { readSessions } from '../storage.js';
 import {
   PROFILE_KEYS,
@@ -54,6 +55,38 @@ function memoryEntry(dateText, bodyText, actions) {
     ]),
     actions.length ? el('div', { class: 'row' }, actions) : null,
   ]);
+}
+
+const TIP_MIND =
+  '由你最近一次测评（和与上一次的变化）按规则得出，AI 回答时以它为主线；只描述这次任务里呈现的倾向，不是能力定级，也不与人群比较。';
+
+/** agent 对你心智状态的理解：先放空壳，数据回来后再填，不阻塞页面。 */
+function mindCard(ctx) {
+  const body = el('div', {}, [el('p', { class: 'muted', text: '正在读取…' })]);
+  const card = el('div', { class: 'card' }, [titled('h2', 'AI 眼中的你', TIP_MIND), body]);
+  api
+    .get('/memory/mind-profile')
+    .then((data) => {
+      body.replaceChildren();
+      if (!data || !data.lines || data.lines.length === 0) {
+        body.appendChild(
+          emptyState({
+            title: '还不了解你的心智状态',
+            text: '完成一次测评后，这里会写出 AI 对你这次心智形态的理解。',
+            actionLabel: '去测评',
+            onAction: () => ctx.go('/tier'),
+            art: false,
+          }),
+        );
+        return;
+      }
+      body.appendChild(el('h3', { text: data.headline }));
+      data.lines.forEach((line) => body.appendChild(el('p', { text: line })));
+    })
+    .catch(() => {
+      body.replaceChildren(el('p', { class: 'muted', text: '暂时读不到，稍后刷新再试。' }));
+    });
+  return card;
 }
 
 function profileCard(view, ctx, rerender) {
@@ -204,6 +237,7 @@ export function renderMemory(root, ctx) {
 
   const page = el('section', { class: 'page', 'aria-labelledby': 'memory-title' }, [
     el('h1', { id: 'memory-title', class: 'page-title', text: '我的记忆' }),
+    mindCard(ctx),
     profileCard(view, ctx, rerender),
     summaryCard(view, ctx, rerender),
     adviceCard(view, ctx, rerender),

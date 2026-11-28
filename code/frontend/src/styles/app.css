@@ -10,7 +10,7 @@
   --line: #d8dee4;
   --text: #1f2328;
   --muted: #6b7280;
-  --dim: #9aa1aa;
+  --dim: #6f7782;
   --accent: #15803d;
   --accent-2: #22c55e;
   --accent-deep: #166534;
@@ -387,7 +387,7 @@ body.focus #app {
   line-height: 1.7;
 }
 .disclaimer {
-  color: var(--muted);
+  color: #5f6673;
   font-size: var(--fs-xs);
   line-height: 1.75;
   margin-top: var(--space-14);
@@ -984,35 +984,102 @@ body.focus #app {
   text-align: left;
 }
 
-/* ---- L-05 对话页 ---- */
-/* 人工测试反馈 3 第 1 条：消息流自己滚（整页不再被历史拉长），
-   输入框那一块 sticky 在视口底部，进页面第一眼就找得到对话入口。
-   上限按"360×640 一屏之内能同时看到消息流与输入框"倒推：sticky 抬起来时最多只
-   会盖住页尾那行免责句（往下滚一点就完整可见），不会再出现"要先划到底才找得到输入框"。 */
+/* ---- L-05 对话页：标准对话式布局 ---- */
+/* 标题栏（含返回/记忆/清空）钉在顶部，消息区是唯一滚动区域，输入框贴住底沿。
+   宽屏（≥900，侧栏与主区同排）页面锁定一屏高度：整页不滚，只有消息区滚；
+   窄屏（侧栏在顶部）页面不锁高，用高度上限保证输入框仍留在首屏。 */
+.page-chat {
+  display: flex;
+  flex-direction: column;
+  max-width: 860px;
+  margin-inline: auto;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .page-chat {
+    height: calc(100dvh - 116px);
+    min-height: 480px;
+  }
+}
+.chat-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10);
+  padding: 0 0 var(--space-10);
+  border-bottom: 1px solid var(--line);
+}
+.chat-head .page-title {
+  margin: var(--space-4) 0 0;
+}
+.chat-head-title {
+  min-width: 0;
+}
+.chat-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-6);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chat-head-actions::-webkit-scrollbar {
+  display: none;
+}
+.chat-head-actions .btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--fs-xs);
+  border-radius: var(--radius-pill);
+}
+.chat-notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  margin: var(--space-8) 0 0;
+  padding: var(--space-8) var(--space-12);
+  border: 1px dashed var(--warn-line);
+  border-radius: var(--radius-md);
+  background: var(--warn-soft);
+}
+.chat-notice p {
+  flex: 1;
+  margin: 0;
+}
+.chat-notice .btn {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: var(--space-4) var(--space-10);
+  font-size: var(--fs-xs);
+}
 .chat-scroll {
-  max-height: min(44vh, 520px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  padding: var(--space-12) 0 var(--space-4);
 }
-.chat-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-10);
-  margin: var(--space-8) 0 var(--space-10);
-}
-.chat-toolbar .btn {
-  width: auto;
-  flex: 0 0 auto;
-  min-width: 132px;
-  padding: var(--space-8) var(--space-14);
+@media (max-width: 899px) {
+  .chat-scroll {
+    flex: 0 1 auto;
+    max-height: min(44vh, 480px);
+  }
 }
 .chat-composer {
+  flex: none;
   position: sticky;
   bottom: 0;
   z-index: 6;
-  margin: var(--space-12) 0 0;
+  margin: var(--space-8) 0 0;
   padding: var(--space-10) var(--space-10) var(--space-6);
   background: var(--card);
   border: 1px solid var(--line);
@@ -1022,8 +1089,7 @@ body.focus #app {
 .chat-composer .row {
   margin: 0;
   align-items: flex-end;
-  /* 360px 下不换行：换行会把 composer 撑高 ~50px，页尾免责句就被 sticky 抬起来的
-     输入条盖住了。输入框自己 min-width:0 收缩即可。 */
+  /* 360px 下不换行：换行会把 composer 撑高，输入框容易被挤出首屏。 */
   flex-wrap: nowrap;
 }
 .chat-composer p:empty {
@@ -1032,25 +1098,62 @@ body.focus #app {
 .chat-composer p {
   margin: var(--space-6) 0 0;
 }
+.chat-composer-note {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
 .chat-list {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-10);
 }
+.chat-list > .empty-state {
+  margin: auto;
+}
+.chat-list .card {
+  margin: 0;
+}
+.chat-list .chat-pending {
+  margin: 0;
+}
 .chat-user {
   align-self: flex-end;
-  max-width: 85%;
+  max-width: 82%;
   background: var(--accent-soft);
   border-color: var(--accent-line);
+  border-radius: var(--radius-lg) var(--radius-lg) 6px var(--radius-lg);
 }
 .chat-ai {
   align-self: flex-start;
-  max-width: 92%;
-  border-left: 3px solid var(--ai-line);
+  max-width: 90%;
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 6px;
 }
 .chat-user p,
 .chat-ai p {
   margin: var(--space-4) 0;
+}
+@media (max-width: 599px) {
+  /* 手机上的标题栏按 app bar 处理：去掉装饰性 kicker，标题与操作各占一行。 */
+  .chat-head .kicker {
+    display: none;
+  }
+  .chat-head .page-title {
+    margin: 0;
+    font-size: var(--fs-lg);
+  }
+  .chat-head {
+    align-items: center;
+    padding-bottom: var(--space-8);
+  }
+  .chat-scroll {
+    max-height: min(42vh, 480px);
+  }
+  .chat-composer-note {
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
 }
 
 .citations {
@@ -1985,14 +2088,65 @@ button.spot-cell {
 }
 
 /* ---- 趋势折线图 ---- */
-.trend-chart {
-  margin: var(--space-6) 0 2px;
+/* 每个维度一张小图（按变化大小排序），窄屏自动变成单列。 */
+.trend-minis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-14);
+  margin: var(--space-10) 0;
 }
-.trend-chart svg {
+.trend-mini {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--space-14);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.trend-mini-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-10);
+}
+.trend-mini-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-weight: 600;
+}
+.trend-mini-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+}
+.trend-mini-chart svg {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
+}
+.trend-band {
+  fill: var(--accent-soft);
+  stroke: var(--accent-line);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.trend-value {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.trend-status {
+  margin: 0;
+}
+.trend-mini .btn {
+  align-self: flex-start;
+}
+.trend-status.above,
+.trend-status.below {
+  font-weight: 600;
 }
 .trend-grid {
   stroke: var(--line);
@@ -2004,27 +2158,19 @@ button.spot-cell {
   fill: var(--dim);
   font-size: 12px;
 }
-.trend-line {
-  stroke-dasharray: 1400;
-  stroke-dashoffset: 1400;
-  animation: trend-draw 1.2s ease-out forwards;
-}
-.trend-dot {
-  opacity: 0;
-  animation: fade-in 0.4s ease forwards 0.8s;
-}
-.trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-14);
-  margin: var(--space-10) 0 2px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.trend-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
+/* 默认就可见：折线与圆点是数据本身，不能依赖动画才显示出来。
+   只有用户接受动效时才「先藏起来再画出来」；系统开了减少动态效果时
+   动画被全局关掉，隐藏态就永远不会被撤销（用户看到的是空图）。 */
+@media (prefers-reduced-motion: no-preference) {
+  .trend-line {
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: trend-draw 1.2s ease-out forwards;
+  }
+  .trend-dot {
+    opacity: 0;
+    animation: fade-in 0.4s ease forwards 0.8s;
+  }
 }
 .legend-digit {
   font-weight: 700;
@@ -2436,12 +2582,6 @@ button.spot-cell {
 .task-page .options .btn {
   color: #101418;
   font-weight: 600;
-}
-.trend-legend-item i {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-xs);
-  display: inline-block;
 }
 @keyframes trend-draw {
   to {
@@ -2933,10 +3073,281 @@ body.rail-min .rail .card {
 }
 
 /* ---------- 登录 / 注册（Web 部署） ---------- */
+/* 左侧「心智镜」视觉：同心环 + 八个维度节点；纯 CSS，无图片依赖。 */
 .auth-page {
-  max-width: 480px;
+  position: relative;
+  isolation: isolate;
+  max-width: 980px;
   margin: 0 auto;
-  padding-top: var(--space-8);
+  padding: 32px 24px 24px;
+  min-height: calc(100vh - 140px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 3vw, 40px);
+}
+.auth-page::before {
+  content: none;
+}
+.auth-panel {
+  width: 100%;
+  max-width: 440px;
+  justify-self: center;
+}
+.auth-visual {
+  justify-self: end;
+  width: 100%;
+  max-width: 460px;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-8);
+  padding: 32px 24px 24px;
+  border-radius: 24px;
+  border: 1px solid var(--accent-line);
+  background: linear-gradient(160deg, #ffffff 0%, #f3fbf5 55%, #eaf7ee 100%);
+  box-shadow: var(--shadow-3);
+  text-align: center;
+}
+.auth-orbit {
+  /* 半径留出标签宽度，保证八个节点都在圆内、不压到右侧登录卡 */
+  --orbit: clamp(240px, 22vw, 300px);
+  --orbit-r: calc(var(--orbit) / 2 - 34px);
+  position: relative;
+  width: var(--orbit);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+.auth-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--accent-line);
+}
+.auth-ring-1 {
+  inset: 0;
+  animation: auth-breathe 7s ease-in-out infinite;
+}
+.auth-ring-2 {
+  inset: 15%;
+  border-style: dashed;
+  opacity: 0.8;
+  animation: auth-spin 48s linear infinite;
+}
+.auth-ring-3 {
+  inset: 31%;
+  animation: auth-breathe 9s ease-in-out infinite reverse;
+}
+.auth-lens {
+  position: relative;
+  width: 46%;
+  aspect-ratio: 4 / 5;
+  display: grid;
+  place-items: center;
+  animation: lens-float 6.5s ease-in-out infinite;
+}
+@keyframes lens-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.auth-lens-glow {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.3), transparent 66%);
+  animation: auth-glow 5.5s ease-in-out infinite;
+}
+.auth-lens-mark {
+  display: none;
+}
+.auth-lens-art {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.lens-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgba(21, 128, 61, 0.16));
+}
+.lens-sweep {
+  animation: lens-sweep 4.8s ease-in-out infinite;
+}
+.lens-spark {
+  animation: lens-twinkle 3.6s ease-in-out infinite;
+}
+.lens-spark-2 {
+  animation-delay: 1.3s;
+}
+@keyframes lens-sweep {
+  0%,
+  12% {
+    transform: translateX(-70px);
+  }
+  62%,
+  100% {
+    transform: translateX(170px);
+  }
+}
+@keyframes lens-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.auth-rotor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: auth-rotate 64s linear infinite;
+}
+.auth-node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-deep);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(-1 * var(--orbit-r)))
+    rotate(calc(-1 * var(--a)));
+  animation: auth-node-in 0.7s ease both;
+}
+.auth-node-text {
+  display: inline-block;
+  /* 与转子同周期反向旋转，文字始终正立 */
+  animation: auth-counter-rotate 64s linear infinite;
+}
+.auth-node:nth-child(1) {
+  --a: 0deg;
+  animation-delay: 0.04s;
+}
+.auth-node:nth-child(2) {
+  --a: 45deg;
+  animation-delay: 0.08s;
+}
+.auth-node:nth-child(3) {
+  --a: 90deg;
+  animation-delay: 0.12s;
+}
+.auth-node:nth-child(4) {
+  --a: 135deg;
+  animation-delay: 0.16s;
+}
+.auth-node:nth-child(5) {
+  --a: 180deg;
+  animation-delay: 0.2s;
+}
+.auth-node:nth-child(6) {
+  --a: 225deg;
+  animation-delay: 0.24s;
+}
+.auth-node:nth-child(7) {
+  --a: 270deg;
+  animation-delay: 0.28s;
+}
+.auth-node:nth-child(8) {
+  --a: 315deg;
+  animation-delay: 0.32s;
+}
+@keyframes auth-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes auth-counter-rotate {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes auth-node-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.auth-visual-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+@keyframes auth-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+}
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes auth-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+@media (max-width: 900px) {
+  .auth-page {
+    display: block;
+    max-width: 480px;
+    padding-top: var(--space-8);
+  }
+  /* 窄屏保留一个紧凑的「镜」视觉，节点与说明文字收起，避免挤占首屏。 */
+  .auth-visual {
+    max-width: 100%;
+    margin: 0 auto var(--space-8);
+    padding: 8px;
+    border: none;
+    background: none;
+    box-shadow: none;
+  }
+  .auth-orbit {
+    --orbit: 168px;
+    --orbit-r: 60px;
+  }
+  .auth-node,
+  .auth-visual-caption {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ring,
+  .auth-lens-glow,
+  .auth-node,
+  .auth-node-text,
+  .auth-rotor,
+  .auth-lens,
+  .lens-sweep,
+  .lens-spark {
+    animation: none;
+  }
 }
 .auth-form {
   max-width: 100%;
@@ -3166,5 +3577,67 @@ body.focus .auth-page {
   }
   body.focus .auth-page {
     padding-top: var(--space-12);
+  }
+}
+
+/* ---- 对话空态：可点的示例问题 ---- */
+.chat-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+.sample-chip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--accent-deep);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.sample-chip:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.sample-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- 密码框：显示 / 隐藏 ---- */
+.input-wrap {
+  position: relative;
+  display: block;
+}
+.input-wrap .input {
+  padding-right: 64px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.pw-toggle:hover {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+/* 顶栏全屏开关：窄屏隐藏，避免顶栏挤爆 */
+@media (max-width: 600px) {
+  #toggle-fullscreen {
+    display: none;
   }
 }

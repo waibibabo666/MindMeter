@@ -41,7 +41,7 @@ export function buildNetCubeQuestion(random = Math.random) {
     net: { top, left, front, right, back, bottom },
     options,
     answer: options.indexOf(correct),
-    q: '下面哪个立方体，是由左边的展开图折成的？',
+    q: '下面哪个立方体，是由左边的展开图折成的？（颜色朝外）',
   };
 }
 
@@ -140,15 +140,14 @@ export function renderNetQuestion(item, onPick) {
   const options = el('div', { class: 'cube-options' });
 
   item.options.forEach((colors, i) => {
-    const cube = cubeOption(colors, (turns) => {
+    const cube = cubeOption(colors, () => {
       totalTurns += 1;
-      if (turns === 1) totalTurns += 0;
     });
     const card = el('button', { class: 'cube-option', type: 'button' }, [cube.node]);
-    card.addEventListener('click', (event) => {
-      // 拖动结束后浏览器会补一个 click，这里吞掉，避免误提交
+    card.addEventListener('click', () => {
+      // 拖动结束后浏览器会补一个 click：吞掉，避免「转一下就算作答」。
+      // 键盘（Enter/Space）产生的 click 没有拖动，照常选中。
       if (cube.consumeMoved()) return;
-      if (event.detail === 0) return;
       onPick(i);
     });
     options.appendChild(card);

@@ -17,7 +17,7 @@
     "test:games": "node scripts/test_games.js",
     "test:chat": "node scripts/test_chat.js",
     "test:log": "node scripts/test_log.js",
-    "test:backend": "python -m pytest -q tests/backend -rs",
+    "test:backend": "python -m pytest -q tests/unit tests/integration -rs",
     "test:e2e": "playwright test",
     "lint": "eslint scripts code/frontend/src",
     "lint:frontend": "eslint code/frontend/src",

@@ -10,7 +10,7 @@ code/backend/
 │  ├─ auth.py              # PBKDF2 口令、服务端会话表、限流、依赖注入
 │  ├─ audit.py             # 只记动作与结果，不记内容
 │  ├─ models.py            # 多租户 SQLAlchemy 模型（user_id 复合主键）
-│  ├─ scoring/             # scoring-v3.2 Python（唯一权威，与前端一致）
+│  ├─ scoring/             # scoring-v3.3 Python（唯一权威，与前端一致）
 │  ├─ rag/                 # BM25（默认）+ pgvector 向量检索 + embedding ingest
 │  ├─ agent/               # LangGraph 小图
 │  ├─ llm.py               # OpenAI 兼容客户端 + site_llm_config()

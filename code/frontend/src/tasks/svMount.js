@@ -16,10 +16,10 @@ const SIZE = 3;
 const CELLS = SIZE * SIZE;
 const rand = mulberry32(Date.now() & 0x7fffffff);
 
-function shuffle(list) {
+function shuffle(list, random = rand) {
   const out = list.slice();
   for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rand() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     const tmp = out[i];
     out[i] = out[j];
     out[j] = tmp;
@@ -63,16 +63,27 @@ function randomPattern() {
 const same = (a, b) => a.every((v, i) => v === b[i]);
 
 export function buildRotate() {
-  const base = randomPattern();
+  // 图案本身 90° 对称时，「旋转后」和原图一样，题目就退化了（实测 1/200）。
+  let base = randomPattern();
+  for (let guard = 0; guard < 20 && same(base, rotate90(base)); guard += 1) {
+    base = randomPattern();
+  }
   const correct = rotate90(base);
   const pool = [rotate90(correct), rotate90(rotate90(correct)), mirrorGrid(base)];
   const options = [correct];
-  for (const candidate of pool) {
-    if (options.some((grid) => same(grid, candidate))) continue;
-    options.push(candidate);
-    if (options.length === 4) break;
+  // 去重必须覆盖"随机补位"：旧实现 while (options.length < 4) push(randomPattern())，
+  // 随机图案一旦和已有选项撞车，就会出现两张相同的图（等于两个正确答案）。
+  const add = (grid) => {
+    if (options.length === 4) return;
+    if (options.some((item) => same(item, grid))) return;
+    options.push(grid);
+  };
+  for (const candidate of pool) add(candidate);
+  let guard = 0;
+  while (options.length < 4 && guard < 200) {
+    guard += 1;
+    add(randomPattern());
   }
-  while (options.length < 4) options.push(randomPattern());
   const list = shuffle(options);
   return {
     kind: 'rotate',
@@ -84,27 +95,27 @@ export function buildRotate() {
 
 const FOLD_BANK = [
   {
-    q: '正方形纸对折一次，在折边处剪一个洞，展开后有几个洞？',
+    q: '正方形纸对折一次，在折边内侧剪一个洞（不跨过折痕），展开后有几个洞？',
     options: ['1 个', '2 个', '3 个', '4 个'],
     answer: 1,
   },
   {
-    q: '正方形纸沿中线对折两次（两个方向），在折角处剪一刀，展开后有几个洞？',
+    q: '正方形纸沿中线对折两次（两个方向），剪去折角（即纸的中心），展开后有几个洞？',
     options: ['1 个', '2 个', '4 个', '8 个'],
-    answer: 2,
+    answer: 0,
   },
   {
-    q: '正方形纸对折两次后打一个洞，展开后洞的个数是？',
+    q: '正方形纸对折两次后，在非折痕处打一个洞，展开后洞的个数是？',
     options: ['2 个', '3 个', '4 个', '6 个'],
     answer: 2,
   },
   {
-    q: '纸对折一次后沿折线内侧剪去一个小三角，展开后形状是？',
-    options: ['一个更大的三角', '两个对称的三角', '一个菱形', '一个圆'],
+    q: '正方形纸对折一次，在折线内侧（不接触折痕）剪去一个小三角，展开后有几个洞？',
+    options: ['1 个', '2 个', '3 个', '4 个'],
     answer: 1,
   },
   {
-    q: '不折叠，直接剪去一个角，展开后有几个缺口？',
+    q: '纸不折叠，直接剪去一个角，纸上有几个缺口？',
     options: ['0 个', '1 个', '2 个', '4 个'],
     answer: 1,
   },
@@ -115,9 +126,24 @@ const FOLD_BANK = [
   },
 ];
 
-export function buildFold() {
-  const item = FOLD_BANK[Math.floor(rand() * FOLD_BANK.length)];
-  return { kind: 'fold', q: item.q, options: item.options, answer: item.answer };
+export function buildFold(random = rand, used = null) {
+  // 选项顺序固定 = 正确答案永远在同一个位置，必须每题打乱。
+  const all = FOLD_BANK.map((item, index) => ({ item, index }));
+  const pool = used ? all.filter((entry) => !used.has(entry.index)) : all;
+  const candidates = pool.length ? pool : all;
+  const chosen = candidates[Math.floor(random() * candidates.length)];
+  if (used) used.add(chosen.index);
+  const mixed = shuffle(
+    chosen.item.options.map((text, i) => ({ text, right: i === chosen.item.answer })),
+    random,
+  );
+  return {
+    kind: 'fold',
+    id: `fold-${chosen.index + 1}`,
+    q: chosen.item.q,
+    options: mixed.map((entry) => entry.text),
+    answer: mixed.findIndex((entry) => entry.right),
+  };
 }
 
 function gridNode(grid, size) {
@@ -143,10 +169,11 @@ function weightFor(kind, turns) {
 export function mountSv(root, ctx) {
   const count = (ctx.spec && ctx.spec.items) || 8;
   const plan = [];
+  const usedFold = new Set();
   for (let i = 0; i < count; i += 1) {
     const mod = i % 3;
     if (mod === 0) plan.push(buildRotate());
-    else if (mod === 1) plan.push(buildFold());
+    else if (mod === 1) plan.push(buildFold(rand, usedFold));
     else plan.push(buildNetCubeQuestion());
   }
 

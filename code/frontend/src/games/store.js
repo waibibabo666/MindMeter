@@ -1,62 +1,47 @@
 /**
- * 游戏记录的本地存储。
+ * 游戏记录（按账号存后端）。
  *
- * 与 storage.js（走后端 API）分开：游戏是练习，不参与测评数据，
- * 只放本设备 localStorage，账号清库/导出都不影响它。
+ * 游戏是练习，不参与测评：不进报告、不进趋势、不进导出。
+ * 之所以从 localStorage 挪到后端：同一台电脑换账号登录时，
+ * 浏览器本地记录会让两个人互相看到对方的最佳成绩。
  */
+import { api } from '../api.js';
 
-const KEY = 'mindmeter.games.v2';
-const VERSION = 2;
+const EMPTY = { records: {} };
 
-function readRaw() {
+function normalize(data) {
+  if (!data || typeof data !== 'object' || !data.records || typeof data.records !== 'object') {
+    return EMPTY;
+  }
+  return { records: data.records };
+}
+
+/** 读本账号的全部游戏记录；网络失败时返回空记录，页面照常渲染。 */
+export async function readGames() {
   try {
-    const raw = globalThis.localStorage?.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== VERSION) return null;
-    return parsed;
+    return normalize(await api.get('/games'));
   } catch {
-    return null;
+    return EMPTY;
   }
 }
 
-function writeRaw(value) {
+/** 记一局：最高分只升不降，局数照常累加。返回更新后的记录。 */
+export async function recordGame(gameId, score, dim) {
+  const value = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
   try {
-    globalThis.localStorage?.setItem(KEY, JSON.stringify(value));
+    const data = await api.post(`/games/${encodeURIComponent(gameId)}`, { score: value, dim });
+    return normalize(data);
+  } catch {
+    return EMPTY;
+  }
+}
+
+/** 清空本账号的游戏记录（测评数据不受影响）。 */
+export async function clearGames() {
+  try {
+    await api.del('/games');
     return true;
   } catch {
     return false;
-  }
-}
-
-export function readGames() {
-  const record = readRaw();
-  return {
-    records: record && record.records && typeof record.records === 'object' ? record.records : {},
-  };
-}
-
-/** 只升不降：低分不覆盖最高分，局数与最近一局照常更新。 */
-export function recordGame(gameId, score) {
-  const { records } = readGames();
-  const prev = records[gameId] || { best: 0, plays: 0, lastScore: 0, lastAt: '' };
-  const value = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-  const next = {
-    best: Math.max(Number(prev.best) || 0, value),
-    plays: (Number(prev.plays) || 0) + 1,
-    lastScore: value,
-    lastAt: new Date().toISOString(),
-  };
-  return writeRaw({
-    version: VERSION,
-    records: Object.assign({}, records, { [gameId]: next }),
-  });
-}
-
-export function clearGames() {
-  try {
-    globalThis.localStorage?.removeItem(KEY);
-  } catch {
-    /* 清不掉就算了 */
   }
 }

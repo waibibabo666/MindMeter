@@ -44,6 +44,17 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 - 计分：服务端 Python `scoring-v3.2` 唯一权威（与前端引擎逐维一致）；
 - 部署：`Dockerfile` + `railway.json`（Railway）+ [Railway 部署指南](docs/software/deploy-railway.md)；本地一键起服见 [本地开发与测试](docs/software/local-development.md)。
 
+**技术栈与版本**（对应项目汇报 3.2 的要求）
+
+| 条目 | 内容 | 版本 |
+| --- | --- | --- |
+| 程序设计语言 | Python / JavaScript（原生 ES Module） | 3.13（需 3.12+）/ ES2022 |
+| Web 框架 | FastAPI + Uvicorn | 0.162.7 / 0.54.0 |
+| Agent 编排 | LangGraph + langchain-core | 1.2.21 / 1.8.0 |
+| 数据层 | PostgreSQL + pgvector；SQLAlchemy / Alembic | 16 / 0.8.x；2.1.8 / 1.20.1 |
+| 测试与质量 | pytest / Playwright / ESLint / Prettier | 9.2.0 / 1.65 / 10 / 3.9 |
+| 部署 | Docker 单容器 + nginx 反向代理（自建）或 Railway | — |
+
 **不再采用（相关代码已于 2026-11-20 删除）**
 
 - 浏览器 localStorage 存业务数据；
@@ -81,8 +92,9 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 | [迁移报告](docs/software/migration-report.md) | 保留/重写/删除、测试结果、限制 |
 | [软件设计](docs/software/software.md) | 模块总览 |
 | [Agent P0 改造包设计](docs/software/agent-trend-workflow.md) | 统一出口 + 趋势联动详细设计（评审稿） |
+| [汇报幻灯片](docs/slides/README.md) | Slidev 答辩稿：启动方式、审核与评分 loop、截图清单 |
 | [诊断日志](docs/software/logging.md) | 前端内存日志、脱敏、导出 |
-| [用户故事](docs/research/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
+| [用户故事](docs/requirements/user_stories.md) | 16 条 L2 故事与 Gherkin 验收 |
 | [原型说明](docs/software/prototype/prototype.md) | L1 原型骨架（UI 参考，非最终架构） |
 | [沟通计划](docs/mgmt/communication_mgmt_plan.md) | 分工、节奏、升级 |
 | [风险计划](docs/mgmt/risk_mgmt_plan.md) | 范围、Key、RAG、隐私、素材 |
@@ -121,11 +133,11 @@ MindMeter/
 │  ├─ mgmt/                # 沟通与风险
 │  └─ retrospection/
 ├─ code/
-│  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG、scoring
+│  ├─ backend/            # FastAPI：auth/账号、API、Agent、RAG
 │  ├─ frontend/           # 原生前端（登录/注册 + 测评 + 报告 + 对话）
-│  └─ core_engine/        # L1 JS 计分历史
+│  └─ core_engine/        # 无框架核心引擎（计分 scoring-v3.2）
 ├─ scripts/                # 门禁、本地一键起服、冒烟检查、纯逻辑测试
-├─ tests/                  # backend（pytest）/ e2e（Playwright）/ ai_eval（评测集）
+├─ tests/                  # unit / integration / e2e / ai_eval / XXXagent_demo_user_test
 ├─ work_for_submission/    # 课程提交历史快照
 └─ README.md
 ```
@@ -164,7 +176,7 @@ python scripts/export_issues.py --check
 
 # 后端测试（需要 pgvector Postgres；设 MM_TEST_DATABASE_URL 后）
 $env:MM_TEST_DATABASE_URL = "postgresql+psycopg://mm_test@127.0.0.1:55450/mindmeter_test"
-pytest -q tests/backend -rs
+pytest -q tests/unit tests/integration -rs
 
 # 本地跑 Web 版（一条命令：自建数据库 + 迁移 + 服务在 :8100）
 python scripts/e2e_server.py

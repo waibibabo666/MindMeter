@@ -1,10 +1,4 @@
-"""Per-account data portability: export, import, erasure, diagnostics.
-
-The desktop build shelled out to ``pg_dump`` before an import. A hosted build
-has an ephemeral filesystem and a managed database, so the backup is the
-account's own export JSON plus the hosted database backup — documented in
-docs/software/deploy-railway.md.
-"""
+"""按账号的数据可携带性：导出、导入、删除与诊断。"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -40,12 +34,13 @@ USER_TABLES = (
     "chat_messages",
     "ai_runs",
     "assessments",  # cascades assessment_tasks / assessment_scores
+    "game_records",  # practice games, never part of a report
 )
 
 
 @router.get("/export")
 def export_data(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    """F-06: JSON download of this account's data. No passwords, no key."""
+    """F-06：以 JSON 下载本账号数据。不包含密码与 Key。"""
     return export_payload(db, int(user.id))
 
 
@@ -184,7 +179,7 @@ def import_data(
 
 @router.delete("/data")
 def clear_data(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    """Erase this account's product data. Other accounts are never touched."""
+    """删除本账号的业务数据；其他账号永远不受影响。"""
     uid = int(user.id)
     for table in USER_TABLES:
         db.execute(text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": uid})
@@ -194,7 +189,7 @@ def clear_data(user: User = Depends(auth.require_user), db: Session = Depends(ge
 
 @router.get("/logs")
 def logs(limit: int = 200, user: User = Depends(auth.require_user)):
-    """Diagnostics are off by default on a shared host (MM_EXPOSE_LOGS=1 to enable)."""
+    """共享主机上诊断默认关闭（``MM_EXPOSE_LOGS=1`` 才开启）。"""
     if not settings.expose_logs:
         raise HTTPException(403, "logs_disabled")
     path = Path(settings.data_dir) / "logs" / "backend.log"

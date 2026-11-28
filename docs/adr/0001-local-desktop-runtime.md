@@ -1,4 +1,4 @@
-# ADR-0001：本地桌面运行时（pywebview + FastAPI + 便携 PostgreSQL + pgvector）
+﻿# ADR-0001：本地桌面运行时（pywebview + FastAPI + 便携 PostgreSQL + pgvector）
 
 - 状态：部分被取代（Superseded in part by [ADR-0003](0003-web-accounts-and-hosted-deployment.md)）
 - 日期：2026-11-14
@@ -36,7 +36,7 @@ UI 已经冻结。本次是架构迁移，不是 UI 重做。
 - 安装包变大（PostgreSQL + Python + 可选 embedding 模型）；需要首次 initdb。
 - 需要处理进程生命周期、随机端口、单实例、崩溃恢复。
 - 旧 localStorage 数据通过“导出 JSON → 导入”迁移；Key 不迁移，需重新填写。
-- `tests/backend/test_openapi_contract.py` 的 auth/JWT 路径被本地无账号 API 取代。
+- `tests/integration/test_openapi_contract.py` 的 auth/JWT 路径被本地无账号 API 取代。
 - `npm run check` 只跑前端/纯逻辑测试；后端测试用 `pytest`，E2E 用真实本地服务。
 
 ## 不采用

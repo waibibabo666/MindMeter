@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 归纳推理：瑞文式 3×3 图形矩阵。
  *
  * 六种规则轮换出题：数量递增、数量递减、形状循环、位置轮换、叠加、交替。
@@ -7,6 +7,10 @@
 import { el, clear } from '../ui.js';
 
 const SHAPES = ['●', '▲', '■', '◆'];
+
+// 单格最多 5 个符号：diagonal / combine 的右下角正好是 5。
+// 原来钳到 4 会把「应为 5」的答案画成 4，与左邻上邻撞车。
+const MAX_COUNT = 5;
 
 function randInt(min, max, random = Math.random) {
   return min + Math.floor(random() * (max - min + 1));
@@ -25,15 +29,51 @@ const RULES = {
   mirror: (r, c) => ({ shape: SHAPES[c % 3], count: 3 - r }),
 };
 
+/** 生成四个互不相同的选项：正确答案 + 三个干扰项。 */
+function buildOptions(answer, shapes, random) {
+  // 干扰项要**四个互不相同**：先给"只错数量/只错形状/两样都错"，
+  // 数量为 1 时 ±1 会被夹回 1（旧实现因此和正确答案撞车，出现两个正确项），
+  // 所以候选按"难度优先"排好后去重，不够再从"题干出现过的形状 × 数量"里补。
+  // 形状限定在题干出现过的集合，避免干扰项用了根本没出现过的图形（一眼排除）。
+  const clampCount = (value) => Math.min(MAX_COUNT, Math.max(1, value));
+  const cellKey = (value) => `${value.shape}:${value.count}`;
+  const pool = shapes.length ? shapes : [answer.shape];
+  const otherShape = pool.find((shape) => shape !== answer.shape) || answer.shape;
+  const ordered = [
+    { shape: answer.shape, count: clampCount(answer.count + 1) },
+    { shape: answer.shape, count: clampCount(answer.count - 1) },
+    { shape: otherShape, count: answer.count },
+    { shape: otherShape, count: clampCount(answer.count + 1) },
+    { shape: otherShape, count: clampCount(answer.count - 1) },
+  ];
+  for (const shape of pool) {
+    for (let count = 1; count <= MAX_COUNT; count += 1) ordered.push({ shape, count });
+  }
+  const options = [answer];
+  for (const candidate of ordered) {
+    if (options.length === 4) break;
+    const value = { shape: candidate.shape, count: clampCount(candidate.count) };
+    if (cellKey(value) === cellKey(answer)) continue;
+    if (options.some((item) => cellKey(item) === cellKey(value))) continue;
+    options.push(value);
+  }
+  for (let i = options.length - 1; i > 0; i -= 1) {
+    const j = randInt(0, i, random);
+    const tmp = options[i];
+    options[i] = options[j];
+    options[j] = tmp;
+  }
+  return options;
+}
+
 /** 生成一题的九宫格与答案；行规则与列规则交叉，避免「看一行就够」。 */
 export function buildMatrix(ruleName, random = Math.random) {
   const rule = RULES[ruleName] || RULES.rowShape;
   const shapeA = SHAPES[randInt(0, 3, random)];
-  const shapeB = SHAPES[(SHAPES.indexOf(shapeA) + 1) % 4];
 
   const cell = (r, c) => {
     const value = rule(r, c, shapeA);
-    return { shape: value.shape || shapeA, count: Math.min(4, Math.max(1, value.count)) };
+    return { shape: value.shape || shapeA, count: Math.min(MAX_COUNT, Math.max(1, value.count)) };
   };
 
   const cells = [];
@@ -41,22 +81,8 @@ export function buildMatrix(ruleName, random = Math.random) {
     for (let c = 0; c < 3; c += 1) cells.push(r === 2 && c === 2 ? null : cell(r, c));
   }
   const answer = cell(2, 2);
-  const otherShape = answer.shape === shapeA ? shapeB : shapeA;
-
-  // 三个干扰项各错一半：只错数量 / 只错形状 / 数量形状都错且更像
-  const distractors = [
-    { shape: answer.shape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-    { shape: otherShape, count: answer.count },
-    { shape: otherShape, count: Math.max(1, Math.min(4, answer.count - 1)) },
-  ];
-
-  const options = [answer, ...distractors];
-  for (let i = options.length - 1; i > 0; i -= 1) {
-    const j = randInt(0, i, random);
-    const tmp = options[i];
-    options[i] = options[j];
-    options[j] = tmp;
-  }
+  const gridShapes = [...new Set(cells.filter(Boolean).map((cell) => cell.shape))];
+  const options = buildOptions(answer, gridShapes, random);
   return { cells, options, answer: options.indexOf(answer), rule: ruleName };
 }
 
@@ -76,7 +102,7 @@ function cellNode(cell, size = 12) {
     node.appendChild(el('span', { class: 'mx-q', text: '?' }));
     return node;
   }
-  const count = Math.min(cell.count, 4);
+  const count = Math.min(cell.count, MAX_COUNT);
   for (let i = 0; i < count; i += 1) {
     node.appendChild(
       el('span', { class: 'mx-sym', style: `font-size:${size}px`, text: cell.shape }),

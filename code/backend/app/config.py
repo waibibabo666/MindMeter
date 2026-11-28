@@ -1,12 +1,4 @@
-"""Runtime configuration for the hosted MindMeter backend.
-
-Everything comes from the environment (prefix ``MM_``), which is what a hosted
-web service gives you: ``MM_DATABASE_URL`` from the provisioned Postgres and
-``MM_LLM_*`` for the site-provided OpenAI-compatible model. No key is ever read
-from a local credential store, and no key is stored in the database.
-
-Importing this module never starts a database and never runs migrations.
-"""
+"""托管版 MindMeter 后端的运行时配置（环境变量前缀 ``MM_``）。"""
 from __future__ import annotations
 
 import os
@@ -22,7 +14,7 @@ DEFAULT_LLM_FALLBACKS = "glm-4-air-250414,glm-4.5-flash"
 
 
 def _data_dir() -> Path:
-    """Writable scratch dir for logs; ephemeral on Railway, so keep it small."""
+    """日志用的可写临时目录；Railway 上是临时的，保持精简。"""
     raw = os.environ.get("MM_DATA_DIR", "").strip()
     if raw:
         return Path(raw)
@@ -37,12 +29,12 @@ class Settings(BaseSettings):
     app_name: str = "MindMeter"
     app_version: str = "0.3.6"
 
-    # --- storage -----------------------------------------------------------
+    # --- 存储 ---------------------------------------------------------------
     database_url: str = ""
     data_dir: Path = _data_dir()
     frontend_dir: Path = Path(__file__).resolve().parents[2] / "frontend"
 
-    # --- site-provided LLM (OpenAI-compatible chat completions) ------------
+    # --- 站点提供的 LLM（OpenAI 兼容 chat completions） --------------------
     llm_base_url: str = DEFAULT_LLM_BASE_URL
     llm_model: str = DEFAULT_LLM_MODEL
     llm_api_key: str = ""
@@ -58,7 +50,7 @@ class Settings(BaseSettings):
     # 少数兼容网关需要额外字段（如智谱关思考）。留空则按域名自动判断。
     llm_extra_params: str = ""
 
-    # --- accounts ----------------------------------------------------------
+    # --- 账号 ---------------------------------------------------------------
     allow_registration: bool = True
     session_ttl_days: int = 30
     cookie_name: str = "mm_session"
@@ -68,9 +60,12 @@ class Settings(BaseSettings):
     register_window_s: int = 3600
     register_max_attempts: int = 50  # generous: a campus/hotel NAT is one IP
 
-    # --- retrieval ---------------------------------------------------------
+    # --- 检索 ---------------------------------------------------------------
     rag_mode: str = "keyword"  # auto | vector | keyword
     expose_logs: bool = False  # shared host: never stream server logs to clients
+    # 可选能力（默认关闭，改动不影响既有行为）
+    llm_structured: bool = False  # 让模型输出 JSON，再由代码组装
+    memory_in_prompt: bool = True  # 是否把记忆（画像/摘要/建议）注入回答
 
     @property
     def is_configured(self) -> bool:

@@ -3,7 +3,7 @@
  * L-06 本地知识库检查（无依赖、无浏览器）。
  *
  * 覆盖：
- *   - 30 条齐全、id 唯一、分类配比符合 P-06 计划
+ *   - 42 条齐全、id 唯一、分类配比符合 P-06 计划
  *   - 字段契约：必填、枚举、id 格式、标题/正文长度、标签数量、来源四要素
  *   - 禁用词扫描（含按 id 白名单）
  *   - 未审内容不进索引
@@ -32,7 +32,7 @@ const eq = (actual, expected, label) => {
 };
 
 /** 计划中的分类配比（P-06 第五节）。 */
-const CATEGORY_PLAN = { dim: 12, task: 4, score: 5, factor: 3, limit: 4, plan: 2 };
+const CATEGORY_PLAN = { dim: 24, task: 4, score: 5, factor: 3, limit: 4, plan: 2 };
 
 /**
  * 全局禁用词：出现即判失败。
@@ -62,9 +62,9 @@ async function main() {
 
   // ---------- 结构与配比 ----------
 
-  test('30 条齐全且 id 唯一', () => {
-    eq(CHUNKS.length, 30, 'chunk 总数');
-    eq(byId.size, 30, '唯一 id 数');
+  test('42 条齐全且 id 唯一', () => {
+    eq(CHUNKS.length, 42, 'chunk 总数');
+    eq(byId.size, 42, '唯一 id 数');
   });
 
   test('分类配比符合 P-06 计划', () => {
@@ -75,8 +75,8 @@ async function main() {
     }
   });
 
-  test('维度覆盖：4 个维度各有 3 条 dim 条目', () => {
-    const dims = ['vc', 'ps', 'sv', 'am'];
+  test('维度覆盖：8 个维度各有 3 条 dim 条目', () => {
+    const dims = ['vc', 'vf', 'nc', 'ps', 'ir', 'sv', 'am', 'ni'];
     for (const d of dims) {
       const n = CHUNKS.filter((c) => c.category === 'dim' && c.dims.includes(d)).length;
       eq(n, 3, `${d} 的 dim 条数`);
@@ -115,7 +115,8 @@ async function main() {
       );
       assert(['low', 'medium', 'high'].includes(c.risk), `${c.id} risk`);
       assert(['draft', 'reviewed', 'rejected'].includes(c.review.status), `${c.id} review.status`);
-      for (const d of c.dims) assert(['vc', 'ps', 'sv', 'am'].includes(d), `${c.id} dims`);
+      for (const d of c.dims)
+        assert(['vc', 'vf', 'nc', 'ps', 'ir', 'sv', 'am', 'ni'].includes(d), `${c.id} dims`);
       assert(/^\d+\.\d+$/.test(c.version), `${c.id} version`);
     }
   });
@@ -191,8 +192,8 @@ async function main() {
     const { index, reviewedCount } = kb.createIndex(fixture);
     eq(reviewedCount, 1, 'draft 不应计入已审数');
     eq(index.docs.length, 1, '只有已审条目进索引');
-    // 2026-11-07：30 条来源核验完成（xlr268），全部 reviewed。
-    eq(INDEXABLE.length, 30, '当前 30 条应全部已审');
+    // 2026-11-21：补充 4 个维度后共 42 条，全部 reviewed。
+    eq(INDEXABLE.length, 42, '当前 42 条应全部已审');
   });
 
   test('审后条目可被检索到', () => {

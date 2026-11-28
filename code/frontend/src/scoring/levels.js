@@ -6,36 +6,38 @@
  */
 
 /** 每档每维的题量（限时维度是秒数）。 */
+// vf 是需要开口说的题：时间缩短到 20/30/45 秒，减少口干与疲劳；
+// 计分时会按实际秒数换算到 60 秒基准（见 formulas.js scoreVf）。
 export const LEVEL_SPEC = {
   quick: {
     vc: { items: 4 },
     ps: { seconds: 30 },
     sv: { items: 6 },
-    am: { pairs: 6, items: 8, studySeconds: 12 },
+    am: { pairs: 6, items: 6 },
     nc: { items: 6 },
     ir: { items: 6 },
     ni: { items: 6 },
-    vf: { seconds: 30 },
+    vf: { seconds: 20 },
   },
   standard: {
     vc: { items: 8 },
     ps: { seconds: 45 },
     sv: { items: 8 },
-    am: { pairs: 12, items: 16, studySeconds: 20 },
+    am: { pairs: 6, items: 6 },
     nc: { items: 10 },
     ir: { items: 8 },
     ni: { items: 8 },
-    vf: { seconds: 60 },
+    vf: { seconds: 30 },
   },
   deep: {
     vc: { items: 12 },
     ps: { seconds: 90 },
     sv: { items: 12 },
-    am: { pairs: 12, items: 16, studySeconds: 20 },
+    am: { pairs: 6, items: 6 },
     nc: { items: 10 },
     ir: { items: 8 },
     ni: { items: 8 },
-    vf: { seconds: 90 },
+    vf: { seconds: 45 },
   },
 };
 

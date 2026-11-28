@@ -1,4 +1,4 @@
-"""Shared result analysis: facts + reviewed knowledge + concrete suggestions."""
+"""共享结果分析：facts、已审知识块与具体建议。"""
 from __future__ import annotations
 
 import json
@@ -15,7 +15,7 @@ DIM_NAMES = {
     "ir": "归纳推理",
     "sv": "空间视觉化",
     "am": "联想记忆",
-    "ni": "自然探索",
+    "ni": "自然知识",
 }
 DIM_ORDER = ["vc", "vf", "nc", "ps", "ir", "sv", "am", "ni"]
 
@@ -34,11 +34,12 @@ ANALYSIS_PROMPT = (
     "3）末尾另起一行写「引用：<真实编号> · <真实标题>」："
     "编号与标题都要逐字取自下面列出的知识块，不要编造编号，"
     "也严禁把“知识块编号”“知识块标题”这些说明文字抄进回答。"
-    "不推断能力高低，不下诊断，不与人群比较，不提总分、百分位或正常/异常。"
-    "不得给指标编造材料里没有的认知机制（“属于目标符号本身错误”“可能存在混淆”"
-    "“回忆效率/编码质量有待提升”这类都不行），只陈述数值本身与任务条件。"
-    "不得给出等级、好差、强弱的判断（“表现中等”“水平较高”“能力较弱”“优秀”“良好”都禁），"
-    "褒义的评级同样禁止；只描述任务条件与原始数字。"
+    "如果给出了「已核实的心智画像」，回答要以它为主线：先讲这个人这次呈现出怎样的心智形态"
+    "（哪方面相对突出、哪方面相对靠后、作答偏快还是偏准、记忆配对是否靠重试），再给建议；"
+    "可以做合理的、基于画像的心智解读，但不要添加画像和指标里没有的结论。"
+    "不下临床诊断，不提总分、百分位或正常/异常，不把分数换算成任何量表，不与人群比较；"
+    "可以说「相对突出/相对靠后」，不要说智商、天赋、人格这类稳定特质，"
+    "也不要断言一个人的能力是固定的——这里只是本次任务里呈现的倾向。"
     "总长不超过 700 字。"
 )
 
@@ -99,7 +100,14 @@ def facts_block(facts: dict) -> str:
     return "\n".join(lines) or "（本次没有可解读的指标）"
 
 
-def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
+def retrieve_context(
+    db: Session, facts: dict, limit: int = 8, question: str | None = None
+) -> list[dict]:
+    """按弱项维度 + **用户原话** 检索知识块。
+
+    旧版只看 facts 的弱项，问「睡眠会影响吗」「工作记忆是什么」时命不中
+    对应的 factor / 概念块；现在把问题本身和它点到的维度也作为查询。
+    """
     weak = weak_dims(facts)
     queries = []
     for dim in weak:
@@ -116,6 +124,18 @@ def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
     }
     queries += [extra[dim] for dim in weak if dim in extra]
     queries += [f"{DIM_NAMES[dim]} 分数怎么读" for dim in weak[:1]]
+    # 用户点名的维度（含口语说法）优先补查询，避免只答弱项。
+    # 懒导入：agent.classify 是叶子模块，放函数里可避免 analysis ↔ agent 的循环导入。
+    asked = []
+    if question:
+        from .agent.classify import dims_in_question
+
+        asked = dims_in_question(question)
+    for dim in asked:
+        queries.extend([f"{DIM_NAMES[dim]} 测什么", f"{DIM_NAMES[dim]} 分数怎么读"])
+    # 原话直接作为一条查询：概念/因素类问题靠它命中。
+    if question:
+        queries.append(str(question).strip()[:40])
     queries += ["练习效应", "睡眠会影响成绩吗", "复测怎么比较", "未测是什么意思"]
     found: dict[str, dict] = {}
     for query in queries:
@@ -132,16 +152,39 @@ def retrieve_context(db: Session, facts: dict, limit: int = 8) -> list[dict]:
     return ordered[:limit]
 
 
+# Prompt 预算：知识块只取命中的前 3 块、每块截断，问题截断，整体再兜一层字符上限。
+# 目的：控制 token 与延迟，避免长对话把上下文撑爆。
+MAX_CHUNKS_IN_PROMPT = 3
+MAX_CHUNK_CHARS = 120
+MAX_QUESTION_CHARS = 80
+MAX_PROMPT_CHARS = 1800
+
+
+def _clip(text: object, limit: int) -> str:
+    value = str(text or "").strip().replace("\n", " ")
+    return value if len(value) <= limit else value[: limit - 1] + "…"
+
+
 def build_messages(facts: dict, chunks: list[dict], question: str | None = None) -> list[dict]:
-    kb = "\n".join(f"{c['id']} · {c['title']}：{c['text']}" for c in chunks) or "（无）"
+    selected = (chunks or [])[:MAX_CHUNKS_IN_PROMPT]
+    kb = (
+        "\n".join(
+            f"{c['id']} · {c['title']}：{_clip(c.get('text'), MAX_CHUNK_CHARS)}" for c in selected
+        )
+        or "（无）"
+    )
+    from .agent.mind_profile import profile_block
+
+    mind = profile_block(facts)
     user = [
         "本次原始指标：",
         facts_block(facts),
         "",
+        *([mind, ""] if mind else []),
         "可引用知识块：",
         kb,
     ]
-    if chunks:
+    if selected:
         # 引用行的真实编号来源（和 chat 侧同源）：逐条给出「引用：编号 · 标题」，
         # 不写出来模型就会抄占位说明。
         user.extend(
@@ -151,15 +194,18 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
                 "也不要把「知识块编号」「标题」这些说明词抄进回答）：\n"
                 + "\n".join(
                     f"引用：{chunk.get('id')} · {chunk.get('title', '')}".rstrip(" ·")
-                    for chunk in chunks[:3]
+                    for chunk in selected
                 ),
             ]
         )
     if question:
-        user.extend(["", f"用户问题：{question}"])
+        user.extend(["", f"用户问题：{_clip(question, MAX_QUESTION_CHARS)}"])
+    body = "\n".join(user)
+    if len(body) > MAX_PROMPT_CHARS:
+        body = body[: MAX_PROMPT_CHARS - 1] + "…"
     return [
         {"role": "system", "content": ANALYSIS_PROMPT},
-        {"role": "user", "content": "\n".join(user)},
+        {"role": "user", "content": body},
     ]
 
 
@@ -167,9 +213,13 @@ def template_analysis(facts: dict, chunks: list[dict]) -> str:
     items = measured(facts)
     if not items:
         return "本次还没有可解读的参考分。先完成一次测评，我会按维度和知识库给你具体建议。"
+    from .agent.mind_profile import build_mind_profile
+
     weak = weak_dims(facts)
     strong = strong_dims(facts)
+    mind_lines = build_mind_profile(facts)["lines"]
     lines = [
+        *(["你这次呈现的心智形态：", *[f"· {m}" for m in mind_lines], ""] if mind_lines else []),
         f"本次有 {len(items)} 个维度有参考分。"
         + (f"相对较高的是 {DIM_NAMES[strong[0]]}（{dict(items)[strong[0]]}）。" if strong else "")
         + (f"可以关注 {('、'.join(DIM_NAMES[d] for d in weak))}。" if weak else ""),

@@ -1,4 +1,4 @@
-# M1 → 桌面本地版迁移报告
+﻿# M1 → 桌面本地版迁移报告
 
 > **历史报告**：本文记录 0.2.0 的桌面化迁移结果。2026-11-19 起主形态已改为 Web 托管版
 > （[ADR-0003](../adr/0003-web-accounts-and-hosted-deployment.md)），2026-11-20 桌面入口
@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | 数据层 | `storage.js` + localStorage | `storage.js` 内存缓存 + `/api/v1` |
 | App 状态 | `store.js` localStorage | 内存缓存 + `PUT /state` |
-| 计分 | 浏览器 `scoring/*` | `code/backend/app/scoring/`（唯一权威） |
+| 计分 | 浏览器 `scoring/*` | `code/core_engine/scoring/`（唯一权威） |
 | LLM 调用 | `llm/client.js` 浏览器直连 | `code/backend/app/llm.py` |
 | Agent | `agent/run.js` 本地状态机 | `code/backend/app/agent` LangGraph |
 | RAG | `kb/search.js` BM25 | pgvector + BM25 混合 |
@@ -56,7 +56,7 @@
 | 命令 | 结果 |
 | --- | --- |
 | `npm run check` | 通过（lint + format + 前端/纯逻辑测试） |
-| `pytest -q tests/backend` | 25 passed（需 `MM_TEST_DATABASE_URL`） |
+| `pytest -q tests/integration` | 25 passed（需 `MM_TEST_DATABASE_URL`） |
 | `npm run test:e2e` | 4 passed（真实 PostgreSQL + FastAPI） |
 | `python scripts/check_docs.py` | 通过 |
 | `python scripts/check_secrets.py` | 通过 |
