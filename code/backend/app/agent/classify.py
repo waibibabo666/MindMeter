@@ -29,6 +29,8 @@ INTENT = {
     "SUPPORT": "support",
     "HIGH_DOMAIN": "high_domain",
     "SUMMARY": "summary",
+    # 问「下一步怎么练 / 怎么提升」：要建议，不是再听一遍整体总结
+    "ADVICE": "advice",
     "GREETING": "greeting",
     # 内容红线：色情 / 暴力 / 政治（课程要求绝对限制）
     "BLOCKED": "blocked",
@@ -50,6 +52,7 @@ RISK_BY_INTENT = {
     INTENT["SELF_BLAME"]: "low",
     INTENT["TREND_NO_DATA"]: "low",
     INTENT["SUMMARY"]: "low",
+    INTENT["ADVICE"]: "low",
     INTENT["GREETING"]: "low",
 }
 
@@ -178,6 +181,36 @@ SUPPORT_WORDS = [
     "算欺负",
     "算霸凌",
 ]
+
+# 丧失/哀伤：这类话不是"状态可能影响测评结果"，回应必须先接住人。
+# 关键词只收明确的丧事说法，避免"走"这种歧义（"我先走了"）。
+GRIEF_WORDS = [
+    "去世",
+    "过世",
+    "离世",
+    "死人了",
+    "人没了",
+    "葬礼",
+    "丧事",
+    "丧礼",
+    "白事",
+    "亲人走了",
+    "家人走了",
+    "妈妈走了",
+    "爸爸走了",
+]
+SUPPORT_GRIEF = (
+    "抱歉听到这个消息。亲人离世是很重的丧失，先顾好吃饭睡觉，不用急着做测评，"
+    "也不用现在就想明白什么。想说的话可以继续在这儿说；"
+    "如果吃不下、睡不着，或这种状态持续很久，找信任的人或学校心理中心聊聊。"
+    "我不能做诊断，也不会用一次测评给你下结论。"
+)
+SUPPORT_FOLLOWUP = (
+    "我还在听。你不用把话说完整，也不用马上想清楚。"
+    "如果刚才那句是在怪自己，先别急着给自己定罪——很多事不是一个人能扛住的。"
+    "愿意的话可以再多说一点；如果持续影响吃饭睡觉，找信任的人或学校心理中心聊聊。"
+    "我不能做诊断，也不会用一次测评给你下结论。"
+)
 SUMMARY_PHRASES = [
     "我的认知",
     "认知怎么样",
@@ -236,6 +269,10 @@ ADVICE_PHRASES = [
     "该做什么",
     "怎么安排",
     "如何安排",
+    "生活方面",
+    "生活上",
+    "日常生活",
+    "生活里",
 ]
 UNRELATED_WORDS = [
     "天气",
@@ -488,6 +525,7 @@ COLLOQUIAL_DIM_WORDS = {
     "词不达意": "vc",
     "阅读慢": "vc",
     "词汇量": "vc",
+    "言语方面": "vc",
     # 言语流畅 vf
     "说不出词": "vf",
     "想不起词": "vf",
@@ -633,6 +671,27 @@ def greeting_only(question: str) -> bool:
     return bool(hits(str(question or ""), GREETING_WORDS))
 
 
+def support_followup(question: str, history: list[dict] | None) -> bool:
+    """上一轮是支持/危机话术时，短追问继续接住，不要再问「你指的是哪一项」。
+
+    "我家死人了" → "我干的" 这类转折里，关键词表什么都抓不到；
+    但上一轮已经确认是情绪话题，这时最差的选择就是让用户重报维度名。
+    """
+    text = normalize(question)
+    if not text or len(text) > 12:
+        return False
+    # 明确问维度/要建议时不算“情绪追问”，仍然走正常业务意图。
+    if dims_in_question(question) or is_advice_ask(question):
+        return False
+    for item in list(history or [])[-4:]:
+        if item.get("role") != "assistant":
+            continue
+        code = str(item.get("code") or "")
+        if code.startswith(("intent:support", "intent:crisis", "intent:self_blame")):
+            return True
+    return False
+
+
 def conversation_topic(question: str, facts: dict | None = None) -> str:
     """摘要里的"本次对话主题"：只描述问题点到的维度与问法，不复述用户原句。
 
@@ -707,11 +766,25 @@ def classify(question: str) -> dict:
             "matched": [judgment.group(0)],
             "reason": "judgment-question",
         }
+    grief = hits(text, GRIEF_WORDS)
+    if grief:
+        return {
+            "intent": INTENT["SUPPORT"],
+            "matched": [*grief, "grief"],
+            "reason": "grief",
+        }
     matched = hits(text, SUPPORT_WORDS)
     if matched:
         return {"intent": INTENT["SUPPORT"], "matched": matched, "reason": "support-word"}
-    if any(phrase in text for phrase in ADVICE_PHRASES):
-        return {"intent": INTENT["SUMMARY"], "matched": [], "reason": "advice-question"}
+    advice_ask = any(phrase in text for phrase in ADVICE_PHRASES)
+    if not advice_ask:
+        # 「言语方面怎么具体提升」这类追问带维度名，按建议回答；
+        # 「如何提高编程能力」没有本项目维度，仍走 explain。
+        advice_ask = bool(dims_in_question(text)) and is_advice_ask(text) and not is_explain_what_ask(text)
+    if advice_ask:
+        # 建议类问题单独成意图：以前落进 SUMMARY，每轮都先复述一遍
+        # 「这次你的 X 最突出、Y 相对靠后」再给建议，追问时尤其像复读机。
+        return {"intent": INTENT["ADVICE"], "matched": [], "reason": "advice-question"}
     # 工具类请求（写代码/改文件/跑脚本）不属于心智评估，先于"离题"判断。
     off_task = hits(text, OFF_TASK_WORDS)
     tool_match = OFF_TASK_RE.search(text)
@@ -799,6 +872,8 @@ CONFIDENT_INTENTS = frozenset(
         INTENT["TREND"],
         INTENT["TREND_NO_DATA"],
         INTENT["SUMMARY"],
+        INTENT["ADVICE"],
+        INTENT["GREETING"],
     }
 )
 
@@ -811,6 +886,7 @@ LLM_ALLOWED_INTENTS = frozenset(
     {
         INTENT["EXPLAIN"],
         INTENT["SUMMARY"],
+        INTENT["ADVICE"],
         INTENT["TREND"],
         INTENT["CLARIFY"],
         INTENT["UNRELATED"],
@@ -823,7 +899,8 @@ LLM_ALLOWED_INTENTS = frozenset(
 
 def needs_llm_fallback(result: dict) -> bool:
     """关键词结果是否模糊到需要模型兜底。"""
-    return str((result or {}).get("intent")) in AMBIGUOUS_INTENTS
+    intent = str((result or {}).get("intent"))
+    return intent in AMBIGUOUS_INTENTS and intent not in CONFIDENT_INTENTS
 
 
 def resolve_intent(
@@ -855,7 +932,7 @@ def resolve_intent(
         return keyword_intent, "rule"
     if llm_intent == INTENT["TREND"] and not has_trend:
         return keyword_intent, "rule"
-    if llm_intent in (INTENT["EXPLAIN"], INTENT["SUMMARY"]) and not has_facts:
+    if llm_intent in (INTENT["EXPLAIN"], INTENT["SUMMARY"], INTENT["ADVICE"]) and not has_facts:
         return keyword_intent, "rule"
     if llm_intent == keyword_intent:
         return keyword_intent, "rule"
