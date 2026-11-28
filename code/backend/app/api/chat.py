@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from .. import auth
 from ..agent import answer
 from ..db import get_db
-from ..memory import MemoryStore
+from ..memory_store import MemoryStore
 from ..models import AIRun, AppState, Assessment, User
 from ..privacy import find_sensitive, redact
 from ..serializers import (

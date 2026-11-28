@@ -1,4 +1,8 @@
-"""对话记忆：读取 prompt 上下文、保留最近消息、沉淀摘要与建议。"""
+"""对话记忆的仓储层：读取 prompt 上下文、保留最近消息、沉淀摘要与建议。
+
+与 `api/memory.py` 的区别：那个是 HTTP 接口层（路由、鉴权、序列化），
+本文件只负责表怎么读写，不含任何 HTTP 概念。
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone

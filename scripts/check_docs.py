@@ -169,10 +169,10 @@ def check_submission_files():
             continue
         matches = [
             p for p in folder.glob("*.md")
-            if "assignment" in p.name and f"[{i}]" in p.name and p.name.endswith("_rev.md")
+            if "assignment" in p.name and f"[{i}]" in p.name and p.name.endswith(".md")
         ]
         if not matches:
-            errors.append(f"missing submission file: work_for_submission/{i}.md (or assignment[{i}]_rev.md)")
+            errors.append(f"missing submission file: work_for_submission/{i}.md (or *assignment[{i}]*.md)")
     return errors
 
 
