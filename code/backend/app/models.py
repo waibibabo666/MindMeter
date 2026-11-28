@@ -137,6 +137,10 @@ class Assessment(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     scoring_version: Mapped[str] = mapped_column(Text, nullable=False)
+    # 临场状态（睡眠/疲劳）：只影响这次解读的可信度，不参与计分
+    context: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=sa_text("'{}'::jsonb")
+    )
     dims: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, server_default=sa_text("'{}'::text[]")
     )

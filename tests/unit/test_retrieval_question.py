@@ -21,9 +21,9 @@ def test_colloquial_dimension_words_map_to_ids():
 
 
 def test_colloquial_question_is_answered_not_clarified():
-    # 口语化的问题不能再回「你指的是哪一项」；问建议走 summary，问原因走 explain。
-    assert classify("记性差怎么办")["intent"] in {"summary", "explain"}
-    assert classify("反应慢能练吗")["intent"] in {"summary", "explain"}
+    # 口语化的问题不能再回「你指的是哪一项」；问建议走 advice/summary，问原因走 explain。
+    assert classify("记性差怎么办")["intent"] in {"advice", "summary", "explain"}
+    assert classify("反应慢能练吗")["intent"] in {"advice", "summary", "explain"}
     assert classify("为什么我记性差")["intent"] == "explain"
 
 

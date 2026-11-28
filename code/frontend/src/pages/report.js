@@ -184,16 +184,39 @@ function readSessionList(ctx) {
   }
 }
 
-/** 状态与年龄提示：只解释结果，不改分数。 */
-function contextCard() {
+/** 读取随测评保存的临场状态（旧记录可能没有）。 */
+function prepContext() {
   const profile = readProfile();
-  const warn = stateWarning(profile);
-  const note = ageNote(profile.age);
-  if (!warn && !note && !profile.age) return null;
+  const latest = (readSessions().sessions || [])[0] || {};
+  const prep = latest.prep && typeof latest.prep === 'object' ? latest.prep : {};
+  return { profile, sleep: Number(prep.sleep), fatigue: Number(prep.fatigue) };
+}
 
+function prepBits(profile, sleep, fatigue) {
   const bits = [];
   if (profile.age) bits.push(`${profile.age} 岁（${ageBand(profile.age)}）`);
-  if (profile.sleep) bits.push('睡眠已记录');
+  if (Number.isFinite(sleep) && sleep > 0) bits.push(`睡眠 ${sleep} 小时`);
+  else if (profile.sleep) bits.push('睡眠已记录');
+  if (Number.isFinite(fatigue)) bits.push(`疲劳 ${fatigue}/5`);
+  return bits;
+}
+
+function prepWarning(profile, sleep, fatigue) {
+  const local = stateWarning(profile);
+  if (local) return local;
+  if (sleep > 0 && sleep <= 5) return '本次睡眠偏少，速度类与记忆类分数可能受影响，解读时请留意。';
+  if (Number.isFinite(fatigue) && fatigue >= 4)
+    return '你反馈当前疲劳程度较高，后段题目表现可能受影响。';
+  return '';
+}
+
+/** 状态与年龄提示：只解释结果，不改分数。 */
+function contextCard() {
+  const { profile, sleep, fatigue } = prepContext();
+  const note = ageNote(profile.age);
+  const warn = prepWarning(profile, sleep, fatigue);
+  const bits = prepBits(profile, sleep, fatigue);
+  if (!warn && !note && !bits.length) return null;
 
   return el('div', { class: `card${warn ? ' card-warn' : ''}` }, [
     titled(

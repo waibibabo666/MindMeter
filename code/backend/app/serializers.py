@@ -168,6 +168,7 @@ def assessment_to_session(db: Session, assessment: Assessment) -> dict:
         "results": results,
         "scores": scores,
         "scoringVersion": assessment.scoring_version,
+        "prep": dict(assessment.context or {}),
     }
 
 

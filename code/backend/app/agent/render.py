@@ -109,6 +109,9 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
 
     parts.append("")
     parts.append("这些只是本次测得的原始数据，不是分数，也不与人群比较。")
+    prep_line = _prep_line(facts)
+    if prep_line:
+        parts.append(f"本次临场状态：{prep_line}；仅用于判断这份结果的可信度，不参与计分。")
     parts.append(SCORING_NOTE)
     return "\n".join(parts)
 
@@ -172,7 +175,7 @@ def _facts_line(facts: dict) -> str:
     """
     parts = []
     for key, value in (facts or {}).items():
-        if key == "trend":
+        if key in ("trend", "prep"):
             continue
         label = f"{DIM_NAMES[key]}（{key}）" if key in DIM_NAMES else key
         if isinstance(value, dict):
@@ -203,6 +206,19 @@ def _trend_block(trend: dict) -> str:
     return "两次对比数据：\n" + "\n".join(lines) + ("\n" + "；".join(tail) if tail else "")
 
 
+def _prep_line(facts: dict) -> str:
+    """临场状态一句话：只用于说明可信度，不是指标。"""
+    prep = facts.get("prep") if isinstance(facts, dict) else None
+    if not isinstance(prep, dict) or not prep:
+        return ""
+    bits = []
+    if isinstance(prep.get("sleep"), int):
+        bits.append(f"昨晚睡眠 {prep['sleep']} 小时")
+    if isinstance(prep.get("fatigue"), int):
+        bits.append(f"当前疲劳 {prep['fatigue']}/5")
+    return "；".join(bits)
+
+
 def build_messages(
     question: str,
     facts: dict,
@@ -223,7 +239,9 @@ def build_messages(
         "可引用知识块：\n" + ("\n".join(f"{c['id']} · {c['title']}：{c['text']}" for c in chunks) or "（无）"),
     ]
     mind = profile_block(facts)
-    if mind:
+    if mind and not dims_in_question(question):
+        # 问的是某个具体维度时，不再先铺一段"整体形态"——那会让每轮回答
+        # 都从同一句「这次你的 X 最突出…」开始，像复读。
         blocks.insert(1, mind)
     if chunks:
         # 引用行照抄这一行：把本轮真实存在的编号 · 标题逐条给出来。
@@ -238,9 +256,19 @@ def build_messages(
         )
     if isinstance(facts, dict) and facts.get("trend"):
         blocks.append(_trend_block(facts["trend"]))
+    prep_line = _prep_line(facts)
+    if prep_line:
+        blocks.append(
+            "临场状态（只用于说明本次解读的可信度，不得据此改分数或编造结论）："
+            + prep_line
+            + "。睡眠偏少或疲劳偏高时，用一句话说明速度类 / 记忆类结果可能受影响。"
+        )
     extra = memory_lines(memory)
     if extra:
         blocks.append("用户背景（只用于调整表述，不作为数字来源）：\n" + "\n".join(extra))
+    if prior:
+        # 连续对话：允许承接上一轮，但不要逐字复述已经说过的总结/数字。
+        blocks.append("这是连续对话：只回答当前问题，不要重复上一轮已经给过的总结或指标原文。")
     blocks.append("用户问题：" + question)
     # 时序修正：旧对话在前，当前问题在最后（此前把 history 拼在问题之后）。
     return [{"role": "system", "content": prompt_for(scene)}, *prior, {"role": "user", "content": "\n\n".join(blocks)}]
