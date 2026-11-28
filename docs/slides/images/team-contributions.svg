@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" width="1600" height="720" font-family="'Microsoft YaHei','Segoe UI',Arial,sans-serif">
+<rect width="1600" height="720" fill="#ffffff"/>
+<text x="96" y="64" font-size="36" font-weight="700" fill="#1f2328">团队提交分布</text>
+<text x="96" y="102" font-size="17" fill="#6b7280">2026-10-17 – 2026-11-27 · 共 237 次提交 · 按提交邮箱归并</text>
+<circle cx="103" cy="130" r="7" fill="#15803d"/>
+<text x="118" y="136" font-size="16" fill="#1f2328">waibibabo666 · 125</text>
+<circle cx="353" cy="130" r="7" fill="#22c55e"/>
+<text x="368" y="136" font-size="16" fill="#1f2328">1213lz · 54</text>
+<circle cx="603" cy="130" r="7" fill="#4f46e5"/>
+<text x="618" y="136" font-size="16" fill="#1f2328">XLR268 · 40</text>
+<circle cx="853" cy="130" r="7" fill="#b45309"/>
+<text x="868" y="136" font-size="16" fill="#1f2328">SONG-bot418 · 18</text>
+<line x1="96" y1="596" x2="1536" y2="596" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="80" y="602" font-size="15" fill="#9aa1aa" text-anchor="end">0</text>
+<line x1="96" y1="507.2" x2="1536" y2="507.2" stroke="#eef2f6" stroke-width="1"/>
+<text x="80" y="513.2" font-size="15" fill="#9aa1aa" text-anchor="end">15</text>
+<line x1="96" y1="418.4" x2="1536" y2="418.4" stroke="#eef2f6" stroke-width="1"/>
+<text x="80" y="424.4" font-size="15" fill="#9aa1aa" text-anchor="end">30</text>
+<line x1="96" y1="329.6" x2="1536" y2="329.6" stroke="#eef2f6" stroke-width="1"/>
+<text x="80" y="335.6" font-size="15" fill="#9aa1aa" text-anchor="end">45</text>
+<line x1="96" y1="240.79999999999995" x2="1536" y2="240.79999999999995" stroke="#eef2f6" stroke-width="1"/>
+<text x="80" y="246.79999999999995" font-size="15" fill="#9aa1aa" text-anchor="end">60</text>
+<line x1="96" y1="152" x2="1536" y2="152" stroke="#eef2f6" stroke-width="1"/>
+<text x="80" y="158" font-size="15" fill="#9aa1aa" text-anchor="end">75</text>
+<rect x="150.85714285714286" y="507.2" width="96" height="88.80000000000001" fill="#15803d" rx="3"/>
+<rect x="150.85714285714286" y="448" width="96" height="59.199999999999996" fill="#22c55e" rx="3"/>
+<rect x="150.85714285714286" y="430.24" width="96" height="17.76" fill="#4f46e5" rx="3"/>
+<rect x="150.85714285714286" y="388.8" width="96" height="41.440000000000005" fill="#b45309" rx="3"/>
+<text x="198.85714285714286" y="376.8" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">35</text>
+<text x="198.85714285714286" y="630" font-size="16" fill="#475569" text-anchor="middle">10/12</text>
+<rect x="356.57142857142856" y="501.28" width="96" height="94.72000000000001" fill="#15803d" rx="3"/>
+<rect x="356.57142857142856" y="483.52" width="96" height="17.76" fill="#22c55e" rx="3"/>
+<rect x="356.57142857142856" y="430.24" width="96" height="53.28" fill="#4f46e5" rx="3"/>
+<rect x="356.57142857142856" y="412.48" width="96" height="17.76" fill="#b45309" rx="3"/>
+<text x="404.57142857142856" y="400.48" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">31</text>
+<text x="404.57142857142856" y="630" font-size="16" fill="#475569" text-anchor="middle">10/19</text>
+<text x="610.2857142857143" y="630" font-size="16" fill="#475569" text-anchor="middle">10/26</text>
+<rect x="768" y="347.36" width="96" height="248.64000000000001" fill="#15803d" rx="3"/>
+<rect x="768" y="282.24" width="96" height="65.12" fill="#22c55e" rx="3"/>
+<rect x="768" y="211.2" width="96" height="71.04" fill="#4f46e5" rx="3"/>
+<rect x="768" y="169.76" width="96" height="41.440000000000005" fill="#b45309" rx="3"/>
+<text x="816" y="157.76" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">72</text>
+<text x="816" y="630" font-size="16" fill="#475569" text-anchor="middle">11/2</text>
+<rect x="973.7142857142858" y="459.84000000000003" width="96" height="136.16" fill="#15803d" rx="3"/>
+<rect x="973.7142857142858" y="376.96000000000004" width="96" height="82.88000000000001" fill="#22c55e" rx="3"/>
+<rect x="973.7142857142858" y="341.44000000000005" width="96" height="35.52" fill="#4f46e5" rx="3"/>
+<rect x="973.7142857142858" y="335.52000000000004" width="96" height="5.920000000000001" fill="#b45309" rx="3"/>
+<text x="1021.7142857142858" y="323.52000000000004" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">44</text>
+<text x="1021.7142857142858" y="630" font-size="16" fill="#475569" text-anchor="middle">11/9</text>
+<rect x="1179.4285714285716" y="524.96" width="96" height="71.04" fill="#15803d" rx="3"/>
+<rect x="1179.4285714285716" y="430.24" width="96" height="94.72000000000001" fill="#22c55e" rx="3"/>
+<rect x="1179.4285714285716" y="371.04" width="96" height="59.199999999999996" fill="#4f46e5" rx="3"/>
+<text x="1227.4285714285716" y="359.04" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">38</text>
+<text x="1227.4285714285716" y="630" font-size="16" fill="#475569" text-anchor="middle">11/16</text>
+<rect x="1385.142857142857" y="495.36" width="96" height="100.64" fill="#15803d" rx="3"/>
+<text x="1433.142857142857" y="483.36" font-size="16" font-weight="650" fill="#334155" text-anchor="middle">17</text>
+<text x="1433.142857142857" y="630" font-size="16" fill="#475569" text-anchor="middle">11/23</text>
+</svg>

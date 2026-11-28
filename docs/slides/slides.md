@@ -1,4 +1,4 @@
----
+﻿---
 title: MindMeter 心智镜 · 项目汇报
 info: 创新工程实践营 · 2026.11
 colorSchema: light
@@ -210,18 +210,23 @@ layout: default
 
 | 成员 | 提交次数 | 主要职责 |
 | --- | --- | --- |
-| waibibabo666 | 114 | 项目负责人 |
-| 1213lz | 38 | 计分 / RAG / 测试 |
-| xlr268 | 30 | 产品与文案 |
+| waibibabo666 | 125 | 项目负责人 |
+| 1213lz | 54 | 计分 / RAG / 测试 |
+| xlr268 | 40 | 产品与文案 |
 | SONG-bot418 | 18 | 前端与部署 |
 
-<div class="shot">
-  <div class="shot-head">截图占位 · 3.3 提交历史</div>
-  <p>请拍：GitHub → Insights → Pulse（或 Contributors），显示每位成员提交次数</p>
-  <p class="shot-file">建议文件名：docs/slides/images/pulse.png</p>
-</div>
 
-<!-- [0:40] 提交数据取自 GitHub Contributors；截图由作者补充。 -->
+<!-- [0:40] 提交数据取自 git log 自动生成；本页为文字概览，下一页放完整图（pulse 截图位）。 -->
+
+---
+layout: default
+---
+
+# 3.3 提交历史 · 团队提交分布
+
+<img class="deck-figure" src="./images/team-contributions.png" alt="团队提交分布：按周堆叠的成员提交次数" />
+
+<!-- [0:30] 图由 git log 自动生成：按周堆叠，四位成员的提交节奏一目了然。 -->
 
 ---
 layout: default
@@ -229,15 +234,22 @@ layout: default
 
 ## 3.3（续）团队协作工具
 
-参考文档建议补充 team planning、Kanban、Bug tracker 的项目截图（可选，没有可删掉本页）。
+- **Issue**：需求、缺陷与待办都留档，按标签与里程碑归类
+- **Pull Request**：每次改动走分支 + 评审，合并前必须过 CI
+- **GitHub Projects**：L-01～L-09 任务看板，跟踪依赖与完成状态
+- **CI**：lint/format、浏览器 E2E、后端契约测试、文档结构、密钥扫描
 
-<div class="shot">
-  <div class="shot-head">截图占位 · 3.3 协作工具（可选）</div>
-  <p>请拍：GitHub Projects / Issues 看板，或团队使用的看板与缺陷跟踪页面</p>
-  <p class="shot-file">建议文件名：docs/slides/images/kanban.png</p>
-</div>
+<!-- [0:40] 协作工具不是摆设：每个 Issue/PR 都能在仓库里查到。 -->
 
-<!-- [0:20] 没有看板截图就跳过本页，答辩时不失分。 -->
+---
+layout: default
+---
+
+# 3.3（续）协作流程 · Issue → PR → CI → 合并
+
+<img class="deck-figure" src="./images/collab-board.png" alt="团队协作看板：Issue、PR、CI 与真实合并记录" />
+
+<!-- [0:30] 真实合并记录来自 gh CLI 只读拉取；六步流程对应仓库实际工作流。 -->
 
 ---
 layout: default
@@ -382,7 +394,7 @@ layout: default
 | --- | --- |
 | 日志 | 关键路径记录、日志脱敏，不写 Key 与完整对话 |
 | 异常 | 错误码收敛；模型失败、校验失败都有确定性兜底 |
-| 测试 | pytest 339 passed；前端 12 套纯逻辑；Playwright E2E 覆盖主链路 |
+| 测试 | pytest 430 passed（CI）；前端 12 套纯逻辑；Playwright E2E 15 条覆盖主链路 |
 | CI | 五道门禁：lint/format、E2E、后端契约、文档结构、密钥扫描 |
 
 <!-- [0:40] 质量不靠人工自觉，靠 CI 门禁；测试数量取自最近一次全量运行。 -->
@@ -398,15 +410,19 @@ layout: default
 | ESLint + SonarJS | JS 规范与复杂度门禁 | CI 与本地均通过 |
 | Prettier | 格式统一 | CI 检查通过 |
 | pytest / Playwright | 单测、集成、E2E | 全绿 |
-| Pylint / 复杂度扫描 | Python 语义与复杂度 | 见截图 |
+| Pylint / 复杂度扫描 | Python 语义与复杂度 | 9.11/10 · 平均 B（5.61） |
 
-<div class="shot">
-  <div class="shot-head">截图占位 · 3.6.2 质量扫描</div>
-  <p>请拍：PEP8 / Pylint / 复杂度扫描结果（VS Code 插件或命令行输出）</p>
-  <p class="shot-file">建议文件名：docs/slides/images/quality-scan.png</p>
-</div>
+<!-- [0:40] Java 的 p3c 不适用本项目；Python 侧用 Pylint 与 Radon 复杂度扫描。 -->
 
-<!-- [0:40] Java 的 p3c 不适用本项目；Python 侧用 Pylint 与复杂度插件。 -->
+---
+layout: default
+---
+
+# 3.6.2 质量扫描结果
+
+<img class="deck-figure" src="./images/quality-scan.png" alt="质量扫描结果：Pylint 9.11/10、Radon 平均 B、ESLint/Prettier 通过" />
+
+<!-- [0:30] 本地实测：Pylint 9.11/10，Radon 329 个代码块平均 B（5.61），ESLint/Prettier 通过。 -->
 
 ---
 layout: default
@@ -416,21 +432,25 @@ layout: default
 
 | 范围 | 文件数 | 行数 |
 | --- | --- | --- |
-| 后端（Python） | 47 | 8,293 |
-| 前端（JS/CSS/HTML） | 69 | 15,670 |
-| 测试（Python + JS） | 30 | 5,351 |
-| 脚本（质量 / 部署 / 数据） | 24 | 5,746 |
-| **合计** | **170** | **35,060** |
+| 后端（Python） | 57 | 8,870 |
+| 前端（JS/CSS/HTML） | 70 | 16,244 |
+| 测试（Python + JS） | 41 | 6,118 |
+| 脚本（质量 / 部署 / 数据） | 26 | 5,995 |
+| **合计** | **194** | **37,227** |
 
 <p class="source">AI 协作：需求梳理、代码、测试与文档大量由 AI 起草，人工负责范围界定、评审与验收；比例不做精确统计以免误导。</p>
 
-<div class="shot">
-  <div class="shot-head">截图占位 · 3.7 代码统计</div>
-  <p>请拍：VS Code Counter / Statistic 插件结果，或 `cloc` 输出</p>
-  <p class="shot-file">建议文件名：docs/slides/images/code-stats.png</p>
-</div>
-
 <!-- [0:40] 模块数与行数为当前仓库实测；AI 比例如实说明，不虚报。 -->
+
+---
+layout: default
+---
+
+# 3.7.3 代码统计（按范围）
+
+<img class="deck-figure" src="./images/code-stats.png" alt="代码统计：194 个文件、37,227 行，前端占 43.6%" />
+
+<!-- [0:30] 统计口径：git 跟踪文件；测试行占 16.4%，前端占 43.6%。 -->
 
 ---
 layout: center
