@@ -65,7 +65,7 @@ function splitSlides(text) {
     const start = i;
     while (i < lines.length && !isSep(lines[i])) i += 1;
     const body = lines.slice(start, i).join('\n');
-    if (i < lines.length) i += 1;
+    // 不在这里跳过分隔符：下一轮从分隔符开始，才能识别下一张的 frontmatter
     if (body.trim()) slides.push(body);
   }
   return slides;

@@ -31,3 +31,20 @@ th { color: #14532d; }
   object-fit: contain;
   margin: 0.8rem auto 0;
 }
+
+/* ---- 全局字号：正文、标题、表格整体放大一档 ---- */
+.slidev-layout { font-size: 1.16rem; line-height: 1.55; }
+.slidev-layout h1 { font-size: 2.9rem; line-height: 1.15; }
+.slidev-layout h2 { font-size: 2.05rem; line-height: 1.25; }
+.slidev-layout h3 { font-size: 1.5rem; }
+.slidev-layout ul, .slidev-layout ol { font-size: 1.04em; }
+.slidev-layout table { font-size: 0.98rem; }
+.slidev-layout th, .slidev-layout td { line-height: 1.45; }
+.source { font-size: 0.92rem; }
+.tiny { font-size: 0.88rem; }
+.flow .step { font-size: 1rem; }
+.flow .step span { font-size: 0.86rem; }
+.cover h1 { font-size: 3rem; }
+.cover .slogan { font-size: 1.5rem; }
+.cover .meta { font-size: 1.1rem; }
+.deck-figure { max-height: 390px; }
