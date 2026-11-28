@@ -459,7 +459,15 @@ def after_turn(
     signal = profile_signal(question)
     suggested = signal or None
     profile_row = db.get(MemoryProfile, uid)
-    if signal and profile_row is not None and profile_row.confirmed:
+    if signal and (profile_row is None or not profile_row.confirmed):
+        # 未确认也把线索写成“草稿行”（confirmed=False）：换页/刷新后记忆页
+        # 仍能看到并确认；Agent 只读取 confirmed 的画像，草稿不会被引用。
+        row = profile_row or MemoryProfile(user_id=uid, confirmed=False)
+        for key, value in signal.items():
+            if value:
+                setattr(row, key, value)
+        db.add(row)
+    elif signal and profile_row.confirmed:
         # 画像只有用户确认过才由服务端更新；未确认时一个字段都不写，
         # 只把线索回传给前端走确认流程（记忆面板上"能不能被写"是用户说了算）。
         for key, value in signal.items():

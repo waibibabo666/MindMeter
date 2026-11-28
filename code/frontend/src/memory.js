@@ -74,15 +74,20 @@ export function confirmProfile(profile) {
   if (!PROFILE_KEYS.some((key) => clean[key])) return null;
   const next = { ...clean, confirmed: true, confirmedAt: Date.now() };
   const memory = readMemory();
-  cache.memory = Object.assign(memory, { profile: next });
-  enqueue(() => api.put('/memory/profile', clean));
+  const merged = Object.assign(memory, { profile: next });
+  delete merged.profileDraft;
+  cache.memory = merged;
+  // confirmed 必须一起发：后端只认 true，否则画像永远是“待确认”，AI 不引用。
+  enqueue(() => api.put('/memory/profile', { ...clean, confirmed: true }));
   return next;
 }
 
 /** 忽略待确认画像：只清未确认内容，不动摘要与建议。 */
 export function dismissProfile() {
   const memory = readMemory();
-  cache.memory = Object.assign(memory, { profile: {} });
+  const merged = Object.assign(memory, { profile: {} });
+  delete merged.profileDraft;
+  cache.memory = merged;
   enqueue(() => api.del('/memory/profile'));
 }
 
@@ -198,9 +203,15 @@ export async function clearConversation() {
 /** 给记忆页用的汇总视角。 */
 export function memoryOverview() {
   const memory = readMemory();
+  const stored = memory.profile || {};
+  const draft = memory.profileDraft || {};
+  const hasStored = PROFILE_KEYS.some((key) => String(stored[key] || '').trim());
+  // 服务端没画像时，把对话里产生的草稿显示出来，用户才能确认；
+  // 已确认的画像优先，避免草稿覆盖正式内容。
+  const profile = hasStored ? stored : { ...draft };
   return {
-    profile: memory.profile || {},
-    profileUsable: isProfileUsable(memory.profile),
+    profile,
+    profileUsable: isProfileUsable(stored),
     summaries: memory.summaries,
     advice: memory.advice,
     messages: memory.messages,
