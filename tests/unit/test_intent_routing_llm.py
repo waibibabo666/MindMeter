@@ -1,4 +1,4 @@
-﻿"""LLM 兜底意图路由（第 3 轮反馈 3 的架构升级）。
+"""LLM 兜底意图路由（第 3 轮反馈 3 的架构升级）。
 
 要钉住的不是"模型能不能分类"，而是三条安全不变式：
 1. 安全红线不可降级（危机/越界/高风险领域/疏导/自责由关键词决定）；
@@ -47,15 +47,31 @@ def test_confident_business_intents_are_not_downgraded(keyword_intent):
 
 
 def test_ambiguous_intents_are_rescued():
-    for ambiguous in (INTENT["CLARIFY"], INTENT["UNRELATED"], INTENT["GREETING"]):
+    for ambiguous in (INTENT["CLARIFY"], INTENT["UNRELATED"]):
         assert needs_llm_fallback({"intent": ambiguous})
         intent, source = resolve_intent({"intent": ambiguous}, INTENT["SUMMARY"], has_facts=True)
         assert intent == INTENT["SUMMARY"]
         assert source == "llm"
 
 
+def test_greeting_is_confident_and_never_rescued():
+    # 纯寒暄必须稳定回固定问候：以前交给模型兜底，常被改判成 summary，
+    # 用户说「你好」却收到一整段测评摘要。
+    assert classify("你好")["intent"] == INTENT["GREETING"]
+    assert not needs_llm_fallback({"intent": INTENT["GREETING"]})
+    intent, source = resolve_intent({"intent": INTENT["GREETING"]}, INTENT["SUMMARY"], has_facts=True)
+    assert intent == INTENT["GREETING"] and source == "rule"
+
+
 def test_confident_intents_do_not_need_the_llm_at_all():
-    for confident in (INTENT["EXPLAIN"], INTENT["TREND"], INTENT["SUMMARY"], INTENT["CRISIS"]):
+    for confident in (
+        INTENT["EXPLAIN"],
+        INTENT["TREND"],
+        INTENT["SUMMARY"],
+        INTENT["ADVICE"],
+        INTENT["GREETING"],
+        INTENT["CRISIS"],
+    ):
         assert not needs_llm_fallback({"intent": confident})
 
 

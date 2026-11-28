@@ -80,6 +80,8 @@ def _classify_node(state: AgentState) -> dict:
         update["scene"] = "trend"
     if intent == INTENT["SUMMARY"]:
         update["scene"] = "summary"
+    if intent == INTENT["ADVICE"]:
+        update["scene"] = "advice"
     return update
 
 
@@ -136,12 +138,14 @@ def _generate_node(state: AgentState) -> dict:
     facts = state.get("facts") or {}
     chunks = state.get("chunks") or []
     summary = state.get("intent") == INTENT["SUMMARY"] or scene == "report"
+    advice = state.get("intent") == INTENT["ADVICE"] or scene == "advice"
     domain_hit = any(word in (state.get("matched") or []) for word in DOMAIN_WORDS)
     trend_question = state.get("intent") == INTENT["TREND"] or scene == "trend"
     if (
         not chunks
         and not trend_question
         and not summary
+        and not advice
         and (not domain_hit or not _facts_line(facts))
     ):
         return {"chunks": [], "text": NO_KNOWLEDGE_REPLY, "code": "no_knowledge", "source": "template"}
@@ -320,7 +324,7 @@ def _after_classify(state: AgentState) -> str:
         return "generate"
     if intent == INTENT["TREND"]:
         return "retrieve" if (state.get("facts") or {}).get("trend") else "no_trend"
-    if intent in {INTENT["EXPLAIN"], INTENT["SUMMARY"]}:
+    if intent in {INTENT["EXPLAIN"], INTENT["SUMMARY"], INTENT["ADVICE"]}:
         return "retrieve"
     return "fixed"
 

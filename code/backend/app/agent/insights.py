@@ -41,7 +41,7 @@ ADVICE_PER_TURN = 3
 # crisis / boundary / high_domain / support / self_blame / greeting 有意排除：
 # 记忆面板是能被导出、被第三个人看见的长期档案，把情绪或临床话题沉淀进去
 # 与 ADR-0002 的隐私承诺相反（用户测试表 A7）。
-SEDIMENT_INTENTS = {"explain", "summary", "trend"}
+SEDIMENT_INTENTS = {"explain", "summary", "trend", "advice"}
 
 SECTION_HEADINGS = ["可以试试", "下一步可以这样安排", "可以这样安排", "接下来"]
 # 建议小节标题行的形态：真实模型写得比固定词表杂（"练习建议：" / "**可以试试：**" /
@@ -399,6 +399,8 @@ def after_turn(
     items = advice_from_reply(text, reply.get("sources") or [])
 
     written_ids: list[str] = []
+    seen_keys: set[str] = set()
+    seen_titles: set[str] = set()
     if items:
         # 同一句建议换个措辞（带不带"知觉速度 ·"前缀、被截断过）也只该有一条记录：
         # 先按归一化文本把本轮条目对到已有行上。
@@ -406,6 +408,11 @@ def after_turn(
         for row in db.scalars(select(MemoryAdvice).where(MemoryAdvice.user_id == uid)).all():
             by_key.setdefault(advice_key(row.title), row.id)
         for item in items:
+            title_key = advice_key(item["title"])
+            if item["key"] in seen_keys or title_key in seen_titles:
+                continue
+            seen_keys.add(item["key"])
+            seen_titles.add(title_key)
             advice_id = by_key.get(item["key"], item["id"])
             row = find_advice(db, uid, advice_id)
             if row is None:

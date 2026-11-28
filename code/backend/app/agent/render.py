@@ -223,7 +223,9 @@ def build_messages(
         "可引用知识块：\n" + ("\n".join(f"{c['id']} · {c['title']}：{c['text']}" for c in chunks) or "（无）"),
     ]
     mind = profile_block(facts)
-    if mind:
+    if mind and not dims_in_question(question):
+        # 问的是某个具体维度时，不再先铺一段"整体形态"——那会让每轮回答
+        # 都从同一句「这次你的 X 最突出…」开始，像复读。
         blocks.insert(1, mind)
     if chunks:
         # 引用行照抄这一行：把本轮真实存在的编号 · 标题逐条给出来。
@@ -241,6 +243,9 @@ def build_messages(
     extra = memory_lines(memory)
     if extra:
         blocks.append("用户背景（只用于调整表述，不作为数字来源）：\n" + "\n".join(extra))
+    if prior:
+        # 连续对话：允许承接上一轮，但不要逐字复述已经说过的总结/数字。
+        blocks.append("这是连续对话：只回答当前问题，不要重复上一轮已经给过的总结或指标原文。")
     blocks.append("用户问题：" + question)
     # 时序修正：旧对话在前，当前问题在最后（此前把 history 拼在问题之后）。
     return [{"role": "system", "content": prompt_for(scene)}, *prior, {"role": "user", "content": "\n\n".join(blocks)}]

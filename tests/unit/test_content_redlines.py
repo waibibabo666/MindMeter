@@ -94,7 +94,8 @@ def test_victim_statement_gets_support_not_block():
 def test_normal_questions_still_work():
     # 红线收紧不能误伤正常问题。
     assert classify("如何提高编程能力？")["intent"] == INTENT["EXPLAIN"]
-    assert classify("联想记忆怎么练")["intent"] == INTENT["EXPLAIN"]
+    # 「怎么练」要建议，不是再听一遍解释——单独走 advice。
+    assert classify("联想记忆怎么练")["intent"] == INTENT["ADVICE"]
 
 
 # --- 不能过度限制：弱词 + 正常语境必须放行 ---------------------------------

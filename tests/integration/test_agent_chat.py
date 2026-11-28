@@ -1,4 +1,4 @@
-"""Agent safety/regression tests for the chat surface."""
+﻿"""Agent safety/regression tests for the chat surface."""
 from __future__ import annotations
 
 import uuid
@@ -103,6 +103,6 @@ def test_summary_and_greeting_do_not_fall_into_clarify(logged_client):
     assert "解读助手" in greeting["reply"]["text"]
 
     advice = chat(logged_client, "给点建议")
-    assert advice["reply"]["intent"] == "summary"
-    assert "可以试试" in advice["reply"]["text"]
+    assert advice["reply"]["intent"] == "advice"
+    assert "下一步" in advice["reply"]["text"] or "可以试试" in advice["reply"]["text"]
     assert "限时任务先练" not in advice["reply"]["text"]

@@ -32,6 +32,12 @@ SCENE_POLICIES: dict[str, dict] = {
         "require_scope_note": "soft",
         "extra_banned": [],
     },
+    "advice": {
+        "max_chars": EXPLAIN_MAX_CHARS,
+        "require_citation": "soft",
+        "require_scope_note": "soft",
+        "extra_banned": [],
+    },
     "report": {
         "max_chars": LONG_MAX_CHARS,
         "require_citation": "off",
@@ -183,6 +189,17 @@ SCENE_PROMPTS: dict[str, str] = {
         "也不要把分数说成能力、天赋或稳定特质。"
         "建议用编号列表给出，每条写成「短标题：具体怎么做」（例如「1. 睡眠与休息：保证充足睡眠」）。"
         f"不超过 {LONG_MAX_CHARS} 字。"
+    ),
+    "advice": (
+        "用户问的是「下一步怎么练 / 怎么提升」，直接给做法；"
+        "不要复述整体测评总结，也不要把强项弱项排名再讲一遍——那是上一个问题的答案。"
+        "点名了维度就只针对该维度给 2–3 条今天就能做的具体做法；"
+        "没点名时，挑本次相对靠后的 1–2 个维度。"
+        "每条写成「短标题：具体怎么做」，具体到动作、时长或次数，"
+        "不要写「保证充足睡眠」「保持好心态」这类与测评无关的通用句。"
+        "用户提到生活场景（作息、通勤、学习安排）时，把建议放进那个场景里。"
+        "只引用回答里真正用到的知识块；正文里不要写 kb- 编号，编号只放在末尾引用行。"
+        f"用不超过 {EXPLAIN_MAX_CHARS} 字回答。"
     ),
     "report": (
         "结合本次指标与知识块，用平实的话说明这些数字怎么读，"
