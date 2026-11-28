@@ -98,9 +98,15 @@ function profileCard(view, ctx, rerender) {
     card.appendChild(
       emptyState({
         title: '还没有画像',
-        text: '画像只在你确认后才会被 AI 引用。',
+        text: '在对话里说出你的目标、偏好或时间安排，系统会先生成草稿；你确认后才写入，AI 也才会引用。',
         actionLabel: '去对话里聊聊',
         onAction: () => ctx.go('/chat'),
+      }),
+    );
+    card.appendChild(
+      el('p', {
+        class: 'tiny',
+        text: '例如：「我想在两周内提升言语理解，每天只有30分钟」。发出去之后，回答下面会出现「画像草稿」。',
       }),
     );
     return card;
