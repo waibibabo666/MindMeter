@@ -84,6 +84,17 @@ def test_citations_are_clickable_source_objects(logged_client):
     assert isinstance(first["source"], dict)
 
 
+def test_grief_is_handled_with_empathy_and_context(logged_client):
+    seed_assessment(logged_client)
+    grief = chat(logged_client, "我家死人了")
+    assert grief["reply"]["intent"] == "support"
+    assert "抱歉" in grief["reply"]["text"]
+    # 上一轮是支持话术时，短追问不再回「你指的是哪一项」
+    follow = chat(logged_client, "我干的")
+    assert follow["reply"]["intent"] == "support"
+    assert "你指的是哪一项" not in follow["reply"]["text"]
+
+
 def test_medium_support_risk_is_explicit(logged_client):
     seed_assessment(logged_client)
     body = chat(logged_client, "最近压力很大，睡不着怎么办？")

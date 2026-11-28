@@ -23,6 +23,8 @@ from .classify import (
     NO_KNOWLEDGE_REPLY,
     RISK_BY_INTENT,
     SCOPE_BACKFILL,
+    SUPPORT_FOLLOWUP,
+    SUPPORT_GRIEF,
     classify,
     dims_in_question,
     fixed_reply,
@@ -30,6 +32,7 @@ from .classify import (
     is_explain_what_ask,
     needs_llm_fallback,
     resolve_intent,
+    support_followup,
 )
 from .display import cited_sources, display_text
 from .intent_llm import classify_with_llm
@@ -68,6 +71,13 @@ def _classify_node(state: AgentState) -> dict:
         )
         if source == "llm":
             matched = [f"llm:{intent}"]
+
+    # 上一轮是支持/危机话术时，短追问继续接住，不要回「你指的是哪一项」。
+    if intent in {INTENT["CLARIFY"], INTENT["SUPPORT"]} and support_followup(
+        state.get("question", ""), state.get("history") or []
+    ):
+        if not (intent == INTENT["SUPPORT"] and "grief" in matched):
+            intent, source, matched = INTENT["SUPPORT"], "rule", ["followup"]
 
     # TREND 意图自动切换 scene，让校验与模板走趋势策略；其余保持入口 scene。
     update: dict = {
@@ -112,15 +122,23 @@ def _retrieve_node(state: AgentState) -> dict:
 
 def _fixed_node(state: AgentState) -> dict:
     intent = state.get("intent", INTENT["UNRELATED"])
+    matched = state.get("matched") or []
     text = fixed_reply(intent)
-    if intent == INTENT["GREETING"] and not _readable_facts(state.get("facts") or {}):
+    code = f"intent:{intent}"
+    if intent == INTENT["SUPPORT"] and "grief" in matched:
+        text = SUPPORT_GRIEF
+        code = "intent:support:grief"
+    elif intent == INTENT["SUPPORT"] and "followup" in matched:
+        text = SUPPORT_FOLLOWUP
+        code = "intent:support:followup"
+    elif intent == INTENT["GREETING"] and not _readable_facts(state.get("facts") or {}):
         # 还没有任何可解读结果时，寒暄必须先把能力边界说清（A1），
         # 而不是抛一句"你可以问你的认知怎么样"却根本不答得出来。
         text = GREETING_NO_FACTS
     return {
         "text": text,
         "source": "policy",
-        "code": f"intent:{intent}",
+        "code": code,
         "risk": state.get("risk") or RISK_BY_INTENT.get(intent, "low"),
     }
 
