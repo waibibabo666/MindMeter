@@ -48,3 +48,7 @@ th { color: #14532d; }
 .cover .slogan { font-size: 1.5rem; }
 .cover .meta { font-size: 1.1rem; }
 .deck-figure { max-height: 390px; }
+
+/* ---- Mermaid 图自适应：ER 图较高时按高度缩放，避免溢出 ---- */
+.mermaid svg, svg[id^="mermaid"] { max-width: 100%; max-height: 380px; height: auto; }
+.deck-figure.er { max-height: 340px; }
