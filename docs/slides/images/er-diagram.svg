@@ -1,48 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="470" viewBox="0 0 1120 470">
-<style>text{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:15px;fill:#374151} .t{font-weight:700;fill:#14532d;font-size:16px} .l{fill:#6b7280;font-size:13px}</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="500" viewBox="0 0 1120 500">
+<style>text{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;fill:#374151} .t{font-weight:700;fill:#14532d;font-size:15px} .k{fill:#7c3aed;font-size:12px;font-weight:700} .r{fill:#6b7280;font-size:12px} .l{fill:#4b5563;font-size:12.5px}</style>
 <rect width="100%" height="100%" fill="#ffffff"/>
-<rect x="30" y="30" width="230" height="120" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4"/>
-<rect x="30" y="30" width="230" height="34" rx="8" fill="#ddd6fe"/>
-<rect x="30" y="54" width="230" height="10" fill="#ddd6fe"/>
-<text x="42" y="53" class="t">users</text>
-<text x="42" y="86">id  PK</text>
-<text x="42" y="108">username  UNIQUE</text>
-<text x="42" y="130">password_hash</text>
-<rect x="340" y="30" width="260" height="135" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4"/>
-<rect x="340" y="30" width="260" height="34" rx="8" fill="#ddd6fe"/>
-<rect x="340" y="54" width="260" height="10" fill="#ddd6fe"/>
-<text x="352" y="53" class="t">assessments</text>
-<text x="352" y="86">id  PK</text>
-<text x="352" y="108">user_id  FK</text>
-<text x="352" y="130">mode</text>
-<text x="352" y="152">finished_at</text>
-<rect x="700" y="30" width="270" height="120" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4"/>
-<rect x="700" y="30" width="270" height="34" rx="8" fill="#ddd6fe"/>
-<rect x="700" y="54" width="270" height="10" fill="#ddd6fe"/>
-<text x="712" y="53" class="t">memory_summaries</text>
-<text x="712" y="86">id  PK</text>
-<text x="712" y="108">user_id  FK</text>
-<text x="712" y="130">text</text>
-<rect x="340" y="300" width="260" height="120" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4"/>
-<rect x="340" y="300" width="260" height="34" rx="8" fill="#ddd6fe"/>
-<rect x="340" y="324" width="260" height="10" fill="#ddd6fe"/>
-<text x="352" y="323" class="t">assessment_tasks</text>
-<text x="352" y="356">assessment_id  FK</text>
-<text x="352" y="378">task_id</text>
-<text x="352" y="400">metrics  JSONB</text>
-<rect x="700" y="300" width="270" height="120" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4"/>
-<rect x="700" y="300" width="270" height="34" rx="8" fill="#ddd6fe"/>
-<rect x="700" y="324" width="270" height="10" fill="#ddd6fe"/>
-<text x="712" y="323" class="t">assessment_scores</text>
-<text x="712" y="356">assessment_id  FK</text>
-<text x="712" y="378">dimension</text>
-<text x="712" y="400">score</text>
-<line x1="260" y1="95" x2="340" y2="95" stroke="#a1a1aa" stroke-width="1.6"/>
-<text x="268" y="85" class="l">1 : N 拥有</text>
-<line x1="470" y1="165" x2="470" y2="300" stroke="#a1a1aa" stroke-width="1.6"/>
-<text x="478" y="235" class="l">1 : N 包含</text>
-<path d="M600 120 L640 120 L640 255 L720 255 L720 300" fill="none" stroke="#a1a1aa" stroke-width="1.6"/>
-<text x="648" y="245" class="l">1 : N 计分</text>
-<path d="M145 150 L145 220 L835 220 L835 150" fill="none" stroke="#a1a1aa" stroke-width="1.6"/>
-<text x="470" y="212" class="l">1 : N 记录</text>
+<rect x="40" y="40" width="240" height="122" rx="6" fill="#fafafa" stroke="#d4d4d8" stroke-width="1.2"/>
+<rect x="40" y="40" width="240" height="32" rx="6" fill="#ede9fe"/>
+<rect x="40" y="62" width="240" height="10" fill="#ede9fe"/>
+<text x="52" y="61" class="t">users</text>
+<text x="52" y="92">id</text>
+<text x="216" y="92" class="k">PK</text>
+<text x="52" y="113">username</text>
+<text x="216" y="113" class="k">UNIQUE</text>
+<text x="52" y="134">password_hash</text>
+<rect x="430" y="40" width="270" height="144" rx="6" fill="#fafafa" stroke="#d4d4d8" stroke-width="1.2"/>
+<rect x="430" y="40" width="270" height="32" rx="6" fill="#ede9fe"/>
+<rect x="430" y="62" width="270" height="10" fill="#ede9fe"/>
+<text x="442" y="61" class="t">assessments</text>
+<text x="442" y="92">id</text>
+<text x="636" y="92" class="k">PK</text>
+<text x="442" y="113">user_id</text>
+<text x="636" y="113" class="k">FK</text>
+<text x="442" y="134">mode</text>
+<text x="442" y="155">finished_at</text>
+<rect x="40" y="300" width="240" height="122" rx="6" fill="#fafafa" stroke="#d4d4d8" stroke-width="1.2"/>
+<rect x="40" y="300" width="240" height="32" rx="6" fill="#ede9fe"/>
+<rect x="40" y="322" width="240" height="10" fill="#ede9fe"/>
+<text x="52" y="321" class="t">memory_summaries</text>
+<text x="52" y="352">id</text>
+<text x="216" y="352" class="k">PK</text>
+<text x="52" y="373">user_id</text>
+<text x="216" y="373" class="k">FK</text>
+<text x="52" y="394">text</text>
+<rect x="430" y="300" width="270" height="122" rx="6" fill="#fafafa" stroke="#d4d4d8" stroke-width="1.2"/>
+<rect x="430" y="300" width="270" height="32" rx="6" fill="#ede9fe"/>
+<rect x="430" y="322" width="270" height="10" fill="#ede9fe"/>
+<text x="442" y="321" class="t">assessment_tasks</text>
+<text x="442" y="352">assessment_id</text>
+<text x="636" y="352" class="k">FK</text>
+<text x="442" y="373">task_id</text>
+<text x="442" y="394">metrics</text>
+<text x="636" y="394" class="k">JSONB</text>
+<rect x="830" y="300" width="250" height="122" rx="6" fill="#fafafa" stroke="#d4d4d8" stroke-width="1.2"/>
+<rect x="830" y="300" width="250" height="32" rx="6" fill="#ede9fe"/>
+<rect x="830" y="322" width="250" height="10" fill="#ede9fe"/>
+<text x="842" y="321" class="t">assessment_scores</text>
+<text x="842" y="352">assessment_id</text>
+<text x="1016" y="352" class="k">FK</text>
+<text x="842" y="373">dimension</text>
+<text x="842" y="394">score</text>
+<line x1="280" y1="101" x2="430" y2="101" stroke="#9ca3af" stroke-width="1.6"/>
+<line x1="280" y1="94" x2="280" y2="108" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="430" y1="101" x2="442" y2="101" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="430" y1="101" x2="442" y2="93" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="430" y1="101" x2="442" y2="101" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="430" y1="101" x2="442" y2="109" stroke="#6b7280" stroke-width="1.3"/>
+<text x="292" y="92" class="l">拥有 (1:N)</text>
+<line x1="160" y1="162" x2="160" y2="300" stroke="#9ca3af" stroke-width="1.6"/>
+<line x1="160" y1="155" x2="160" y2="169" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="160" y1="300" x2="160" y2="312" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="160" y1="300" x2="152" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="160" y1="300" x2="160" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="160" y1="300" x2="168" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<text x="170" y="235" class="l">记录 (1:N)</text>
+<line x1="565" y1="184" x2="565" y2="300" stroke="#9ca3af" stroke-width="1.6"/>
+<line x1="565" y1="177" x2="565" y2="191" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="565" y1="300" x2="565" y2="312" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="565" y1="300" x2="557" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="565" y1="300" x2="565" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="565" y1="300" x2="573" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<text x="575" y="250" class="l">包含 (1:N)</text>
+<path d="M700 101 L955 101 L955 300" fill="none" stroke="#9ca3af" stroke-width="1.6"/>
+<line x1="700" y1="94" x2="700" y2="108" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="955" y1="300" x2="955" y2="312" stroke="#6b7280" stroke-width="1.5"/>
+<line x1="955" y1="300" x2="947" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="955" y1="300" x2="955" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="955" y1="300" x2="963" y2="312" stroke="#6b7280" stroke-width="1.3"/>
+<text x="760" y="92" class="l">计分 (1:N)</text>
 </svg>
