@@ -3586,6 +3586,11 @@ body.focus .auth-page {
   flex-wrap: wrap;
   gap: var(--space-8);
 }
+
+/* 回答后的追问选项：与消息卡片左对齐，不抢正文层级 */
+.chat-followups {
+  margin: calc(var(--space-4) * -1) 0 var(--space-12) var(--space-12);
+}
 .sample-chip {
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
