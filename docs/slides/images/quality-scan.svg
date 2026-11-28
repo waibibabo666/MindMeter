@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 868" width="1600" height="868" font-family="'Microsoft YaHei','Segoe UI',Arial,sans-serif">
+<rect width="1600" height="868" fill="#ffffff"/>
+<text x="72" y="84" font-size="38" font-weight="700" fill="#1f2328">3.6.2 质量扫描结果</text>
+<text x="72" y="122" font-size="17" fill="#6b7280">本地实测 · 2026-11-28 · Python 3.14 / Node 26 · 命令与结果如下</text>
+<rect x="72" y="158" width="1456" height="126" rx="16" fill="#ffffff" stroke="#e2e8e5" stroke-width="1.5"/>
+<rect x="72" y="158" width="6" height="126" rx="3" fill="#15803d"/>
+<text x="100" y="200" font-size="23" font-weight="700" fill="#1f2328">Pylint</text>
+<text x="100" y="234" font-size="15" fill="#6b7280" font-family="Consolas,'Courier New',monospace">$ python -m pylint code/backend/app</text>
+<text x="100" y="262" font-size="14.5" fill="#9aa1aa">306 条提示：C 192 · R 61 · W 45 · E 8</text>
+<text x="1496" y="216" font-size="30" font-weight="700" fill="#15803d" text-anchor="end">9.11 / 10</text>
+<text x="1496" y="246" font-size="14" fill="#15803d" text-anchor="end">通过</text>
+<rect x="72" y="302" width="1456" height="126" rx="16" fill="#ffffff" stroke="#e2e8e5" stroke-width="1.5"/>
+<rect x="72" y="302" width="6" height="126" rx="3" fill="#15803d"/>
+<text x="100" y="344" font-size="23" font-weight="700" fill="#1f2328">Radon 复杂度</text>
+<text x="100" y="378" font-size="15" fill="#6b7280" font-family="Consolas,'Courier New',monospace">$ python -m radon cc code/backend/app -s -a</text>
+<text x="100" y="406" font-size="14.5" fill="#9aa1aa">329 个代码块 · A 231 · B 56 · C 29 · D 4 · E 6 · F 3</text>
+<text x="1496" y="360" font-size="30" font-weight="700" fill="#15803d" text-anchor="end">平均 B（5.61）</text>
+<text x="1496" y="390" font-size="14" fill="#15803d" text-anchor="end">通过</text>
+<rect x="72" y="446" width="1456" height="126" rx="16" fill="#ffffff" stroke="#e2e8e5" stroke-width="1.5"/>
+<rect x="72" y="446" width="6" height="126" rx="3" fill="#15803d"/>
+<text x="100" y="488" font-size="23" font-weight="700" fill="#1f2328">ESLint + SonarJS</text>
+<text x="100" y="522" font-size="15" fill="#6b7280" font-family="Consolas,'Courier New',monospace">$ npm run lint</text>
+<text x="100" y="550" font-size="14.5" fill="#9aa1aa">scripts + code/frontend/src 全量检查</text>
+<text x="1496" y="504" font-size="30" font-weight="700" fill="#15803d" text-anchor="end">0 errors</text>
+<text x="1496" y="534" font-size="14" fill="#15803d" text-anchor="end">通过</text>
+<rect x="72" y="590" width="1456" height="126" rx="16" fill="#ffffff" stroke="#e2e8e5" stroke-width="1.5"/>
+<rect x="72" y="590" width="6" height="126" rx="3" fill="#15803d"/>
+<text x="100" y="632" font-size="23" font-weight="700" fill="#1f2328">Prettier</text>
+<text x="100" y="666" font-size="15" fill="#6b7280" font-family="Consolas,'Courier New',monospace">$ npm run format:check</text>
+<text x="100" y="694" font-size="14.5" fill="#9aa1aa">scripts / frontend / e2e / 配置文件</text>
+<text x="1496" y="648" font-size="30" font-weight="700" fill="#15803d" text-anchor="end">全部通过</text>
+<text x="1496" y="678" font-size="14" fill="#15803d" text-anchor="end">通过</text>
+<rect x="72" y="740" width="1456" height="86" rx="14" fill="#f0fdf4" stroke="#bbf7d0"/>
+<text x="96" y="774" font-size="18" font-weight="700" fill="#166534">结论：无阻塞性问题</text>
+<text x="96" y="802" font-size="15" fill="#4b5563">提示以文档字符串与风格类为主（convention 占六成）；复杂度集中在数据导入、分类与模板三个文件，已列入后续重构。</text>
+</svg>
