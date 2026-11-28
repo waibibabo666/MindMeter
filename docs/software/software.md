@@ -23,7 +23,7 @@ L2 是一个**有账号、有服务端记忆、有对话式 Agent** 的 Web 产�
 - Agent 做报告解读、建议、追问、趋势解释；
 - 记忆：最近 20 条消息 + 画像 + 测评摘要 + 建议记录；
 - RAG：本地知识库 + pgvector 检索 + 引用；
-- 模型 BYOK，Key 加密存库；
+- 站点统一模型：Key 只在服务端环境变量（无 BYOK）；
 - 原生前端 + FastAPI + PostgreSQL/pgvector + LangGraph；
 - 不引入 K8s/Redis/Milvus，保持 4 人可维护。
 
@@ -38,7 +38,7 @@ L2 是一个**有账号、有服务端记忆、有对话式 Agent** 的 Web 产�
 | `backend/rag` | 知识库 ingest、embedding、检索、引用 | 不抓公网 |
 | `backend/memory` | profile/summaries/advice/最近消息 | 不存全量对话 |
 | `backend/core` | 配置、DB、安全、加密、日志 | — |
-| `postgres` | 业务表 + pgvector + LangGraph checkpoint | — |
+| `postgres` | 业务表 + pgvector（无 LangGraph checkpoint） | — |
 | `tests` | 单测/集成/E2E/AI 评测 | 不使用真实用户数据 |
 
 ## 四、目录
@@ -101,15 +101,15 @@ code/
 
 - 不存姓名、手机号、学校、公司、年龄、学历；
 - 不存原始 ASR 音频/转写全文；
-- BYOK Key 加密存库，主密钥只放环境变量；
+- 模型 Key 只在服务端环境变量；不入库、不下发浏览器；
 - 导出不含密码/Key。
 
 ## 七、部署
 
 | 项 | 方案 |
 | --- | --- |
-| 本地 | Docker Compose：api + postgres |
-| 生产 | 1 个 API 服务 + 1 个托管 Postgres + 静态前端 |
+| 本地 | `scripts/dev_serve.py`（一次性 PostgreSQL + uvicorn，见[本地开发](local-development.md)） |
+| 生产 | Docker 单容器 + nginx 反向代理（云服务器），或 Railway 托管 |
 | 迁移 | Alembic |
 | 备份 | 托管 Postgres 每日备份，7 天 |
 | 监控 | 结构化日志 + `ai_runs` + 健康检查 |
@@ -118,8 +118,8 @@ code/
 ## 八、关键取舍
 
 - **服务端计分**：单一权威、防篡改；代价是 Python 重写 8 个公式。
-- **BYOK 加密存库**：用户不用每次填 Key；代价是托管风险与主密钥管理。
-- **LangGraph**：显式图/状态/checkpoint；代价是框架复杂度，prompt 和校验仍留在自己代码。
+- **站点统一模型**：用户无需自备 Key、开箱即用；代价是站点承担模型成本与供应商依赖。
+- **LangGraph**：显式图/状态/场景策略；无 checkpointer（状态每次显式传入）；prompt 和校验仍留在自己代码。
 - **本地 embedding**：不依赖外部 embedding API；代价是 CPU/模型依赖。
 - **原生前端**：不引入构建链；代价是复杂交互要自己组织模块。
 - **不上 K8s/Redis/Milvus**：4 人维护；需要时再评估。

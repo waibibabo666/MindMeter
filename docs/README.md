@@ -6,10 +6,10 @@
 
 | 目录 | 文档 | 状态 | 说明 |
 | --- | --- | --- | --- |
-| `requirements/` | [问题定义与产品描述](requirements/problem_definition.md) | 当前 v3.0 | Agent-first 定位、用户、竞品、路线图 |
-| `requirements/` | [功能需求规范](requirements/functional_spec.md) | 当前 v3.0 | 账号、测评、报告、Agent、记忆、RAG、API |
+| `requirements/` | [问题定义与产品描述](requirements/problem_definition.md) | 当前 v3.1 | Agent-first 定位、用户、竞品、路线图 |
+| `requirements/` | [功能需求规范](requirements/functional_spec.md) | 当前 v3.2 | 账号、测评、报告、Agent、记忆、RAG、API |
 | `requirements/` | [非功能需求规范](requirements/nonfunctional_spec.md) | 当前 v3.0 | 性能、可靠、安全、隐私、AI 质量 |
-| `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v3.0 | LangGraph、记忆、RAG、校验、评测 |
+| `requirements/` | [Agent 设计](requirements/xlragentdesign.md) | 当前 v4.0 | 意图、场景策略、护栏、记忆、RAG、评测 |
 | `algorithm/` | [算法设计](algorithm/algorithm.md) | 当前 v4.0 | 8 项公式、`scoring-v3`、服务端计分 |
 | `algorithm/` | [算法调研与选型依据](algorithm/research.md) | 当前 | 候选方案、取舍、复杂度、调研索引 |
 | `software/` | [技术方案](software/architecture.md) | 历史 v4.0（见 ADR） | 早期 L2 服务端设想；当前 Web 形态见 ADR-0003 |
