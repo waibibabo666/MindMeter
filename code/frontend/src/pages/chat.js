@@ -1,4 +1,4 @@
-/**
+﻿/**
  * L-05 对话页（/chat）。
  *
  * 只做三件事：渲染消息、把问题交给 /api/v1/chat、用返回的消息刷新。
@@ -204,6 +204,63 @@ function profileDraftCard(ctx, host) {
 /** 空态里可点的示例问题：点一下填进输入框，不直接发送。 */
 const SAMPLE_QUESTIONS = ['为什么联想记忆低？', '知觉速度怎么练？', '这次结果该怎么读？'];
 
+const DIM_WORDS = [
+  '联想记忆',
+  '言语理解',
+  '言语',
+  '知觉速度',
+  '空间视觉化',
+  '数字运算',
+  '归纳推理',
+  '自然知识',
+  '言语流畅性',
+];
+
+/** 安全/情绪/寒暄类回答后面不挂业务追问。 */
+function showsFollowUps(code) {
+  const value = String(code || '');
+  return !/^intent:(support|crisis|boundary|greeting|clarify|blocked|off_task|self_blame)/.test(
+    value,
+  );
+}
+
+/** 按上一轮问法给 2–3 个可点的追问，避免只在空态有引导。 */
+function followUpQuestions(messages) {
+  const lastAssistant = [...messages].reverse().find((message) => message.role === 'assistant');
+  if (!lastAssistant || !showsFollowUps(lastAssistant.code)) return [];
+  const lastUser = [...messages].reverse().find((message) => message.role === 'user');
+  const question = String((lastUser && lastUser.content) || '');
+  const dim = DIM_WORDS.find((word) => question.includes(word)) || '';
+  const thisDim = dim === '言语' ? '言语理解' : dim || '这项';
+  if (question.includes('测什么') || question.includes('测的是')) {
+    return [`${thisDim}怎么练？`, '这次结果该怎么读？'];
+  }
+  if (question.includes('怎么练') || question.includes('怎么提升') || question.includes('建议')) {
+    return ['多久练一次比较合适？', `${thisDim}测什么？`];
+  }
+  if (question.includes('为什么')) {
+    return [`${thisDim}怎么练？`, '这次结果该怎么读？'];
+  }
+  return ['这项测什么？', '那怎么练？', '这次结果该怎么读？'];
+}
+
+function followUpRow(messages) {
+  const questions = followUpQuestions(messages);
+  if (!questions.length) return null;
+  return el(
+    'div',
+    { class: 'chat-samples chat-followups', 'aria-label': '继续追问' },
+    questions.map((question) =>
+      el('button', {
+        class: 'sample-chip',
+        type: 'button',
+        'data-suggest': question,
+        text: question,
+      }),
+    ),
+  );
+}
+
 /** 空态：有测评结果时给可点的示例问题；没有结果时直接引导去测评。 */
 function emptyChat(ctx, hasFacts) {
   // 「Enter 发送，Shift+Enter 换行」已经写在输入框的 placeholder 里，
@@ -246,10 +303,22 @@ export function renderChat(root, ctx, options = {}) {
   const messages = readMemory().messages || [];
   // 空态也放进 .chat-list 里：这样"第一次提问"时等待气泡有地方落，
   // 不会出现"最需要反馈的时候反而没有反馈"。
+  const listItems = [];
+  if (messages.length) {
+    messages.forEach((message, index) => {
+      listItems.push(messageNode(message));
+      if (index === messages.length - 1 && message.role === 'assistant') {
+        const row = followUpRow(messages);
+        if (row) listItems.push(row);
+      }
+    });
+  } else {
+    listItems.push(emptyChat(ctx, hasFacts));
+  }
   const list = el(
     'div',
     { class: 'chat-list', role: 'log', 'aria-live': 'polite', 'aria-relevant': 'additions' },
-    messages.length ? messages.map(messageNode) : [emptyChat(ctx, hasFacts)],
+    listItems,
   );
   // 消息流是页面里唯一的滚动区域：标题栏与输入框固定在上下两端，不随历史滚动。
   const scroller = el('div', { class: 'chat-scroll' }, [list]);
