@@ -97,6 +97,10 @@ def test_prep_state_is_stored_and_used(logged_client):
     assert response.status_code == 200, response.text
     assert response.json()["session"]["prep"] == {"sleep": 5, "fatigue": 4}
 
+    explain = logged_client.post("/api/v1/reports/s_prep_roundtrip/explain")
+    assert explain.status_code == 200, explain.text
+    assert "本次临场状态" in explain.json()["text"]
+
     body = chat(logged_client, "联想记忆这项测什么？")
     assert "临场状态" in body["reply"]["text"]
 

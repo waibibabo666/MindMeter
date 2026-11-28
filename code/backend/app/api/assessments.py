@@ -39,6 +39,19 @@ def _clean_prep(value: object) -> dict:
     return out
 
 
+def _prep_note(value: object) -> str:
+    """报告里确定性追加的临场状态行：不依赖模型是否提到。"""
+    prep = _clean_prep(value)
+    bits = []
+    if prep.get("sleep") is not None:
+        bits.append(f"睡眠 {prep['sleep']} 小时")
+    if prep.get("fatigue") is not None:
+        bits.append(f"疲劳 {prep['fatigue']}/5")
+    if not bits:
+        return ""
+    return "本次临场状态：" + "、".join(bits) + "；仅用于判断结果可信度，不参与计分。"
+
+
 def persist_session(db: Session, user_id: int, session: dict) -> dict:
     """为 ``user_id`` 保存一次已完成的测评并返回其载荷。
 
@@ -195,6 +208,9 @@ def explain_report(
         score = (session.get("scores") or {}).get(dim)
         if isinstance(score, int):
             facts[dim]["score"] = score
+    prep = session.get("prep")
+    if isinstance(prep, dict) and prep:
+        facts["prep"] = prep
     chunks = retrieve_context(db, facts)
     result = answer(db, REPORT_EXPLAIN_QUESTION, facts, [], None, scene="report", chunks=chunks)
     code = result.get("code")
@@ -212,8 +228,12 @@ def explain_report(
         )
     )
     db.commit()
+    text = result.get("displayText") or result.get("text", "")
+    prep_line = _prep_note(session.get("prep"))
+    if prep_line and "本次临场状态" not in text:
+        text = f"{text}\n\n{prep_line}"
     return {
-        "text": result.get("displayText") or result.get("text", ""),
+        "text": text,
         "source": result.get("source", "template"),
         # code 现在是真实原因（模型侧 timeout/auth/…，或校验侧 too_long/banned_word/
         # unsourced_number/score_misattributed）；细到"哪几个数字没有出处"看 validation。
