@@ -114,9 +114,9 @@ MindMeter 是一个 **8 项能力测评 + 对话式 Agent** 的 Web 产品：用
 
 课程提交版（历史快照，不代表 L2 当前实现）：
 
-- [作业 1](<work_for_submission/苏打F4_MindMeter_assignment[1]_rev.md>)
-- [作业 2](<work_for_submission/苏打F4_MindMeter_assignment[2]_rev.md>)
-- [作业 3](<work_for_submission/苏打F4_MindMeter_assignment[3]_rev.md>)
+- [作业 1](<work_for_submission/苏打F4_MindMeter_assignment[1].md>)
+- [作业 2](<work_for_submission/苏打F4_MindMeter_assignment[2].md>)
+- [作业 3](<work_for_submission/苏打F4_MindMeter_assignment[3].md>)
 
 ## 仓库结构
 
