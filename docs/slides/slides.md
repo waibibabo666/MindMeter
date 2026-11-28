@@ -394,7 +394,7 @@ layout: default
 layout: default
 ---
 
-# 3.5.4 数据库设计
+# 3.5.4 数据库设计（ER 图）
 
 <img class="deck-figure er" src="./images/er-diagram.svg" alt="数据库 ER 图：users、assessments、assessment_tasks、assessment_scores、memory_summaries 的主外键关系" />
 
