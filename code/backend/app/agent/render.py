@@ -109,6 +109,9 @@ def template_explanation(facts: dict, question: str = "", chunk_ids: set[str] | 
 
     parts.append("")
     parts.append("这些只是本次测得的原始数据，不是分数，也不与人群比较。")
+    prep_line = _prep_line(facts)
+    if prep_line:
+        parts.append(f"本次临场状态：{prep_line}；仅用于判断这份结果的可信度，不参与计分。")
     parts.append(SCORING_NOTE)
     return "\n".join(parts)
 
@@ -172,7 +175,7 @@ def _facts_line(facts: dict) -> str:
     """
     parts = []
     for key, value in (facts or {}).items():
-        if key == "trend":
+        if key in ("trend", "prep"):
             continue
         label = f"{DIM_NAMES[key]}（{key}）" if key in DIM_NAMES else key
         if isinstance(value, dict):
@@ -201,6 +204,19 @@ def _trend_block(trend: dict) -> str:
     if skipped:
         tail.append("未参与对比的维度：" + "、".join(skipped))
     return "两次对比数据：\n" + "\n".join(lines) + ("\n" + "；".join(tail) if tail else "")
+
+
+def _prep_line(facts: dict) -> str:
+    """临场状态一句话：只用于说明可信度，不是指标。"""
+    prep = facts.get("prep") if isinstance(facts, dict) else None
+    if not isinstance(prep, dict) or not prep:
+        return ""
+    bits = []
+    if isinstance(prep.get("sleep"), int):
+        bits.append(f"昨晚睡眠 {prep['sleep']} 小时")
+    if isinstance(prep.get("fatigue"), int):
+        bits.append(f"当前疲劳 {prep['fatigue']}/5")
+    return "；".join(bits)
 
 
 def build_messages(
@@ -240,6 +256,13 @@ def build_messages(
         )
     if isinstance(facts, dict) and facts.get("trend"):
         blocks.append(_trend_block(facts["trend"]))
+    prep_line = _prep_line(facts)
+    if prep_line:
+        blocks.append(
+            "临场状态（只用于说明本次解读的可信度，不得据此改分数或编造结论）："
+            + prep_line
+            + "。睡眠偏少或疲劳偏高时，用一句话说明速度类 / 记忆类结果可能受影响。"
+        )
     extra = memory_lines(memory)
     if extra:
         blocks.append("用户背景（只用于调整表述，不作为数字来源）：\n" + "\n".join(extra))

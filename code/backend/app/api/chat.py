@@ -45,6 +45,9 @@ def _facts(db: Session, user_id: int) -> tuple[dict, str | None, str | None]:
     trend = build_trend_payload(sessions_payload(db, user_id, limit=2)["sessions"])
     if trend is not None:
         facts["trend"] = trend
+    prep = session.get("prep")
+    if isinstance(prep, dict) and prep:
+        facts["prep"] = prep
     return facts, row.id, row.mode
 
 

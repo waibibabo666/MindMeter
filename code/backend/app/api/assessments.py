@@ -25,6 +25,20 @@ router = APIRouter()
 MAX_SESSIONS_PER_USER = 50
 
 
+def _clean_prep(value: object) -> dict:
+    """白名单化临场状态：睡眠 0-12 小时、疲劳 1-5，其它一律丢弃。"""
+    if not isinstance(value, dict):
+        return {}
+    out: dict = {}
+    sleep = value.get("sleep")
+    fatigue = value.get("fatigue")
+    if isinstance(sleep, (int, float)) and 0 <= sleep <= 12:
+        out["sleep"] = int(sleep)
+    if isinstance(fatigue, int) and 1 <= fatigue <= 5:
+        out["fatigue"] = fatigue
+    return out
+
+
 def persist_session(db: Session, user_id: int, session: dict) -> dict:
     """为 ``user_id`` 保存一次已完成的测评并返回其载荷。
 
@@ -58,6 +72,7 @@ def persist_session(db: Session, user_id: int, session: dict) -> dict:
         started_at=parse_dt(session.get("startedAt")),
         finished_at=finished_at,
         scoring_version=SCORING_VERSION,
+        context=_clean_prep(session.get("prep")),
         dims=dims,
     )
     db.add(assessment)

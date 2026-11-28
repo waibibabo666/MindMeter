@@ -84,6 +84,23 @@ def test_citations_are_clickable_source_objects(logged_client):
     assert isinstance(first["source"], dict)
 
 
+def test_prep_state_is_stored_and_used(logged_client):
+    session = {
+        "id": "s_prep_roundtrip",
+        "mode": "standard",
+        "finishedAt": "2026-11-28T08:00:00Z",
+        "dims": ["am"],
+        "results": {"am": {"metrics": {"targets": 6, "firstTry": 5, "errors": 1}, "answers": []}},
+        "prep": {"sleep": 5, "fatigue": 4},
+    }
+    response = logged_client.post("/api/v1/assessments", json={"session": session})
+    assert response.status_code == 200, response.text
+    assert response.json()["session"]["prep"] == {"sleep": 5, "fatigue": 4}
+
+    body = chat(logged_client, "联想记忆这项测什么？")
+    assert "临场状态" in body["reply"]["text"]
+
+
 def test_grief_is_handled_with_empathy_and_context(logged_client):
     seed_assessment(logged_client)
     grief = chat(logged_client, "我家死人了")
