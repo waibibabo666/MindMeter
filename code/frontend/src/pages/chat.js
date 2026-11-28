@@ -119,7 +119,9 @@ function sourceLabel(source) {
   return '模板';
 }
 
-function riskNode(risk) {
+function riskNode(risk, code = '') {
+  // 支持 / 哀伤话术不是"状态影响测评结果"，别在丧亲消息下面挂风险标签。
+  if (String(code).startsWith('intent:support')) return null;
   if (risk === 'high') {
     return el('p', {
       class: 'notice',
@@ -144,7 +146,7 @@ function messageNode(message) {
     class: `pill ${message.source === 'llm' ? 'hi' : 'mid'}`,
     text: sourceLabel(message.source),
   });
-  const risk = riskNode(message.risk);
+  const risk = riskNode(message.risk, message.code);
   return el('div', { class: 'card chat-ai' }, [
     el('div', { class: 'row' }, [pill, el('span', { class: 'tiny', text: fmtTime(message.at) })]),
     risk,

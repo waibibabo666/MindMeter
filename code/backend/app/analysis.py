@@ -77,6 +77,21 @@ def strong_dims(facts: dict, limit: int = 1) -> list[str]:
     return [dim for dim, _ in sorted(items, key=lambda pair: pair[1], reverse=True)[:limit]]
 
 
+def _prep_line(facts: dict) -> str:
+    """临场状态一句话：只用于说明可信度，不是指标。"""
+    prep = facts.get("prep") if isinstance(facts, dict) else None
+    if not isinstance(prep, dict) or not prep:
+        return ""
+    bits = []
+    if isinstance(prep.get("sleep"), int):
+        bits.append(f"昨晚睡眠 {prep['sleep']} 小时")
+    if isinstance(prep.get("fatigue"), int):
+        bits.append(f"当前疲劳 {prep['fatigue']}/5")
+    if not bits:
+        return ""
+    return "临场状态（只用于说明可信度，不得据此改分数或编造结论）：" + "；".join(bits)
+
+
 def facts_block(facts: dict) -> str:
     lines = []
     for dim in DIM_ORDER:
@@ -176,9 +191,11 @@ def build_messages(facts: dict, chunks: list[dict], question: str | None = None)
     from .agent.mind_profile import profile_block
 
     mind = profile_block(facts)
+    prep_line = _prep_line(facts)
     user = [
         "本次原始指标：",
         facts_block(facts),
+        *(["", prep_line] if prep_line else []),
         "",
         *([mind, ""] if mind else []),
         "可引用知识块：",
@@ -249,6 +266,15 @@ def template_analysis(facts: dict, chunks: list[dict]) -> str:
         lines.extend(["", "可以试试：", *suggestions[:3]])
     if citations:
         lines.extend(["", "引用：" + " · ".join(dict.fromkeys(citations))])
+    prep = facts.get("prep") if isinstance(facts, dict) else None
+    if isinstance(prep, dict) and prep:
+        bits = []
+        if isinstance(prep.get("sleep"), int):
+            bits.append(f"睡眠 {prep['sleep']} 小时")
+        if isinstance(prep.get("fatigue"), int):
+            bits.append(f"疲劳 {prep['fatigue']}/5")
+        if bits:
+            lines.extend(["", f"本次临场状态：{'、'.join(bits)}；仅用于判断结果可信度，不参与计分。"])
     lines.append("")
     lines.append("分数只反映本次任务，不是常模或诊断；单次差异不等于能力变化。")
     return "\n".join(lines)

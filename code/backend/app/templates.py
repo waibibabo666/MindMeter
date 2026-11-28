@@ -329,6 +329,18 @@ def template_narrative(facts: dict | None) -> str:
         parts.append("可以试试：")
         parts.append(f"· {SUGGESTIONS[weakest]}")
         parts.append(f"· {GENERAL_SUGGESTION}")
+    prep = facts.get("prep") if isinstance(facts, dict) else None
+    if isinstance(prep, dict) and prep:
+        prep_bits = []
+        if isinstance(prep.get("sleep"), int):
+            prep_bits.append(f"睡眠 {prep['sleep']} 小时")
+        if isinstance(prep.get("fatigue"), int):
+            prep_bits.append(f"疲劳 {prep['fatigue']}/5")
+        if prep_bits:
+            parts.append("")
+            parts.append(
+                f"本次临场状态：{'、'.join(prep_bits)}；仅用于判断结果可信度，不参与计分。"
+            )
     if missing:
         names = "、".join(DIM_NAMES[dim] for dim in missing)
         parts.append(f"另有 {len(missing)} 个维度（{names}）本档未测，报告里留空，不按 0 分计算。")

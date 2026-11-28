@@ -16,7 +16,7 @@ import { addSession, clearAllData, exportData } from './storage.js';
 import { UNAUTHENTICATED } from './api.js';
 import { AUTH_PATHS, logout as signOutApi, session } from './auth.js';
 import { bootstrap, installFlushHook, resetCache } from './boot.js';
-import { needsIntake, resetSessionProfile } from './profile.js';
+import { needsIntake, readProfile, resetSessionProfile } from './profile.js';
 import { scoreSession, SCORING_VERSION } from './scoring/index.js';
 import { log } from './log.js';
 import { STANDARD_ORDER, TIERS } from './data.js';
@@ -136,6 +136,12 @@ async function finishTask(taskId, payload) {
   }
 
   const localScores = safeScores(state.results, state.level || 'standard');
+  const prep = {};
+  const prepProfile = readProfile();
+  // 睡眠在表单里是档位字符串（lt5 / 5to6 / 6to7 / 7plus），落库前映射成代表小时数。
+  const SLEEP_HOURS = { lt5: 4, '5to6': 5, '6to7': 6, '7plus': 7 };
+  if (SLEEP_HOURS[prepProfile.sleep]) prep.sleep = SLEEP_HOURS[prepProfile.sleep];
+  if (Number.isFinite(Number(prepProfile.fatigue))) prep.fatigue = Number(prepProfile.fatigue);
   try {
     const saved = await addSession({
       id: `s_${Date.now().toString(36)}`,
@@ -143,6 +149,7 @@ async function finishTask(taskId, payload) {
       finishedAt: new Date().toISOString(),
       dims: state.order.slice(),
       results: state.results,
+      prep,
       scoringVersion: SCORING_VERSION,
     });
     // 前端按档位题量本地计分；后端算式尚未支持分档，故以本地结果为准。

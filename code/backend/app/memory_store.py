@@ -71,7 +71,10 @@ class MemoryStore:
                 .limit(limit)
             ).all()
         )
-        return [{"role": row.role, "content": row.content} for row in reversed(rows)]
+        return [
+        {"role": row.role, "content": row.content, "code": row.code, "risk": row.risk}
+        for row in reversed(rows)
+    ]
 
     def append(
         self,
